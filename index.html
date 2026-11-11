@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Duramax LLY — 2005 6.6L V8</title>
+<script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer/dist/model-viewer.min.js"></script>
+<style>
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: radial-gradient(1200px 700px at 50% 30%, #2b3038 0%, #16181c 60%, #0c0d10 100%);
+    color: #e8eaed;
+  }
+  header { padding: 18px 22px 4px; text-align: center; }
+  header h1 { margin: 0; font-size: 22px; font-weight: 650; letter-spacing: 0.02em; }
+  header p { margin: 4px 0 0; font-size: 13px; color: #9aa3ad; }
+  model-viewer {
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+    --poster-color: transparent;
+  }
+  footer {
+    padding: 10px 16px 16px;
+    text-align: center;
+    font-size: 12.5px;
+    color: #9aa3ad;
+  }
+  .progress {
+    display: block;
+    width: 180px;
+    height: 4px;
+    margin: 40vh auto 0;
+    background: rgba(255,255,255,0.15);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .progress > div { height: 100%; width: 0%; background: #e8eaed; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Duramax LLY — 2005 6.6L V8</h1>
+    <p>Interactive 3D model</p>
+  </header>
+
+  <model-viewer
+    src="Duramax_LLY_2005_66L_V8.glb"
+    alt="3D model of a 2005 Duramax LLY 6.6 liter V8 diesel engine"
+    camera-controls
+    auto-rotate
+    auto-rotate-delay="1500"
+    shadow-intensity="1"
+    exposure="1.1"
+    ar
+    touch-action="none">
+    <div class="progress" slot="progress-bar"><div id="bar"></div></div>
+  </model-viewer>
+
+  <footer>Drag to rotate &nbsp;·&nbsp; Scroll or pinch to zoom &nbsp;·&nbsp; Right-drag to pan</footer>
+
+  <script>
+    const viewer = document.querySelector('model-viewer');
+    const bar = document.getElementById('bar');
+    viewer.addEventListener('progress', (e) => {
+      bar.style.width = Math.round(e.detail.totalProgress * 100) + '%';
+      if (e.detail.totalProgress >= 1) bar.parentElement.style.display = 'none';
+    });
+  </script>
+</body>
+</html>
