@@ -1,15 +1,15 @@
-# Duramax LLY Engine Lab — Project Plan v2.1
+# Duramax LLY Engine Lab — Project Plan v2.2
 
 Status: **APPROVED — this document governs the project.** Any change to this plan must be recorded in `docs/DECISIONS.md` and applied to this file in the same pull request. If work ever conflicts with this plan, the plan wins until it is formally revised.
 
-v2.1 = Claude's Plan v2 (Nov 12, 2026) as reviewed and amended by Buckley, with all review decisions incorporated. It supersedes all earlier plan versions and chat discussions.
+v2.2 = Claude's Plan v2 (Nov 12, 2026) as reviewed and amended by Buckley, plus the owner-approved workflow amendment (DECISIONS.md D-029–D-031): coding by the owner in Antigravity, and Buckley's deliverables pre-reviewed by a separate agent. It supersedes all earlier plan versions and chat discussions.
 
 ## Summary
 
 A web-based interactive engine lab for the 2005 GM Duramax LLY 6.6L V8 diesel: a running engine with mechanically correct motion, variable throttle, exploded/cutaway/x-ray views, swappable parts, and a dyno that computes horsepower/torque for any build and compares stock vs. modified. It is **not** a driving game.
 
 - Platform: TypeScript + Three.js (pinned version) + Vite, hosted on GitHub Pages. Babylon.js, Godot, Unity, and Unreal were evaluated and set aside.
-- Builder: Buckley is the single repo-connected builder and integrator. Claude, Grok, and Gemini are used for reviews and bounded advice only; they never write files to this repo.
+- Builder: coding is done by the owner in Antigravity, working from Buckley's written specs; the specific Gemini model inside Antigravity is chosen per task. Buckley coordinates, verifies, and integrates into this repo. Claude, Grok, and Gemini, when acting as external reviewers/advisors, are used for reviews and bounded advice only.
 - All tools and services are free.
 
 ## Decisions locked
@@ -125,8 +125,8 @@ Each input carries a source and a confidence level. Low-confidence inputs widen 
 
 The loop is spec → build → verify → preview → ship, with every change arriving as a pull request that CI must pass.
 
-1. **Spec:** Buckley writes a spec into the repo, with acceptance tests stated up front and the pinned Three.js API notes attached.
-2. **Build:** Buckley implements on a branch and opens a pull request.
+1. **Spec:** Buckley writes a spec into the repo, with acceptance tests stated up front and the pinned Three.js API notes attached. Buckley's specs and other substantive deliverables are reviewed by a separate agent, and Buckley fixes the issues it flags before the owner sees them (D-030). This pre-review happens before, and is separate from, the outside-model review in step 3 where that also applies.
+2. **Build:** the spec names a task branch. The owner runs Antigravity in a local clone of this repo on that branch and pushes the branch when the implementation is ready (a normal git push, not file copying). Buckley reviews the branch, verifies it (CI, tests, checks), and opens or updates the pull request.
 3. **Verify:** all applicable checks required.
    - CI on every pull request: unit tests (kinematics, performance model), catalog schema validation, type check, build.
    - Screenshot comparison against approved reference frames at fixed crank angles — advisory (report-only) until proven stable, then a merge gate.
@@ -137,7 +137,7 @@ The loop is spec → build → verify → preview → ship, with every change ar
 **Rules**
 
 - The interface (types) file is frozen. It changes only through a spec revision, never inside a feature change.
-- Outside models never write files to the repo. Their output is review comments or advice that Buckley turns into specs.
+- Only Antigravity writes code, and only from a written spec, on a task branch that Buckley verifies and integrates. When acting as external reviewers/advisors, Claude, Grok, and Gemini never write files to the repo — this restriction does not apply to the Gemini model selected inside Antigravity for a coding task. Reviewer output is comments or advice that Buckley turns into specs. Buckley's own substantive deliverables are reviewed by a separate agent, and Buckley fixes the issues it flags, before the owner sees them (D-030).
 - Repo docs (`docs/PLAN.md`, `docs/DECISIONS.md`, `docs/OPEN_ITEMS.md`) are the project's memory. Any new Buckley session starts by reading them.
 - Every number in the app traces to the config or the catalog, which trace to a source.
 
@@ -148,7 +148,7 @@ The largest risk is unknown internal geometry. It is managed by labeling, not so
 | Risk | Impact | Mitigation |
 | --- | --- | --- |
 | Internal dimensions unknown (rod length, pitch, deck height, valvetrain) | Rework whenever better data appears | Placeholder config; parts modeled to config values; illustrative labels in the app |
-| Builder and verifier are the same agent | Shared wrong assumptions pass review | CI tests as the main gate, plus mandatory outside review at milestone exits and interface changes |
+| Coding, verification, and authorship concentrated in too few hands | Shared wrong assumptions pass review | Roles separated: Antigravity codes from spec, Buckley verifies, a separate agent pre-reviews Buckley's deliverables, CI tests are the main gate, plus mandatory outside review at milestone exits and interface changes |
 | Modeling labor for internals and part variants | Schedule stalls in Blender | Milestone 2 sets the detail level; generic tiers keep variant count low |
 | Exterior GLB not registered to the frame | Internals clip through the block | Registration step and an interference check in Milestone 3 |
 | Browser performance (studio look plus explode, cutaway, x-ray) | Slow on laptops, unusable on phones | Budgets per tier from Milestone 2 measurements; instancing; reduced phone tier |
