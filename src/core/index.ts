@@ -1,1 +1,4 @@
-// Core crank-angle simulation module placeholder (populated in Milestone 1).
+// Core crank-angle simulation module exports (Milestone 1).
+
+export * from './interfaces';
+export * from './kinematics';
