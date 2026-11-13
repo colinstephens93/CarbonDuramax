@@ -1,5 +1,7 @@
 # Carbon Duramax — 2005 Chevrolet 6.6L Duramax LLY V8 (3D Engine)
 
+> **Note:** See [`docs/PLAN.md`](docs/PLAN.md) for the governing Duramax LLY Engine Lab project plan (this README describes the preserved legacy viewer at `/legacy/`).
+
 Interactive, mobile-optimized PBR 3D simulation and Augmented Reality (AR) viewer for the **2005 Chevrolet 6.6L Duramax LLY V8 Turbo-Diesel (VIN Code 2)**.
 
 ## Enabled Capabilities

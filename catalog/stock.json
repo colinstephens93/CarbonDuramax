@@ -1,0 +1,13 @@
+[
+  {
+    "id": "turbo_stock",
+    "slotId": "turbo",
+    "name": "Stock Variable-Geometry Turbo (Placeholder)",
+    "provenance": "illustrative",
+    "modelPath": null,
+    "explodeVectorMm": [0, 0, 0],
+    "performanceParams": {},
+    "compatibility": {},
+    "notes": "Milestone 0 illustrative placeholder entry for the stock turbocharger."
+  }
+]
