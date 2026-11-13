@@ -13,7 +13,6 @@ Unresolved questions and data still to source. An item leaves this list only whe
 ## Decisions still to make
 
 - [ ] **Outside reviewer of record** for milestone-exit reviews (Claude, Grok, or Gemini; may rotate — record the choice per milestone in the PR).
-- [ ] **Screenshot reference frames** — choose the fixed crank angles and camera views for visual comparison once Milestone 3 renders the full engine.
 
 ## Watch items
 
