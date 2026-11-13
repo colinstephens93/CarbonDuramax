@@ -1,9 +1,12 @@
-// Plain-DOM UI controls, readouts, illustrative caption, and rAF loop for Milestone 1 (D-007, D-012).
-// Never imports Three.js; drives the renderer through a callback receiving CrankState.
+// Plain-DOM UI controls, readouts, Exterior toggle, Quality profile selector, illustrative caption,
+// and rAF loop for Milestone 3 (D-007, D-012, D-034; docs/specs/M3-full-engine.md §§5, 7, 8).
+// Never imports Three.js; drives the renderer strictly through callbacks.
 
 import type { ValveConfig } from '../config/valveConfig';
 import type { CrankState, CylinderId, EngineConfig } from '../core/interfaces';
 import { computeState, phaseOffsetDeg } from '../core/kinematics';
+
+export type UiQualityMode = 'auto' | 'full' | 'phone';
 
 const CYLINDERS: readonly CylinderId[] = [1, 2, 3, 4, 5, 6, 7, 8];
 const SPEED_OPTIONS = [
@@ -11,6 +14,12 @@ const SPEED_OPTIONS = [
   { multiplier: 0.1, label: '0.1×' },
   { multiplier: 0.01, label: '0.01×' },
 ] as const;
+
+const QUALITY_OPTIONS: ReadonlyArray<{ value: UiQualityMode; label: string }> = [
+  { value: 'auto', label: 'Auto' },
+  { value: 'full', label: 'Full' },
+  { value: 'phone', label: 'Phone' },
+];
 
 type SpeedMultiplier = (typeof SPEED_OPTIONS)[number]['multiplier'];
 
@@ -128,6 +137,50 @@ function injectStyles(): void {
       accent-color: #38bdf8;
       cursor: pointer;
     }
+    .m3-options-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 8px 10px;
+      margin-bottom: 12px;
+      border-radius: 8px;
+      background: rgba(30, 41, 59, 0.55);
+      border: 1px solid rgba(148, 163, 184, 0.16);
+    }
+    .m3-checkbox-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #e2e8f0;
+      cursor: pointer;
+    }
+    .m3-checkbox-label input {
+      width: 15px;
+      height: 15px;
+      margin: 0;
+      accent-color: #38bdf8;
+      cursor: pointer;
+    }
+    .m3-quality-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: #cbd5e1;
+    }
+    .m3-quality-select {
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid rgba(148, 163, 184, 0.32);
+      background: rgba(15, 23, 42, 0.9);
+      color: #f8fafc;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
     .m1-readout-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -156,12 +209,16 @@ function injectStyles(): void {
     .m1-firing-value {
       color: #fb923c;
     }
+    #title-banner,
+    #m1-illustrative-caption {
+      user-select: none;
+    }
     #m1-illustrative-caption {
       position: fixed;
       left: 20px;
       bottom: 16px;
       z-index: 20;
-      max-width: min(560px, calc(100vw - 40px));
+      max-width: min(600px, calc(100vw - 40px));
       padding: 8px 12px;
       border-radius: 8px;
       background: rgba(15, 23, 42, 0.82);
@@ -191,7 +248,16 @@ function injectStyles(): void {
   document.head.appendChild(style);
 }
 
+export interface EngineUiOptions {
+  onExteriorChange?: (visible: boolean) => void;
+  onQualityChange?: (mode: UiQualityMode) => void;
+}
+
 export interface EngineUiHandle {
+  setCrankAngleDeg(deg: number): void;
+  setPlaying(playing: boolean): void;
+  setExteriorChecked(checked: boolean): void;
+  setQualityMode(mode: UiQualityMode): void;
   dispose(): void;
 }
 
@@ -199,12 +265,13 @@ export function mountEngineUi(
   config: EngineConfig,
   valves: ValveConfig,
   onState: (state: CrankState) => void,
+  options?: EngineUiOptions,
 ): EngineUiHandle {
   injectStyles();
 
   const bannerSubtitle = document.querySelector('#title-banner p');
   if (bannerSubtitle) {
-    bannerSubtitle.textContent = 'Milestone 2 — Cylinder 1 Detailed Assembly + Draft Studio Look';
+    bannerSubtitle.textContent = 'Milestone 3 — Full 8-Cylinder Detailed Engine + Studio Look';
   }
 
   let isPlaying = true;
@@ -302,6 +369,44 @@ export function mountEngineUi(
 
   scrubGroup.append(scrubLabelRow, scrubSlider);
 
+  // Milestone 3 controls row: Exterior checkbox (default unchecked) + Quality selector (Auto / Full / Phone)
+  const optionsRow = document.createElement('div');
+  optionsRow.className = 'm3-options-row';
+
+  const exteriorLabel = document.createElement('label');
+  exteriorLabel.className = 'm3-checkbox-label';
+  exteriorLabel.htmlFor = 'm3-exterior-checkbox';
+
+  const exteriorCheckbox = document.createElement('input');
+  exteriorCheckbox.id = 'm3-exterior-checkbox';
+  exteriorCheckbox.type = 'checkbox';
+  exteriorCheckbox.checked = false;
+
+  const exteriorText = document.createElement('span');
+  exteriorText.textContent = 'Exterior';
+  exteriorLabel.append(exteriorCheckbox, exteriorText);
+
+  const qualityWrap = document.createElement('div');
+  qualityWrap.className = 'm3-quality-wrap';
+
+  const qualityLabel = document.createElement('label');
+  qualityLabel.htmlFor = 'm3-quality-select';
+  qualityLabel.textContent = 'Quality';
+
+  const qualitySelect = document.createElement('select');
+  qualitySelect.id = 'm3-quality-select';
+  qualitySelect.className = 'm3-quality-select';
+  for (const opt of QUALITY_OPTIONS) {
+    const optEl = document.createElement('option');
+    optEl.value = opt.value;
+    optEl.textContent = opt.label;
+    qualitySelect.appendChild(optEl);
+  }
+  qualitySelect.value = 'auto';
+  qualityWrap.append(qualityLabel, qualitySelect);
+
+  optionsRow.append(exteriorLabel, qualityWrap);
+
   // Readout cards: Crank Angle, RPM, Effective Speed, Firing Cylinder
   const readoutGrid = document.createElement('div');
   readoutGrid.className = 'm1-readout-grid';
@@ -324,14 +429,14 @@ export function mountEngineUi(
   const effectiveSpeedReadout = createReadoutCard('Effective Speed');
   const firingCylReadout = createReadoutCard('Firing Cylinder', 'm1-firing-value');
 
-  panel.append(topRow, rpmGroup, scrubGroup, readoutGrid);
+  panel.append(topRow, rpmGroup, scrubGroup, optionsRow, readoutGrid);
   document.body.appendChild(panel);
 
-  // On-screen illustrative caption (required by D-012, M1 Deliverable 4, and M2 Draft Studio Look)
+  // On-screen illustrative caption (exact text per Spec §7)
   const caption = document.createElement('div');
   caption.id = 'm1-illustrative-caption';
   caption.textContent =
-    'Illustrative geometry, part shapes & timing: Detailed Cylinder 1 part shapes (piston bowl/rings, rod, crank throw, head section, valves, springs, bridges, rockers, pushrods, lifters, injector), valve timing/lift profiles, and placeholder dimensions are illustrative placeholders, not verified LLY measurements.';
+    'Illustrative geometry, part shapes & timing: Detailed part shapes, valve timing/lift profiles, placeholder dimensions, shared-pin crank layout, lifter gallery placement, and the registered exterior shell are illustrative placeholders, not verified LLY measurements.';
   document.body.appendChild(caption);
 
   const updatePlayButtonLabel = (): void => {
@@ -374,6 +479,15 @@ export function mountEngineUi(
     renderReadouts(crankAngleDeg, rpm);
   });
 
+  exteriorCheckbox.addEventListener('change', () => {
+    options?.onExteriorChange?.(exteriorCheckbox.checked);
+  });
+
+  qualitySelect.addEventListener('change', () => {
+    const val = qualitySelect.value as UiQualityMode;
+    options?.onQualityChange?.(val);
+  });
+
   const pauseAndScrub = (): void => {
     isPlaying = false;
     updatePlayButtonLabel();
@@ -398,7 +512,6 @@ export function mountEngineUi(
     pauseAndScrub();
   });
 
-  // Render initial readouts immediately before the first rAF callback fires.
   renderReadouts(crankAngleDeg, rpm);
 
   // Animation loop in UI layer: advances theta by rpm * 6 * dt * speedMultiplier degrees.
@@ -423,6 +536,32 @@ export function mountEngineUi(
 
   rafId = requestAnimationFrame(tick);
 
+  const setCrankAngleDeg = (deg: number): void => {
+    isPlaying = false;
+    updatePlayButtonLabel();
+    crankAngleDeg = normalizeAngle720(deg);
+    scrubSlider.value = String(crankAngleDeg);
+    renderReadouts(crankAngleDeg, rpm);
+    const state = computeState(config, crankAngleDeg, rpm, valves);
+    onState(state);
+  };
+
+  const setPlaying = (playing: boolean): void => {
+    isPlaying = playing;
+    updatePlayButtonLabel();
+    renderReadouts(crankAngleDeg, rpm);
+  };
+
+  const setExteriorChecked = (checked: boolean): void => {
+    exteriorCheckbox.checked = checked;
+    options?.onExteriorChange?.(checked);
+  };
+
+  const setQualityMode = (mode: UiQualityMode): void => {
+    qualitySelect.value = mode;
+    options?.onQualityChange?.(mode);
+  };
+
   const dispose = (): void => {
     cancelAnimationFrame(rafId);
     window.removeEventListener('pointerup', endScrub);
@@ -431,5 +570,11 @@ export function mountEngineUi(
     caption.remove();
   };
 
-  return { dispose };
+  return {
+    setCrankAngleDeg,
+    setPlaying,
+    setExteriorChecked,
+    setQualityMode,
+    dispose,
+  };
 }

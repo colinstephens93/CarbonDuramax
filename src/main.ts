@@ -1,10 +1,10 @@
-// Application entry point for Duramax LLY Engine Lab (Milestone 2: One Detailed Cylinder + Draft Studio Look).
+// Application entry point for Duramax LLY Engine Lab (Milestone 3: Full 8-Cylinder Engine + Studio Look).
 
 import { detailConfig } from './config/detailConfig';
 import { engineConfig } from './config/engineConfig';
 import { valveConfig } from './config/valveConfig';
 import { createEngineScene } from './renderer/engineScene';
-import { mountEngineUi } from './ui/engineControls';
+import { mountEngineUi, type UiQualityMode } from './ui/engineControls';
 
 const container = document.getElementById('app');
 if (!container) {
@@ -12,30 +12,114 @@ if (!container) {
 }
 
 const scene = createEngineScene(container, engineConfig, valveConfig, detailConfig);
-(window as unknown as { __engineScene?: typeof scene }).__engineScene = scene;
 
-const isBenchmark = new URLSearchParams(window.location.search).get('benchmark') === '1';
+const params = new URLSearchParams(window.location.search);
+const isBenchmark = params.get('benchmark') === '1';
 const cpuRenderSamplesMs: number[] = [];
 
-mountEngineUi(engineConfig, valveConfig, (state) => {
-  if (isBenchmark) {
-    const t0 = performance.now();
-    scene.update(state);
-    cpuRenderSamplesMs.push(performance.now() - t0);
-  } else {
-    scene.update(state);
-  }
-});
+const ui = mountEngineUi(
+  engineConfig,
+  valveConfig,
+  (state) => {
+    if (isBenchmark) {
+      const t0 = performance.now();
+      scene.update(state);
+      cpuRenderSamplesMs.push(performance.now() - t0);
+    } else {
+      scene.update(state);
+    }
+  },
+  {
+    onExteriorChange: (visible) => {
+      scene.setExteriorVisible(visible);
+    },
+    onQualityChange: (mode) => {
+      scene.setQualityMode(mode);
+    },
+  },
+);
 
-// Opt-in 10-second @ 900 RPM telemetry probe (`?benchmark=1`) used to record docs/M2-MEASUREMENTS.md.
-// Inactive during normal viewing (zero extra UI elements).
+(
+  window as unknown as {
+    __engineScene?: typeof scene;
+    __engineUi?: typeof ui;
+  }
+).__engineScene = scene;
+(
+  window as unknown as {
+    __engineScene?: typeof scene;
+    __engineUi?: typeof ui;
+  }
+).__engineUi = ui;
+
+const REFERENCE_FRAME_DEFS: Record<
+  string,
+  {
+    thetaDeg: number;
+    position: [number, number, number];
+    target: [number, number, number];
+    exterior: boolean;
+  }
+> = {
+  'RF-1': {
+    thetaDeg: 0,
+    position: [1.01, -0.78, 0.56],
+    target: [0.25, -0.01, 0.12],
+    exterior: false,
+  },
+  'RF-2': {
+    thetaDeg: 470,
+    position: [0.66, -0.38, 0.56],
+    target: [0.4025, -0.2, 0.255],
+    exterior: false,
+  },
+  'RF-3': {
+    thetaDeg: 180,
+    position: [1.38, -1.18, 0.72],
+    target: [0.3, -0.02, 0.17],
+    exterior: true,
+  },
+  'RF-4': {
+    thetaDeg: 705,
+    position: [0.23, -0.002, 1.18],
+    target: [0.23, 0.0, 0.14],
+    exterior: false,
+  },
+};
+
+const applyReferenceFrame = (frameId: string): boolean => {
+  const def = REFERENCE_FRAME_DEFS[frameId];
+  if (!def) return false;
+  ui.setQualityMode('full');
+  ui.setExteriorChecked(def.exterior);
+  scene.setCameraPose(def.position, def.target);
+  ui.setCrankAngleDeg(def.thetaDeg);
+  return true;
+};
+
+const requestedRf = params.get('rf')?.toUpperCase() ?? null;
+if (requestedRf) {
+  applyReferenceFrame(requestedRf);
+}
+
+// Opt-in 10-second @ 900 RPM telemetry probe (`?benchmark=1`, plus optional `&quality=full|phone&exterior=0|1`)
+// used to record docs/M2-MEASUREMENTS.md and docs/M3-MEASUREMENTS.md. Inactive during normal viewing.
 if (isBenchmark) {
+  const requestedQuality = params.get('quality');
+  if (requestedQuality === 'auto' || requestedQuality === 'full' || requestedQuality === 'phone') {
+    ui.setQualityMode(requestedQuality as UiQualityMode);
+  }
+  const requestedExterior = params.get('exterior');
+  if (requestedExterior === '1' || requestedExterior === '0') {
+    ui.setExteriorChecked(requestedExterior === '1');
+  }
+
   const readout = document.createElement('pre');
   readout.id = 'm2-benchmark-result';
   readout.style.cssText =
-    'position:fixed;top:12px;right:12px;z-index:50;margin:0;padding:10px 12px;' +
+    'position:fixed;top:12px;left:12px;z-index:50;margin:0;padding:10px 12px;' +
     'background:rgba(11,11,13,0.92);border:1px solid #334155;border-radius:8px;' +
-    'color:#e2e8f0;font:11px/1.45 ui-monospace,monospace;max-width:440px;white-space:pre-wrap;';
+    'color:#e2e8f0;font:11px/1.45 ui-monospace,monospace;max-width:460px;white-space:pre-wrap;';
   readout.textContent = 'STATUS: WAITING_FOR_ASSETS';
   document.body.appendChild(readout);
 
@@ -46,14 +130,14 @@ if (isBenchmark) {
 
   const sampleFrame = (nowMs: number): void => {
     const stats = scene.getRenderStats();
-    if (!stats.detailedLoaded || !stats.hdriLoaded) {
+    if (!stats.detailedLoaded || !stats.hdriLoaded || !stats.exteriorLoaded) {
       requestAnimationFrame(sampleFrame);
       return;
     }
 
-    if (warmupFrames < 30) {
+    if (warmupFrames < 60) {
       warmupFrames += 1;
-      readout.textContent = `STATUS: WARMUP (${warmupFrames}/30)`;
+      readout.textContent = `STATUS: WARMUP (${warmupFrames}/60)`;
       prevFrameMs = nowMs;
       requestAnimationFrame(sampleFrame);
       return;
@@ -110,7 +194,7 @@ if (isBenchmark) {
         renderInfo: stats,
         viewport: `${window.innerWidth}x${window.innerHeight}`,
         devicePixelRatio: window.devicePixelRatio,
-        effectivePixelRatio: Math.min(window.devicePixelRatio || 1, 2),
+        effectivePixelRatio: stats.effectivePixelRatio,
         gpuRenderer: scene.getGpuRenderer(),
         userAgent: navigator.userAgent,
       },

@@ -8,6 +8,8 @@ export interface DetailConfig {
   pistonSkirtClearanceMm: ProvenancedValue;
   wristPinDiameterMm: ProvenancedValue;
   pinJournalDiameterMm: ProvenancedValue;
+  pinJournalLengthMm: ProvenancedValue;
+  rodSeatOffsetMm: ProvenancedValue;
   crankWebThicknessMm: ProvenancedValue;
   crankWebRadiusMm: ProvenancedValue;
   valveIntakeHeadMm: ProvenancedValue;
@@ -28,6 +30,10 @@ export interface DetailConfig {
   pushrodLengthMm: ProvenancedValue;
   pushrodDiameterMm: ProvenancedValue;
   lifterTopBoreOffsetMm: ProvenancedValue;
+  lifterIntakeXOffsetMm: ProvenancedValue;
+  lifterExhaustXOffsetMm: ProvenancedValue;
+  lifterIntakeValleyOffsetMm: ProvenancedValue;
+  lifterExhaustValleyOffsetMm: ProvenancedValue;
   injectorBodyMm: ProvenancedValue;
   injectorLengthMm: ProvenancedValue;
 }
@@ -56,6 +62,18 @@ export const detailConfig: DetailConfig = {
     unit: 'mm',
     confidence: 'placeholder',
     source: 'D-011/D-012 placeholder policy; Rev C concept set crankpin journal diameter unknown',
+  },
+  pinJournalLengthMm: {
+    value: 58,
+    unit: 'mm',
+    confidence: 'placeholder',
+    source: 'M3 spec §3 — derived from rod big-end width (26.4 mm) and shared-pin pair clearance',
+  },
+  rodSeatOffsetMm: {
+    value: 14.2,
+    unit: 'mm',
+    confidence: 'placeholder',
+    source: 'M3 spec §3 — derived from rod big-end width (26.4 mm) with 2.0 mm inter-rod gap',
   },
   crankWebThicknessMm: {
     value: 18,
@@ -176,6 +194,30 @@ export const detailConfig: DetailConfig = {
     unit: 'mm',
     confidence: 'placeholder',
     source: 'D-011/D-012 placeholder policy; Rev C concept set (D10) cam/lifter bore height unknown',
+  },
+  lifterIntakeXOffsetMm: {
+    value: 56,
+    unit: 'mm',
+    confidence: 'placeholder',
+    source: 'M3 spec §4 — derived from cross-cylinder pushrod, lifter, and piston sweep clearance geometry',
+  },
+  lifterExhaustXOffsetMm: {
+    value: 35,
+    unit: 'mm',
+    confidence: 'placeholder',
+    source: 'M3 spec §4 — derived from cross-cylinder pushrod, lifter, and piston sweep clearance geometry',
+  },
+  lifterIntakeValleyOffsetMm: {
+    value: 36,
+    unit: 'mm',
+    confidence: 'placeholder',
+    source: 'M3 spec §4 — derived from cross-cylinder pushrod, lifter, and piston sweep clearance geometry',
+  },
+  lifterExhaustValleyOffsetMm: {
+    value: 55,
+    unit: 'mm',
+    confidence: 'placeholder',
+    source: 'M3 spec §4 — derived from cross-cylinder pushrod, lifter, and piston sweep clearance geometry',
   },
   injectorBodyMm: {
     value: 24,

@@ -424,7 +424,8 @@ describe('Milestone 2 GLB asset contract (src/assets/glbContract.test.ts)', () =
     expect(Math.abs(intakeDiamXMm - detailConfig.valveIntakeHeadMm.value)).toBeLessThanOrEqual(1.0);
     expect(Math.abs(intakeDiamZMm - detailConfig.valveIntakeHeadMm.value)).toBeLessThanOrEqual(1.0);
 
-    // Crankthrow pin node translation ≈ (0, +crankThrowMm, 0) within 0.5 mm per component
+    // Crankthrow pin node translation ≈ (0, +crankThrowMm, 0) within 0.5 mm per component,
+    // and M3 §3/§12.1 pin journal mesh length along file X ≈ pinJournalLengthMm ± 2 mm
     const throwGltf = parseGlbJson(resolve(MODELS_DIR, 'rot_crankthrow_c1_stock.glb'));
     const throwOriginM = getNodeWorldTranslationM(throwGltf, 'rot_crankthrow_c1_stock');
     const pinPosM = getNodeWorldTranslationM(throwGltf, 'rot_crankpin_c1_stock');
@@ -436,6 +437,15 @@ describe('Milestone 2 GLB asset contract (src/assets/glbContract.test.ts)', () =
     expect(Math.abs(pinRelMm[0] - 0)).toBeLessThanOrEqual(0.5);
     expect(Math.abs(pinRelMm[1] - engineConfig.crankThrowMm.value)).toBeLessThanOrEqual(0.5);
     expect(Math.abs(pinRelMm[2] - 0)).toBeLessThanOrEqual(0.5);
+
+    const pinNodeIdx = findNodeIndexByName(throwGltf, 'rot_crankpin_c1_stock');
+    const pinMeshIdx = throwGltf.nodes?.[pinNodeIdx]?.mesh;
+    expect(pinMeshIdx).toBeDefined();
+    const pinMeshBounds = computeMeshLocalBoundsM(throwGltf, pinMeshIdx!);
+    const pinJournalLengthXMm = pinMeshBounds.size[0] * 1000;
+    expect(Math.abs(pinJournalLengthXMm - detailConfig.pinJournalLengthMm.value)).toBeLessThanOrEqual(
+      2.0,
+    );
 
     // Head section spans one bore-pitch slice along X (-57.5..+57.5 mm per Revision 2)
     const headGltf = parseGlbJson(resolve(MODELS_DIR, 'sta_head_c1_stock.glb'));
