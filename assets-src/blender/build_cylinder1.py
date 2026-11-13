@@ -37,7 +37,7 @@ def parse_args() -> argparse.Namespace:
     else:
         script_args = []
 
-    parser = argparse.ArgumentParser(description="Build Milestone 2 Cylinder-1 GLBs.")
+    parser = argparse.ArgumentParser(description="Build Cylinder-1 / M3 detailed GLBs.")
     parser.add_argument(
         "--out",
         required=True,
@@ -47,6 +47,25 @@ def parse_args() -> argparse.Namespace:
         "--dimensions",
         default=None,
         help="Optional path to dimensions.json (defaults to assets-src/dimensions.json).",
+    )
+    parser.add_argument(
+        "--only",
+        nargs="+",
+        choices=[
+            "piston",
+            "conrod",
+            "crankthrow",
+            "head",
+            "valve_intake",
+            "valve_exhaust",
+            "pushrod_lifter",
+            "rockers",
+            "bridge",
+            "injector",
+            "fixture",
+        ],
+        default=None,
+        help="Optional subset of targets to regenerate (defaults to building all 10 GLBs + fixture).",
     )
     return parser.parse_args(script_args)
 
@@ -574,8 +593,9 @@ def build_crankthrow(d: dict[str, float], out_dir: Path) -> None:
     web_t = d["crankWebThicknessMm"] * MM_TO_M
     web_r = d["crankWebRadiusMm"] * MM_TO_M
 
-    # Pin journal half-width accommodates the conrod big end cleanly
-    pin_half_w = 0.245 * d["pinJournalDiameterMm"] * MM_TO_M
+    # M3 §3 shared-pin journal: length along X = pinJournalLengthMm (carries both rods of a station pair)
+    pin_half_w = 0.5 * d["pinJournalLengthMm"] * MM_TO_M
+    half_pitch = 0.5 * d["borePitch"] * MM_TO_M
     main_r = 1.08 * pin_r
 
     mat_web = make_pbr_material("mat_crank_web_steel", (0.32, 0.34, 0.38, 1.0), 0.90, 0.30)
@@ -611,8 +631,8 @@ def build_crankthrow(d: dict[str, float], out_dir: Path) -> None:
             x1 = pin_half_w + web_t
         add_extruded_polygon_x(bm, yz_pts, x0, x1, mat_index=0)
 
-        # Main journal stub on outer side of each web
-        stub_len = 0.72 * web_t
+        # Main journal stub on outer side of each web (clamped inside ±half_pitch station slice)
+        stub_len = min(0.72 * web_t, max(0.002, half_pitch - (pin_half_w + web_t)))
         sx0 = x0 - stub_len if sign_x < 0 else x1
         sx1 = x0 if sign_x < 0 else x1 + stub_len
         stub_profile = [
@@ -674,29 +694,102 @@ def build_head(d: dict[str, float], out_dir: Path) -> None:
     bm = bmesh.new()
 
     # Architectural deck slab spanning one bore-pitch slice X in [-half_pitch, +half_pitch] (-57.5..+57.5 mm),
-    # with inter-bore gallery recesses along the ±X faces so pushrods at |X| = cup_x (60 mm, inner edge 55.5 mm)
-    # pass completely clear outside the slice faces!
+    # with M3 §4 symmetric pushrod gallery recess windows on both ±X faces derived from the live pushrod
+    # line crossings across the slab band B in [deck_b + v_inset, deck_b + deck_plate_h].
     deck_plate_h = 0.28 * sp_seat_h
-    pr_clear_x = min(half_pitch, cup_x - 1.45 * pr_r)
     slab_half_y = v_row + 0.85 * v_in_r
-    pr_valley_w = d["pushrodValleyOffsetMm"] * MM_TO_M
-    cup_valley_w = d["rockerTailValleyOffsetMm"] * MM_TO_M
 
-    # Full ±half_pitch (-57.5..+57.5 mm) slice with inter-bore pushrod gallery scallops on ±X:
-    # +X scallop clears the angled intake pushrod; -X scallop clears the vertical exhaust pushrod.
+    deck_b_mm = d["crankThrowMm"] + d["rodLengthMm"] + d["pistonCompressionHeightMm"] + d["deckGap"]
+    b_lo_mm = deck_b_mm + d["valveInsetMm"]
+    b_hi_mm = deck_b_mm + (deck_plate_h / MM_TO_M)
+    b_shaft_mm = deck_b_mm + d["rockerShaftHeightMm"]
+    b_lifter_mm = d["lifterTopBoreOffsetMm"]
+    pr_r_mm = 0.5 * d["pushrodDiameterMm"]
+    pitch_mm = d["borePitch"]
+    half_pitch_mm = 0.5 * pitch_mm
+    cup_x_mm = d["rockerTailXOffsetMm"]
+    cup_w_mm = d["rockerTailValleyOffsetMm"]
+    pr_valley_mm = d["pushrodValleyOffsetMm"]
+    v_row_mm = d["valveRowOffsetMm"]
+    in_lx_mm = d["lifterIntakeXOffsetMm"]
+    in_lw_mm = d["lifterIntakeValleyOffsetMm"]
+    ex_lx_mm = -d["lifterExhaustXOffsetMm"]
+    ex_lw_mm = d["lifterExhaustValleyOffsetMm"]
+    slab_half_y_mm = slab_half_y / MM_TO_M
+
+    in_w_min_mm = float("inf")
+    in_w_max_mm = float("-inf")
+    ex_absx_min_mm = float("inf")
+    ex_w_min_mm = float("inf")
+    ex_w_max_mm = float("-inf")
+
+    for lift_mm in (0.0, d["maxLift"]):
+        th = math.asin(min(1.0, max(0.0, lift_mm / v_row_mm)))
+        rise_mm = cup_w_mm * math.sin(th)
+        # Rear neighbor's intake pushrod crossing the -X face (shifted by -borePitch)
+        p0 = (in_lx_mm - pitch_mm, in_lw_mm, b_lifter_mm + rise_mm)
+        p1 = (cup_x_mm - pitch_mm, -cup_w_mm * math.cos(th), b_shaft_mm + rise_mm)
+        # Own cylinder's exhaust pushrod crossing the -X face
+        q0 = (ex_lx_mm, ex_lw_mm, b_lifter_mm + rise_mm)
+        q1 = (-cup_x_mm, +cup_w_mm * math.cos(th), b_shaft_mm + rise_mm)
+        for b_mm in (b_lo_mm, b_hi_mm):
+            ti = (b_mm - p0[2]) / (p1[2] - p0[2])
+            wi = p0[1] + ti * (p1[1] - p0[1])
+            in_w_min_mm = min(in_w_min_mm, wi - pr_r_mm)
+            in_w_max_mm = max(in_w_max_mm, wi + pr_r_mm)
+
+            te = (b_mm - q0[2]) / (q1[2] - q0[2])
+            xe = q0[0] + te * (q1[0] - q0[0])
+            we = q0[1] + te * (q1[1] - q0[1])
+            ex_absx_min_mm = min(ex_absx_min_mm, abs(xe) - pr_r_mm)
+            ex_w_min_mm = min(ex_w_min_mm, we - pr_r_mm)
+            ex_w_max_mm = max(ex_w_max_mm, we + pr_r_mm)
+
+    recess_floor_mm = ex_absx_min_mm - 0.10 * pr_r_mm
+    win1_w0_mm = min(in_w_min_mm - pr_r_mm, -0.45 * pr_valley_mm)
+    win1_w1_mm = max(in_w_max_mm + 0.35 * pr_r_mm, 0.60 * pr_valley_mm)
+    win2_w0_mm = ex_w_min_mm - 0.60 * pr_r_mm
+    win2_w1_mm = ex_w_max_mm + 0.40 * pr_r_mm
+
+    # Spec §4 recess-window parameter assertions (logged so headless builds verify interior cutouts)
+    assert recess_floor_mm <= 43.0, (
+        f"Head deck recess floor |X|={recess_floor_mm:.3f} mm exceeds M3 §4 limit 43.0 mm"
+    )
+    assert win1_w0_mm <= -8.0 and win1_w1_mm >= 11.0, (
+        f"Head deck lower recess window [{win1_w0_mm:.3f}, {win1_w1_mm:.3f}] mm fails to cover [-8.0, +11.0] mm"
+    )
+    assert win2_w0_mm <= 26.0 and win2_w1_mm >= 41.0 and win2_w1_mm > slab_half_y_mm, (
+        f"Head deck upper recess window [{win2_w0_mm:.3f}, {win2_w1_mm:.3f}] mm fails to cover [+26.0, +41.0] mm"
+    )
+    print(
+        f"[M3 §4 head recess assertion PASS] recess_floor_x={recess_floor_mm:.3f} mm (<= 43.0); "
+        f"window_1_w=[{win1_w0_mm:.3f}, {win1_w1_mm:.3f}] mm (covers [-8.0, +11.0]); "
+        f"window_2_w=[{win2_w0_mm:.3f}, {win2_w1_mm:.3f}] mm (covers [+26.0, +41.0], opens valley edge {slab_half_y_mm:.2f} mm)"
+    )
+
+    rf = recess_floor_mm * MM_TO_M
+    w1_lo = win1_w0_mm * MM_TO_M
+    w1_hi = win1_w1_mm * MM_TO_M
+    w2_lo = win2_w0_mm * MM_TO_M
+
+    # Symmetric CCW deck polygon carrying both recess windows on both ±X faces (window 2 opens +Y valley edge)
     deck_xy = [
         (-half_pitch, -slab_half_y),
-        (half_pitch, -slab_half_y),
-        (half_pitch, -1.20 * cup_valley_w),
-        (pr_clear_x, -0.90 * cup_valley_w),
-        (pr_clear_x, 0.90 * pr_valley_w),
-        (half_pitch, 1.20 * pr_valley_w),
-        (half_pitch, slab_half_y),
-        (-half_pitch, slab_half_y),
-        (-half_pitch, 1.60 * pr_valley_w),
-        (-pr_clear_x, 1.42 * pr_valley_w),
-        (-pr_clear_x, 0.45 * pr_valley_w),
-        (-half_pitch, 0.25 * pr_valley_w),
+        (+half_pitch, -slab_half_y),
+        (+half_pitch, w1_lo),
+        (+rf, w1_lo),
+        (+rf, w1_hi),
+        (+half_pitch, w1_hi),
+        (+half_pitch, w2_lo),
+        (+rf, w2_lo),
+        (+rf, +slab_half_y),
+        (-rf, +slab_half_y),
+        (-rf, w2_lo),
+        (-half_pitch, w2_lo),
+        (-half_pitch, w1_hi),
+        (-rf, w1_hi),
+        (-rf, w1_lo),
+        (-half_pitch, w1_lo),
     ]
     add_extruded_polygon_z(bm, deck_xy, v_inset, deck_plate_h, mat_index=0)
 
@@ -1331,19 +1424,38 @@ def main() -> None:
     with dims_path.open("r", encoding="utf-8") as fh:
         dims: dict[str, float] = json.load(fh)
 
-    build_piston(dims, out_dir)
-    build_conrod(dims, out_dir)
-    build_crankthrow(dims, out_dir)
-    build_head(dims, out_dir)
-    build_valve_and_spring(dims, out_dir, "intake", "valveIntakeHeadMm")
-    build_valve_and_spring(dims, out_dir, "exhaust", "valveExhaustHeadMm")
-    build_pushrod_and_lifter(dims, out_dir)
-    build_rockers(dims, out_dir)
-    build_bridge(dims, out_dir)
-    build_injector(dims, out_dir)
-    build_axis_fixture(fixture_path)
+    targets = set(args.only) if args.only else None
 
-    print(f"Successfully built 10 part GLBs in {out_dir} and axis fixture at {fixture_path}")
+    def want(target: str) -> bool:
+        return targets is None or target in targets
+
+    if want("piston"):
+        build_piston(dims, out_dir)
+    if want("conrod"):
+        build_conrod(dims, out_dir)
+    if want("crankthrow"):
+        build_crankthrow(dims, out_dir)
+    if want("head"):
+        build_head(dims, out_dir)
+    if want("valve_intake"):
+        build_valve_and_spring(dims, out_dir, "intake", "valveIntakeHeadMm")
+    if want("valve_exhaust"):
+        build_valve_and_spring(dims, out_dir, "exhaust", "valveExhaustHeadMm")
+    if want("pushrod_lifter"):
+        build_pushrod_and_lifter(dims, out_dir)
+    if want("rockers"):
+        build_rockers(dims, out_dir)
+    if want("bridge"):
+        build_bridge(dims, out_dir)
+    if want("injector"):
+        build_injector(dims, out_dir)
+    if want("fixture"):
+        build_axis_fixture(fixture_path)
+
+    if targets is None:
+        print(f"Successfully built 10 part GLBs in {out_dir} and axis fixture at {fixture_path}")
+    else:
+        print(f"Successfully built selected targets {sorted(targets)} in {out_dir}")
 
 
 if __name__ == "__main__":

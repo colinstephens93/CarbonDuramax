@@ -10,6 +10,8 @@
   "pistonSkirtClearanceMm": 0.15,
   "wristPinDiameterMm": 33,
   "pinJournalDiameterMm": 60,
+  "pinJournalLengthMm": 58,
+  "rodSeatOffsetMm": 14.2,
   "crankWebThicknessMm": 18,
   "crankWebRadiusMm": 62,
   "valveIntakeHeadMm": 38,
@@ -30,6 +32,10 @@
   "pushrodLengthMm": 246,
   "pushrodDiameterMm": 9,
   "lifterTopBoreOffsetMm": 130,
+  "lifterIntakeXOffsetMm": 56,
+  "lifterExhaustXOffsetMm": 35,
+  "lifterIntakeValleyOffsetMm": 36,
+  "lifterExhaustValleyOffsetMm": 55,
   "injectorBodyMm": 24,
   "injectorLengthMm": 120
 }
