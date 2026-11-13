@@ -1,1 +1,3 @@
-// Web UI module placeholder (populated in Milestone 1+).
+// Web UI module exports (Milestone 1).
+
+export { mountEngineUi, type EngineUiHandle } from './engineControls';

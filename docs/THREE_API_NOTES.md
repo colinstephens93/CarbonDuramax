@@ -53,3 +53,12 @@ Both `three/package.json` and `@types/three/package.json` export `./addons/*` an
 - **KTX2 texture loader:** `import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';`
 - **Meshopt decoder:** `import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';`
 - **Orbit camera controls:** `import { OrbitControls } from 'three/addons/controls/OrbitControls.js';`
+
+## Milestone 1 Primitive Scene APIs (`0.187.0`)
+
+- **`OrbitControls` & `camera.up` (Z-up project frame):** `new OrbitControls(object, domElement)` captures `object.up` at construction time (`this._quat = new Quaternion().setFromUnitVectors(object.up, new Vector3(0, 1, 0))`). Set `camera.up.set(0, 0, 1)` **before** instantiating `OrbitControls` so `+Z` is the vertical orbit axis. When `controls.enableDamping = true` (default `false`, `dampingFactor = 0.05`), `controls.update()` must be called every frame; `controls.dispose()` detaches DOM listeners.
+- **`Object3D.lookAt` axis convention:** On `Camera` and `Light` instances, `lookAt(target)` points local `-Z` toward `target`; on `Mesh` / generic `Object3D` instances, `lookAt(target)` points **local `+Z`** toward `target` using `object.up`.
+- **Primitive geometries & wireframes:**
+  - `CylinderGeometry(radiusTop = 1, radiusBottom = 1, height = 1, radialSegments = 32, ...)` builds a cylinder centered at the origin along **local `+Y`** (`[-height/2, +height/2]`). `BufferGeometry.rotateX(rad)` / `rotateZ(rad)` transforms vertex attributes in place once at creation.
+  - `EdgesGeometry(geometry = null, thresholdAngle = 1)` paired with `LineSegments(edges, new LineBasicMaterial(...))` renders hard-edge wireframes for static `BoxGeometry` enclosures.
+- **Materials & lighting:** `HemisphereLight(skyColor, groundColor, intensity)` and `DirectionalLight(color, intensity)` illuminate `MeshStandardMaterial` meshes (`emissive` `Color` + `emissiveIntensity` `number` used for firing-window piston highlights).
