@@ -20,6 +20,13 @@
         position: fixed;
         inset: 0;
       }
+      #labels-layer {
+        position: fixed;
+        inset: 0;
+        overflow: hidden;
+        pointer-events: none;
+        z-index: 10;
+      }
       #title-banner {
         position: fixed;
         top: 16px;
@@ -43,9 +50,10 @@
   <body>
     <div id="title-banner">
       <h1>Duramax LLY Engine Lab</h1>
-      <p>Milestone 0 — Foundations renderer smoke check</p>
+      <p>Milestone 4 — Views: Explode, Cutaway, X-Ray, Labels</p>
     </div>
     <div id="app"></div>
+    <div id="labels-layer" aria-hidden="true"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

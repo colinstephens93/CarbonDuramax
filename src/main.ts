@@ -1,10 +1,15 @@
-// Application entry point for Duramax LLY Engine Lab (Milestone 3: Full 8-Cylinder Engine + Studio Look).
+// Application entry point for Duramax LLY Engine Lab (Milestone 4: Views — Explode, Cutaway, X-Ray, Labels).
 
 import { detailConfig } from './config/detailConfig';
 import { engineConfig } from './config/engineConfig';
 import { valveConfig } from './config/valveConfig';
 import { createEngineScene } from './renderer/engineScene';
-import { mountEngineUi, type UiQualityMode } from './ui/engineControls';
+import {
+  mountEngineUi,
+  type EngineUiHandle,
+  type UiQualityMode,
+  type UiSectionMode,
+} from './ui/engineControls';
 
 const container = document.getElementById('app');
 if (!container) {
@@ -17,6 +22,15 @@ const params = new URLSearchParams(window.location.search);
 const isBenchmark = params.get('benchmark') === '1';
 const cpuRenderSamplesMs: number[] = [];
 
+let labelsEnabled = false;
+let uiRef: EngineUiHandle | null = null;
+
+const refreshLabelsIfEnabled = (): void => {
+  if (labelsEnabled && uiRef) {
+    uiRef.updateLabels(scene.projectLabelAnchors(window.innerWidth, window.innerHeight));
+  }
+};
+
 const ui = mountEngineUi(
   engineConfig,
   valveConfig,
@@ -24,20 +38,40 @@ const ui = mountEngineUi(
     if (isBenchmark) {
       const t0 = performance.now();
       scene.update(state);
+      refreshLabelsIfEnabled();
       cpuRenderSamplesMs.push(performance.now() - t0);
     } else {
       scene.update(state);
+      refreshLabelsIfEnabled();
     }
   },
   {
     onExteriorChange: (visible) => {
       scene.setExteriorVisible(visible);
+      refreshLabelsIfEnabled();
     },
     onQualityChange: (mode) => {
       scene.setQualityMode(mode);
     },
+    onExplodeChange: (explodeFactor) => {
+      scene.setExplodeFactor(explodeFactor);
+      refreshLabelsIfEnabled();
+    },
+    onSectionChange: (mode, positionMm) => {
+      scene.setSectionState(mode, positionMm);
+      refreshLabelsIfEnabled();
+    },
+    onXrayChange: (enabled) => {
+      scene.setXrayEnabled(enabled);
+      refreshLabelsIfEnabled();
+    },
+    onLabelsChange: (enabled) => {
+      labelsEnabled = enabled;
+      refreshLabelsIfEnabled();
+    },
   },
 );
+uiRef = ui;
 
 (
   window as unknown as {
@@ -52,15 +86,19 @@ const ui = mountEngineUi(
   }
 ).__engineUi = ui;
 
-const REFERENCE_FRAME_DEFS: Record<
-  string,
-  {
-    thetaDeg: number;
-    position: [number, number, number];
-    target: [number, number, number];
-    exterior: boolean;
-  }
-> = {
+interface ReferenceFrameDef {
+  thetaDeg: number;
+  position: [number, number, number];
+  target: [number, number, number];
+  exterior: boolean;
+  explodePercent?: number;
+  sectionMode?: UiSectionMode;
+  sectionPositionMm?: number;
+  xray?: boolean;
+  labels?: boolean;
+}
+
+const REFERENCE_FRAME_DEFS: Record<string, ReferenceFrameDef> = {
   'RF-1': {
     thetaDeg: 0,
     position: [1.01, -0.78, 0.56],
@@ -85,6 +123,31 @@ const REFERENCE_FRAME_DEFS: Record<
     target: [0.23, 0.0, 0.14],
     exterior: false,
   },
+  'RF-5': {
+    thetaDeg: 90,
+    position: [1.28, -1.08, 0.74],
+    target: [0.31, -0.05, 0.18],
+    exterior: false,
+    explodePercent: 100,
+    labels: true,
+  },
+  'RF-6': {
+    thetaDeg: 0,
+    position: [1.06, -0.54, 0.48],
+    target: [0.29, -0.02, 0.14],
+    exterior: false,
+    explodePercent: 0,
+    sectionMode: 'x',
+    sectionPositionMm: 402.5,
+  },
+  'RF-7': {
+    thetaDeg: 180,
+    position: [1.38, -1.18, 0.72],
+    target: [0.3, -0.02, 0.17],
+    exterior: true,
+    explodePercent: 0,
+    xray: true,
+  },
 };
 
 const applyReferenceFrame = (frameId: string): boolean => {
@@ -92,6 +155,13 @@ const applyReferenceFrame = (frameId: string): boolean => {
   if (!def) return false;
   ui.setQualityMode('full');
   ui.setExteriorChecked(def.exterior);
+  ui.setExplodePercent(def.explodePercent ?? 0);
+  ui.setSectionMode(def.sectionMode ?? 'off');
+  if (def.sectionPositionMm !== undefined) {
+    ui.setSectionPositionMm(def.sectionPositionMm);
+  }
+  ui.setXrayChecked(def.xray ?? false);
+  ui.setLabelsChecked(def.labels ?? false);
   scene.setCameraPose(def.position, def.target);
   ui.setCrankAngleDeg(def.thetaDeg);
   return true;
@@ -102,8 +172,9 @@ if (requestedRf) {
   applyReferenceFrame(requestedRf);
 }
 
-// Opt-in 10-second @ 900 RPM telemetry probe (`?benchmark=1`, plus optional `&quality=full|phone&exterior=0|1`)
-// used to record docs/M2-MEASUREMENTS.md and docs/M3-MEASUREMENTS.md. Inactive during normal viewing.
+// Opt-in 10-second @ 900 RPM telemetry probe (`?benchmark=1`, plus optional
+// `&quality=full|phone&exterior=0|1&explode=0..100&section=off|x|y&sectionPos=<mm>&xray=0|1&labels=0|1`)
+// used to record docs/M2-MEASUREMENTS.md, docs/M3-MEASUREMENTS.md, and docs/M4-MEASUREMENTS.md.
 if (isBenchmark) {
   const requestedQuality = params.get('quality');
   if (requestedQuality === 'auto' || requestedQuality === 'full' || requestedQuality === 'phone') {
@@ -112,6 +183,32 @@ if (isBenchmark) {
   const requestedExterior = params.get('exterior');
   if (requestedExterior === '1' || requestedExterior === '0') {
     ui.setExteriorChecked(requestedExterior === '1');
+  }
+  const requestedExplode = params.get('explode');
+  if (requestedExplode !== null && requestedExplode !== '') {
+    const parsedExplode = Number(requestedExplode);
+    if (Number.isFinite(parsedExplode)) {
+      ui.setExplodePercent(parsedExplode);
+    }
+  }
+  const requestedSection = params.get('section')?.toLowerCase();
+  if (requestedSection === 'off' || requestedSection === 'x' || requestedSection === 'y') {
+    ui.setSectionMode(requestedSection as UiSectionMode);
+  }
+  const requestedSectionPos = params.get('sectionPos');
+  if (requestedSectionPos !== null && requestedSectionPos !== '') {
+    const parsedSectionPos = Number(requestedSectionPos);
+    if (Number.isFinite(parsedSectionPos)) {
+      ui.setSectionPositionMm(parsedSectionPos);
+    }
+  }
+  const requestedXray = params.get('xray');
+  if (requestedXray === '1' || requestedXray === '0') {
+    ui.setXrayChecked(requestedXray === '1');
+  }
+  const requestedLabels = params.get('labels');
+  if (requestedLabels === '1' || requestedLabels === '0') {
+    ui.setLabelsChecked(requestedLabels === '1');
   }
 
   const readout = document.createElement('pre');

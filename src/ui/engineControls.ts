@@ -1,5 +1,6 @@
-// Plain-DOM UI controls, readouts, Exterior toggle, Quality profile selector, illustrative caption,
-// and rAF loop for Milestone 3 (D-007, D-012, D-034; docs/specs/M3-full-engine.md §§5, 7, 8).
+// Plain-DOM UI controls, readouts, Exterior & Quality controls, Milestone 4 Views group
+// (Explode, Section cutaway, X-Ray, Labels + overlay chips), illustrative caption, and rAF loop
+// (D-007, D-012, D-034; docs/specs/M4-views.md §§3–8).
 // Never imports Three.js; drives the renderer strictly through callbacks.
 
 import type { ValveConfig } from '../config/valveConfig';
@@ -7,6 +8,15 @@ import type { CrankState, CylinderId, EngineConfig } from '../core/interfaces';
 import { computeState, phaseOffsetDeg } from '../core/kinematics';
 
 export type UiQualityMode = 'auto' | 'full' | 'phone';
+export type UiSectionMode = 'off' | 'x' | 'y';
+
+export interface UiProjectedLabel {
+  readonly id: string;
+  readonly text: string;
+  readonly xPx: number;
+  readonly yPx: number;
+  readonly visible: boolean;
+}
 
 const CYLINDERS: readonly CylinderId[] = [1, 2, 3, 4, 5, 6, 7, 8];
 const SPEED_OPTIONS = [
@@ -20,6 +30,19 @@ const QUALITY_OPTIONS: ReadonlyArray<{ value: UiQualityMode; label: string }> = 
   { value: 'full', label: 'Full' },
   { value: 'phone', label: 'Phone' },
 ];
+
+const SECTION_OPTIONS: ReadonlyArray<{ value: UiSectionMode; label: string }> = [
+  { value: 'off', label: 'Off' },
+  { value: 'x', label: 'Front–Back (X)' },
+  { value: 'y', label: 'Side (Y)' },
+];
+
+const UI_SECTION_RANGES_MM: Readonly<
+  Record<'x' | 'y', { minMm: number; maxMm: number; defaultMm: number; stepMm: number }>
+> = {
+  x: { minMm: -150, maxMm: 900, defaultMm: 900, stepMm: 0.5 },
+  y: { minMm: -580, maxMm: 580, defaultMm: 580, stepMm: 0.5 },
+};
 
 type SpeedMultiplier = (typeof SPEED_OPTIONS)[number]['multiplier'];
 
@@ -52,6 +75,10 @@ function formatEffectiveRpm(effectiveRpm: number): string {
   return effectiveRpm >= 10 ? effectiveRpm.toFixed(1) : effectiveRpm.toFixed(2);
 }
 
+function formatMmValue(mm: number): string {
+  return Number.isInteger(mm) ? `${mm} mm` : `${mm.toFixed(1)} mm`;
+}
+
 function injectStyles(): void {
   if (document.getElementById('m1-ui-styles')) {
     return;
@@ -65,7 +92,10 @@ function injectStyles(): void {
       right: 16px;
       z-index: 20;
       width: min(340px, calc(100vw - 32px));
-      padding: 14px 16px;
+      max-height: calc(100vh - 32px);
+      overflow-y: auto;
+      box-sizing: border-box;
+      padding: 13px 15px;
       border-radius: 12px;
       background: rgba(15, 23, 42, 0.86);
       border: 1px solid rgba(148, 163, 184, 0.22);
@@ -80,10 +110,10 @@ function injectStyles(): void {
       align-items: center;
       justify-content: space-between;
       gap: 10px;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
     .m1-play-btn {
-      padding: 7px 16px;
+      padding: 6px 15px;
       border-radius: 7px;
       border: 1px solid rgba(56, 189, 248, 0.45);
       background: rgba(14, 116, 144, 0.45);
@@ -121,13 +151,13 @@ function injectStyles(): void {
       color: #f8fafc;
     }
     .m1-control-group {
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
     .m1-label-row {
       display: flex;
       justify-content: space-between;
       align-items: baseline;
-      margin-bottom: 4px;
+      margin-bottom: 3px;
       font-size: 12px;
       color: #cbd5e1;
     }
@@ -137,13 +167,17 @@ function injectStyles(): void {
       accent-color: #38bdf8;
       cursor: pointer;
     }
+    .m1-slider:disabled {
+      opacity: 0.42;
+      cursor: not-allowed;
+    }
     .m3-options-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 10px;
-      padding: 8px 10px;
-      margin-bottom: 12px;
+      padding: 7px 10px;
+      margin-bottom: 10px;
       border-radius: 8px;
       background: rgba(30, 41, 59, 0.55);
       border: 1px solid rgba(148, 163, 184, 0.16);
@@ -181,14 +215,54 @@ function injectStyles(): void {
       font-weight: 600;
       cursor: pointer;
     }
+    .m4-views-group {
+      padding: 9px 10px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      background: rgba(30, 41, 59, 0.55);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+    }
+    .m4-views-title {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #94a3b8;
+      margin-bottom: 7px;
+    }
+    .m4-view-item {
+      margin-bottom: 8px;
+    }
+    .m4-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 5px;
+      font-size: 12px;
+      color: #cbd5e1;
+    }
+    .m4-toggles-row {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      margin-top: 6px;
+      margin-bottom: 6px;
+    }
+    .m4-cutaway-note {
+      margin: 0;
+      font-size: 10.5px;
+      line-height: 1.35;
+      color: #94a3b8;
+    }
     .m1-readout-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 8px;
-      margin-top: 4px;
+      margin-top: 2px;
     }
     .m1-readout-card {
-      padding: 7px 9px;
+      padding: 6px 9px;
       border-radius: 8px;
       background: rgba(30, 41, 59, 0.65);
       border: 1px solid rgba(148, 163, 184, 0.14);
@@ -208,6 +282,40 @@ function injectStyles(): void {
     }
     .m1-firing-value {
       color: #fb923c;
+    }
+    #labels-layer {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 10;
+    }
+    .m4-label-chip {
+      position: absolute;
+      left: 0;
+      top: 0;
+      padding: 2px 7px;
+      border-radius: 5px;
+      background: rgba(15, 23, 42, 0.84);
+      border: 1px solid rgba(148, 163, 184, 0.34);
+      color: #e2e8f0;
+      font-size: 11px;
+      font-weight: 500;
+      line-height: 1.3;
+      white-space: nowrap;
+      pointer-events: none;
+      user-select: none;
+      will-change: transform;
+    }
+    .m4-label-chip.m4-label-cyl {
+      padding: 1px 5px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.88);
+      border-color: rgba(56, 189, 248, 0.44);
+      color: #7dd3fc;
+      font-size: 10px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
     }
     #title-banner,
     #m1-illustrative-caption {
@@ -235,6 +343,7 @@ function injectStyles(): void {
         right: 12px;
         left: 12px;
         width: auto;
+        max-height: 52vh;
       }
       #m1-illustrative-caption {
         left: 12px;
@@ -251,6 +360,10 @@ function injectStyles(): void {
 export interface EngineUiOptions {
   onExteriorChange?: (visible: boolean) => void;
   onQualityChange?: (mode: UiQualityMode) => void;
+  onExplodeChange?: (explodeFactor: number) => void;
+  onSectionChange?: (mode: UiSectionMode, positionMm: number) => void;
+  onXrayChange?: (enabled: boolean) => void;
+  onLabelsChange?: (enabled: boolean) => void;
 }
 
 export interface EngineUiHandle {
@@ -258,6 +371,12 @@ export interface EngineUiHandle {
   setPlaying(playing: boolean): void;
   setExteriorChecked(checked: boolean): void;
   setQualityMode(mode: UiQualityMode): void;
+  setExplodePercent(percent: number): void;
+  setSectionMode(mode: UiSectionMode): void;
+  setSectionPositionMm(posMm: number): void;
+  setXrayChecked(checked: boolean): void;
+  setLabelsChecked(checked: boolean): void;
+  updateLabels(labels: readonly UiProjectedLabel[]): void;
   dispose(): void;
 }
 
@@ -271,7 +390,7 @@ export function mountEngineUi(
 
   const bannerSubtitle = document.querySelector('#title-banner p');
   if (bannerSubtitle) {
-    bannerSubtitle.textContent = 'Milestone 3 — Full 8-Cylinder Detailed Engine + Studio Look';
+    bannerSubtitle.textContent = 'Milestone 4 — Views: Explode, Cutaway, X-Ray, Labels';
   }
 
   let isPlaying = true;
@@ -280,9 +399,27 @@ export function mountEngineUi(
   let crankAngleDeg = 0;
   let isScrubbing = false;
 
+  // Milestone 4 view states (defaults per Spec §7)
+  let sectionMode: UiSectionMode = 'off';
+  let sectionPositionMm = UI_SECTION_RANGES_MM.x.defaultMm;
+  let labelsChecked = false;
+
+  // Fixed overlay layer at z-index 10 (canvas below, control panel at 20 above it, Spec §6)
+  let createdLabelsLayer = false;
+  let labelsLayer = document.getElementById('labels-layer');
+  if (!labelsLayer) {
+    labelsLayer = document.createElement('div');
+    labelsLayer.id = 'labels-layer';
+    labelsLayer.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(labelsLayer);
+    createdLabelsLayer = true;
+  }
+  labelsLayer.style.display = 'none';
+  const labelNodesById = new Map<string, HTMLDivElement>();
+
   const panel = document.createElement('section');
   panel.id = 'm1-control-panel';
-  panel.setAttribute('aria-label', 'Engine kinematic controls');
+  panel.setAttribute('aria-label', 'Engine kinematic and view controls');
 
   // Top row: Play/Pause + Slow-motion selector (1x / 0.1x / 0.01x)
   const topRow = document.createElement('div');
@@ -407,6 +544,118 @@ export function mountEngineUi(
 
   optionsRow.append(exteriorLabel, qualityWrap);
 
+  // Milestone 4 Views group (Spec §7 exact order: Explode slider, Section selector + Section position slider,
+  // X-Ray checkbox, Labels checkbox, cutaway open-shells note)
+  const viewsGroup = document.createElement('div');
+  viewsGroup.className = 'm4-views-group';
+  viewsGroup.setAttribute('role', 'group');
+  viewsGroup.setAttribute('aria-label', 'Views');
+
+  const viewsTitle = document.createElement('div');
+  viewsTitle.className = 'm4-views-title';
+  viewsTitle.textContent = 'Views';
+
+  // 1. Explode slider (0-100%)
+  const explodeWrap = document.createElement('div');
+  explodeWrap.className = 'm4-view-item';
+
+  const explodeLabelRow = document.createElement('div');
+  explodeLabelRow.className = 'm1-label-row';
+  const explodeLabel = document.createElement('label');
+  explodeLabel.htmlFor = 'm4-explode-slider';
+  explodeLabel.textContent = 'Explode';
+  const explodeInlineValue = document.createElement('span');
+  explodeInlineValue.textContent = '0%';
+  explodeLabelRow.append(explodeLabel, explodeInlineValue);
+
+  const explodeSlider = document.createElement('input');
+  explodeSlider.id = 'm4-explode-slider';
+  explodeSlider.className = 'm1-slider';
+  explodeSlider.type = 'range';
+  explodeSlider.min = '0';
+  explodeSlider.max = '100';
+  explodeSlider.step = '1';
+  explodeSlider.value = '0';
+  explodeWrap.append(explodeLabelRow, explodeSlider);
+
+  // 2. Section selector + Section position slider
+  const sectionWrap = document.createElement('div');
+  sectionWrap.className = 'm4-view-item';
+
+  const sectionHeader = document.createElement('div');
+  sectionHeader.className = 'm4-section-header';
+  const sectionSelectLabel = document.createElement('label');
+  sectionSelectLabel.htmlFor = 'm4-section-select';
+  sectionSelectLabel.textContent = 'Section';
+
+  const sectionSelect = document.createElement('select');
+  sectionSelect.id = 'm4-section-select';
+  sectionSelect.className = 'm3-quality-select';
+  for (const opt of SECTION_OPTIONS) {
+    const optEl = document.createElement('option');
+    optEl.value = opt.value;
+    optEl.textContent = opt.label;
+    sectionSelect.appendChild(optEl);
+  }
+  sectionSelect.value = 'off';
+  sectionHeader.append(sectionSelectLabel, sectionSelect);
+
+  const sectionPosLabelRow = document.createElement('div');
+  sectionPosLabelRow.className = 'm1-label-row';
+  const sectionPosLabel = document.createElement('label');
+  sectionPosLabel.htmlFor = 'm4-section-pos-slider';
+  sectionPosLabel.textContent = 'Section position';
+  const sectionPosInlineValue = document.createElement('span');
+  sectionPosInlineValue.textContent = 'Off';
+  sectionPosLabelRow.append(sectionPosLabel, sectionPosInlineValue);
+
+  const sectionPosSlider = document.createElement('input');
+  sectionPosSlider.id = 'm4-section-pos-slider';
+  sectionPosSlider.className = 'm1-slider';
+  sectionPosSlider.type = 'range';
+  sectionPosSlider.min = String(UI_SECTION_RANGES_MM.x.minMm);
+  sectionPosSlider.max = String(UI_SECTION_RANGES_MM.x.maxMm);
+  sectionPosSlider.step = String(UI_SECTION_RANGES_MM.x.stepMm);
+  sectionPosSlider.value = String(UI_SECTION_RANGES_MM.x.defaultMm);
+  sectionPosSlider.disabled = true;
+
+  sectionWrap.append(sectionHeader, sectionPosLabelRow, sectionPosSlider);
+
+  // 3 & 4. X-Ray checkbox + Labels checkbox
+  const viewTogglesRow = document.createElement('div');
+  viewTogglesRow.className = 'm4-toggles-row';
+
+  const xrayLabel = document.createElement('label');
+  xrayLabel.className = 'm3-checkbox-label';
+  xrayLabel.htmlFor = 'm4-xray-checkbox';
+  const xrayCheckbox = document.createElement('input');
+  xrayCheckbox.id = 'm4-xray-checkbox';
+  xrayCheckbox.type = 'checkbox';
+  xrayCheckbox.checked = false;
+  const xrayText = document.createElement('span');
+  xrayText.textContent = 'X-Ray';
+  xrayLabel.append(xrayCheckbox, xrayText);
+
+  const labelsToggleLabel = document.createElement('label');
+  labelsToggleLabel.className = 'm3-checkbox-label';
+  labelsToggleLabel.htmlFor = 'm4-labels-checkbox';
+  const labelsCheckbox = document.createElement('input');
+  labelsCheckbox.id = 'm4-labels-checkbox';
+  labelsCheckbox.type = 'checkbox';
+  labelsCheckbox.checked = false;
+  const labelsToggleText = document.createElement('span');
+  labelsToggleText.textContent = 'Labels';
+  labelsToggleLabel.append(labelsCheckbox, labelsToggleText);
+
+  viewTogglesRow.append(xrayLabel, labelsToggleLabel);
+
+  // 5. Cutaway note (exact text per Spec §7)
+  const cutawayNote = document.createElement('p');
+  cutawayNote.className = 'm4-cutaway-note';
+  cutawayNote.textContent = 'Cutaway shows open shells — capped solid sections come later.';
+
+  viewsGroup.append(viewsTitle, explodeWrap, sectionWrap, viewTogglesRow, cutawayNote);
+
   // Readout cards: Crank Angle, RPM, Effective Speed, Firing Cylinder
   const readoutGrid = document.createElement('div');
   readoutGrid.className = 'm1-readout-grid';
@@ -429,10 +678,10 @@ export function mountEngineUi(
   const effectiveSpeedReadout = createReadoutCard('Effective Speed');
   const firingCylReadout = createReadoutCard('Firing Cylinder', 'm1-firing-value');
 
-  panel.append(topRow, rpmGroup, scrubGroup, optionsRow, readoutGrid);
+  panel.append(topRow, rpmGroup, scrubGroup, optionsRow, viewsGroup, readoutGrid);
   document.body.appendChild(panel);
 
-  // On-screen illustrative caption (exact text per Spec §7)
+  // On-screen illustrative caption (unchanged per Spec §7)
   const caption = document.createElement('div');
   caption.id = 'm1-illustrative-caption';
   caption.textContent =
@@ -468,6 +717,95 @@ export function mountEngineUi(
     firingCylReadout.textContent = `Cyl ${firingCyl} (${bank})`;
   };
 
+  const applyExplodePercentInternal = (rawPercent: number): void => {
+    const clamped = Number.isFinite(rawPercent)
+      ? Math.max(0, Math.min(100, rawPercent))
+      : 0;
+    explodeSlider.value = String(clamped);
+    explodeInlineValue.textContent = `${Math.round(clamped)}%`;
+    options?.onExplodeChange?.(clamped / 100);
+  };
+
+  const applySectionModeInternal = (mode: UiSectionMode): void => {
+    sectionMode = mode;
+    sectionSelect.value = mode;
+    if (mode === 'off') {
+      sectionPosSlider.disabled = true;
+      sectionPosInlineValue.textContent = 'Off';
+      options?.onSectionChange?.('off', sectionPositionMm);
+    } else {
+      const range = UI_SECTION_RANGES_MM[mode];
+      sectionPositionMm = range.defaultMm;
+      sectionPosSlider.min = String(range.minMm);
+      sectionPosSlider.max = String(range.maxMm);
+      sectionPosSlider.step = String(range.stepMm);
+      sectionPosSlider.value = String(range.defaultMm);
+      sectionPosSlider.disabled = false;
+      sectionPosInlineValue.textContent = formatMmValue(sectionPositionMm);
+      options?.onSectionChange?.(mode, sectionPositionMm);
+    }
+  };
+
+  const applySectionPositionInternal = (rawPosMm: number): void => {
+    if (sectionMode === 'off') {
+      return;
+    }
+    const range = UI_SECTION_RANGES_MM[sectionMode];
+    const clamped = Number.isFinite(rawPosMm)
+      ? Math.max(range.minMm, Math.min(range.maxMm, rawPosMm))
+      : range.defaultMm;
+    sectionPositionMm = clamped;
+    sectionPosSlider.value = String(clamped);
+    sectionPosInlineValue.textContent = formatMmValue(clamped);
+    options?.onSectionChange?.(sectionMode, clamped);
+  };
+
+  const applyXrayCheckedInternal = (checked: boolean): void => {
+    xrayCheckbox.checked = checked;
+    options?.onXrayChange?.(checked);
+  };
+
+  const applyLabelsCheckedInternal = (checked: boolean): void => {
+    labelsChecked = checked;
+    labelsCheckbox.checked = checked;
+    labelsLayer.style.display = checked ? 'block' : 'none';
+    if (!checked) {
+      for (const el of labelNodesById.values()) {
+        el.style.display = 'none';
+      }
+    }
+    options?.onLabelsChange?.(checked);
+  };
+
+  const updateLabels = (labels: readonly UiProjectedLabel[]): void => {
+    if (!labelsChecked) {
+      return;
+    }
+    for (let i = 0; i < labels.length; i += 1) {
+      const item = labels[i]!;
+      let node = labelNodesById.get(item.id);
+      if (!node) {
+        node = document.createElement('div');
+        node.className = item.id.startsWith('cyl-')
+          ? 'm4-label-chip m4-label-cyl'
+          : 'm4-label-chip';
+        node.dataset.labelId = item.id;
+        node.textContent = item.text;
+        labelsLayer.appendChild(node);
+        labelNodesById.set(item.id, node);
+      } else if (node.textContent !== item.text) {
+        node.textContent = item.text;
+      }
+
+      if (item.visible) {
+        node.style.display = 'block';
+        node.style.transform = `translate3d(${item.xPx.toFixed(1)}px, ${item.yPx.toFixed(1)}px, 0) translate(-50%, -50%)`;
+      } else {
+        node.style.display = 'none';
+      }
+    }
+  };
+
   playPauseBtn.addEventListener('click', () => {
     isPlaying = !isPlaying;
     updatePlayButtonLabel();
@@ -486,6 +824,26 @@ export function mountEngineUi(
   qualitySelect.addEventListener('change', () => {
     const val = qualitySelect.value as UiQualityMode;
     options?.onQualityChange?.(val);
+  });
+
+  explodeSlider.addEventListener('input', () => {
+    applyExplodePercentInternal(Number(explodeSlider.value));
+  });
+
+  sectionSelect.addEventListener('change', () => {
+    applySectionModeInternal(sectionSelect.value as UiSectionMode);
+  });
+
+  sectionPosSlider.addEventListener('input', () => {
+    applySectionPositionInternal(Number(sectionPosSlider.value));
+  });
+
+  xrayCheckbox.addEventListener('change', () => {
+    applyXrayCheckedInternal(xrayCheckbox.checked);
+  });
+
+  labelsCheckbox.addEventListener('change', () => {
+    applyLabelsCheckedInternal(labelsCheckbox.checked);
   });
 
   const pauseAndScrub = (): void => {
@@ -562,10 +920,37 @@ export function mountEngineUi(
     options?.onQualityChange?.(mode);
   };
 
+  const setExplodePercent = (percent: number): void => {
+    applyExplodePercentInternal(percent);
+  };
+
+  const setSectionMode = (mode: UiSectionMode): void => {
+    applySectionModeInternal(mode);
+  };
+
+  const setSectionPositionMm = (posMm: number): void => {
+    applySectionPositionInternal(posMm);
+  };
+
+  const setXrayChecked = (checked: boolean): void => {
+    applyXrayCheckedInternal(checked);
+  };
+
+  const setLabelsChecked = (checked: boolean): void => {
+    applyLabelsCheckedInternal(checked);
+  };
+
   const dispose = (): void => {
     cancelAnimationFrame(rafId);
     window.removeEventListener('pointerup', endScrub);
     window.removeEventListener('pointercancel', endScrub);
+    for (const el of labelNodesById.values()) {
+      el.remove();
+    }
+    labelNodesById.clear();
+    if (createdLabelsLayer) {
+      labelsLayer.remove();
+    }
     panel.remove();
     caption.remove();
   };
@@ -575,6 +960,12 @@ export function mountEngineUi(
     setPlaying,
     setExteriorChecked,
     setQualityMode,
+    setExplodePercent,
+    setSectionMode,
+    setSectionPositionMm,
+    setXrayChecked,
+    setLabelsChecked,
+    updateLabels,
     dispose,
   };
 }
