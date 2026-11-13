@@ -1,0 +1,85 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PartVariantCatalog",
+  "description": "JSON Schema for an array of PartVariant catalog entries (Milestone 0, D-008, D-032).",
+  "type": "array",
+  "items": {
+    "$ref": "#/definitions/PartVariant"
+  },
+  "definitions": {
+    "PartVariant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "slotId",
+        "name",
+        "provenance",
+        "modelPath",
+        "explodeVectorMm",
+        "performanceParams",
+        "compatibility"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "slotId": {
+          "type": "string",
+          "enum": [
+            "turbo",
+            "injectors",
+            "cp3",
+            "intake",
+            "exhaust",
+            "intercooler",
+            "tune",
+            "pistons",
+            "rods",
+            "camshaft",
+            "heads",
+            "fuelRail"
+          ]
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "provenance": {
+          "type": "string",
+          "enum": ["verified", "illustrative"]
+        },
+        "modelPath": {
+          "type": ["string", "null"]
+        },
+        "explodeVectorMm": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "performanceParams": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "compatibility": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
