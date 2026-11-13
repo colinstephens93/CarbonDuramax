@@ -299,18 +299,27 @@ def export_glb(filepath: Path, objects: list[bpy.types.Object]) -> None:
         obj.select_set(True)
     bpy.context.view_layer.objects.active = objects[0]
 
-    bpy.ops.export_scene.gltf(
-        filepath=str(filepath),
-        check_existing=False,
-        export_format="GLB",
-        use_selection=True,
-        export_yup=True,
-        export_apply=False,
-        export_animations=False,
-        export_materials="EXPORT",
-        export_draco_mesh_compression_enable=False,
-        export_meshopt_compression_enable=False,
-    )
+    export_kwargs: dict[str, object] = {
+        "filepath": str(filepath),
+        "check_existing": False,
+        "export_format": "GLB",
+        "use_selection": True,
+        "export_yup": True,
+        "export_apply": False,
+        "export_animations": False,
+        "export_materials": "EXPORT",
+        "export_draco_mesh_compression_enable": False,
+    }
+    if bpy.app.version >= (5, 0, 0):
+        export_kwargs["export_meshopt_compression_enable"] = False
+
+    try:
+        bpy.ops.export_scene.gltf(**export_kwargs)
+    except TypeError as exc:
+        if "export_meshopt_compression_enable" not in str(exc):
+            raise
+        export_kwargs.pop("export_meshopt_compression_enable", None)
+        bpy.ops.export_scene.gltf(**export_kwargs)
 
 
 # ---------------------------------------------------------------------------
