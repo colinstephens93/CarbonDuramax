@@ -1,12 +1,15 @@
 // Three.js renderer module exports (the sole layer permitted to import three).
 
 export {
+  buildSectionPlane,
   createEngineScene,
   type CameraPose,
   type EngineRenderStats,
   type EngineSceneController,
+  type ProjectedLabelAnchor,
   type QualityMode,
   type QualityTier,
+  type SectionState,
 } from './engineScene';
 export { loadRegisteredExteriorShell, type LoadedExteriorShell } from './exteriorLoader';
 export {
@@ -32,3 +35,36 @@ export {
   wrapInPartLocalFrame,
   type ExtractedPartPrimitive,
 } from './partLoader';
+export {
+  clampExplodeFactor,
+  clampSectionPositionMm,
+  computeExplodedPushrodGeometryMm,
+  computeExplodedStationCenterXMm,
+  computeHeadLiftMm,
+  computeLifterLiftMm,
+  computePartGroupExplodeOffsetMm,
+  computeSectionPlaneParamsM,
+  computeStationSpreadOffsetXMm,
+  evaluateLabelAnchors,
+  EXPLODE_HEAD_LIFT_MAX_MM,
+  EXPLODE_LIFTER_LIFT_MAX_MM,
+  EXPLODE_STATION_SPREAD_GAIN,
+  EXTERIOR_SHELL_LABEL_ANCHORS_MM,
+  isLabelVisibleUnderViewRules,
+  LABEL_ANCHOR_DEFINITIONS,
+  MAIN_SHAFT_FRONT_SNOUT_OFFSET_MM,
+  MAIN_SHAFT_REAR_FLANGE_X_MM,
+  SECTION_RANGES_MM,
+  sectionPlaneSignedDistanceM,
+  type ActiveSectionMode,
+  type ChannelPushrodExplodeReportMm,
+  type EvaluatedLabelAnchorMm,
+  type ExplodePartGroup,
+  type ExplodePartGroupOffsetMm,
+  type LabelAnchorDefinition,
+  type LabelCategory,
+  type PushrodExplodeReportMm,
+  type SectionMode,
+  type SectionPlaneParamsM,
+  type SectionRangeSpecMm,
+} from './viewLayout';

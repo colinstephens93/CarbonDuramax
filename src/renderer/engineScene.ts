@@ -1,8 +1,7 @@
-// Milestone 3 full 8-cylinder detailed engine renderer + registered exterior + studio look
-// (D-007, D-011, D-012, D-024, D-033, D-034; docs/specs/M3-full-engine.md).
-// Replicates the Cylinder-1 assembly across all 8 cylinders via THREE.InstancedMesh batching on a
-// 4-throw shared-pin crankshaft + turned main shaft, registers Duramax_LLY_2005_66L_V8.glb behind
-// an Exterior toggle, and supports Auto / Full / Phone quality profiles.
+// Milestone 4 views layered on the Milestone 3 full 8-cylinder detailed engine renderer + studio look
+// (D-007, D-011, D-012, D-024, D-033, D-034; docs/specs/M3-full-engine.md, docs/specs/M4-views.md).
+// Implements explode while running (§3), per-material clipping cutaway with clipShadows (§4),
+// exterior shell X-ray ghosting with snapshot restore (§5), and 3D-to-2D label anchor projection (§6).
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -20,6 +19,21 @@ import {
   loadPartGltf,
   type ExtractedPartPrimitive,
 } from './partLoader';
+import {
+  clampExplodeFactor,
+  clampSectionPositionMm,
+  computeHeadLiftMm,
+  computeLifterLiftMm,
+  computePartGroupExplodeOffsetMm,
+  computeStationSpreadOffsetXMm,
+  evaluateLabelAnchors,
+  isLabelVisibleUnderViewRules,
+  MAIN_SHAFT_FRONT_SNOUT_OFFSET_MM,
+  MAIN_SHAFT_REAR_FLANGE_X_MM,
+  SECTION_RANGES_MM,
+  type ActiveSectionMode,
+  type SectionMode,
+} from './viewLayout';
 
 export type QualityMode = 'auto' | 'full' | 'phone';
 export type QualityTier = 'full' | 'phone';
@@ -30,6 +44,7 @@ const AUTO_PHONE_BREAKPOINT_PX = 768;
 const UNIT_X_AXIS = new THREE.Vector3(1, 0, 0);
 const FIRING_EMISSIVE_COLOR = new THREE.Color(0xf97316);
 const FIRING_EMISSIVE_INTENSITY = 0.85;
+const XRAY_GHOST_OPACITY = 0.22;
 
 // Estimated GPU memory of PMREM HalfFloat cubemap (~4.5 MiB) + internal BRDF LUTs (~0.25 MiB)
 const STUDIO_PMREM_AND_LUT_BYTES = Math.round(4.75 * 1024 * 1024);
@@ -39,6 +54,19 @@ const SHADOW_MAP_2048_BYTES = 16 * 1024 * 1024;
 export interface CameraPose {
   position: [number, number, number];
   target: [number, number, number];
+}
+
+export interface SectionState {
+  mode: SectionMode;
+  positionMm: number;
+}
+
+export interface ProjectedLabelAnchor {
+  id: string;
+  text: string;
+  xPx: number;
+  yPx: number;
+  visible: boolean;
 }
 
 export interface EngineRenderStats {
@@ -51,6 +79,10 @@ export interface EngineRenderStats {
   hdriLoaded: boolean;
   exteriorLoaded: boolean;
   exteriorVisible: boolean;
+  xrayEnabled: boolean;
+  explodeFactor: number;
+  sectionMode: SectionMode;
+  sectionPositionMm: number;
   exteriorMergedMeshes: number;
   exteriorSceneTriangles: number;
   internalSceneTriangles: number;
@@ -66,6 +98,13 @@ export interface EngineSceneController {
   update(state: CrankState): void;
   setExteriorVisible(visible: boolean): void;
   getExteriorVisible(): boolean;
+  setXrayEnabled(enabled: boolean): void;
+  getXrayEnabled(): boolean;
+  setExplodeFactor(factor: number): void;
+  getExplodeFactor(): number;
+  setSectionState(mode: SectionMode, positionMm?: number): void;
+  getSectionState(): SectionState;
+  projectLabelAnchors(viewportWidthPx: number, viewportHeightPx: number): ProjectedLabelAnchor[];
   setQualityMode(mode: QualityMode): void;
   getQualityMode(): QualityMode;
   getEffectiveQualityTier(): QualityTier;
@@ -104,6 +143,33 @@ interface DetailedV8Batches {
   pushrod: InstancedPartBatch;
   lifter: InstancedPartBatch;
   totalTriangles: number;
+}
+
+interface MaterialTransparencySnapshot {
+  readonly transparent: boolean;
+  readonly opacity: number;
+  readonly depthWrite: boolean;
+}
+
+/**
+ * Builds or updates the cutaway `THREE.Plane` in scene units (metres) from a slider position in mm (Spec §4):
+ * - Front–Back ('x'): normal (-1, 0, 0), constant +positionMm / 1000 -> keeps half-space x <= positionMm / 1000
+ * - Side ('y'):       normal (0, -1, 0), constant +positionMm / 1000 -> keeps half-space y <= positionMm / 1000
+ * Three.js keeps fragments where n·p + constant >= 0.
+ */
+export function buildSectionPlane(
+  mode: ActiveSectionMode,
+  positionMm: number,
+  target: THREE.Plane = new THREE.Plane(),
+): THREE.Plane {
+  const constantM = positionMm === 0 ? 0 : positionMm / 1000;
+  if (mode === 'x') {
+    target.normal.set(-1, 0, 0);
+  } else {
+    target.normal.set(0, -1, 0);
+  }
+  target.constant = constantM;
+  return target;
 }
 
 function normalizeAngle720(deg: number): number {
@@ -176,7 +242,7 @@ function createInstancedBatch(
 }
 
 /**
- * Builds the axisymmetric turned main crankshaft along the project X axis (Spec §3):
+ * Builds the axisymmetric turned main crankshaft along the project X axis (M3 Spec §3):
  * main shaft radius = 32.4 mm (within 32 ± 2 mm, matching rot_crankthrow_c1_stock stub radius),
  * rear flywheel flange disc behind station 7&8, and front snout/damper pulley disc ahead of station 1&2.
  */
@@ -195,12 +261,14 @@ function buildMainCrankShaftMesh(
   const frontSnoutR = 0.78 * r;
   const frontPulleyOuterR = 1.76 * r; // 57.0 mm (< 62 mm web radius)
   const frontPulleyHubR = 1.15 * r;
+  const rearFlangeXM = MAIN_SHAFT_REAR_FLANGE_X_MM / 1000; // -0.018 m
+  const frontSnoutEndXM = blockLengthM + MAIN_SHAFT_FRONT_SNOUT_OFFSET_MM / 1000; // +0.478 m
 
   // Profile (radius >= 0, axial X coordinate in meters) from rear (-0.018 m) to front (+0.478 m)
   const profilePoints: THREE.Vector2[] = [
     // Rear flywheel mounting flange disc (-18 mm .. -6 mm)
-    new THREE.Vector2(0, -0.018),
-    new THREE.Vector2(rearFlangeOuterR, -0.018),
+    new THREE.Vector2(0, rearFlangeXM),
+    new THREE.Vector2(rearFlangeOuterR, rearFlangeXM),
     new THREE.Vector2(rearFlangeOuterR, -0.008),
     new THREE.Vector2(rearSealR, -0.008),
     new THREE.Vector2(rearSealR, -0.001),
@@ -215,8 +283,8 @@ function buildMainCrankShaftMesh(
     new THREE.Vector2(frontPulleyHubR, blockLengthM + 0.016),
     new THREE.Vector2(frontPulleyHubR, blockLengthM + 0.013),
     new THREE.Vector2(0.55 * r, blockLengthM + 0.013),
-    new THREE.Vector2(0.55 * r, blockLengthM + 0.018),
-    new THREE.Vector2(0, blockLengthM + 0.018),
+    new THREE.Vector2(0.55 * r, frontSnoutEndXM),
+    new THREE.Vector2(0, frontSnoutEndXM),
   ];
 
   const rawLathe = new THREE.LatheGeometry(profilePoints, 36);
@@ -273,6 +341,7 @@ export function createEngineScene(
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.1;
+  renderer.localClippingEnabled = true; // M4 §4 per-material cutaway clipping
   renderer.shadowMap.enabled = effectiveTier === 'full';
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.setPixelRatio(effectivePixelRatio);
@@ -306,6 +375,21 @@ export function createEngineScene(
   let disposed = false;
   let hdriLoaded = false;
 
+  // M4 §4 explicit clipped material set:
+  // Includes (a) all internal batch materials + firing clones, (b) mainShaft.material, (c) exteriorShell.materials.
+  // Explicitly EXCLUDES groundMat so the studio ground, HDRI background, and UI are never clipped.
+  const clippableMaterials = new Set<THREE.Material>();
+  const sectionPlane = buildSectionPlane('x', SECTION_RANGES_MM.x.defaultMm);
+  let sectionMode: SectionMode = 'off';
+  let sectionPositionMm: number = SECTION_RANGES_MM.x.defaultMm;
+  let activeClippingPlanes: THREE.Plane[] | null = null;
+
+  const registerClippableMaterial = (mat: THREE.Material): void => {
+    mat.clipShadows = true;
+    mat.clippingPlanes = activeClippingPlanes;
+    clippableMaterials.add(mat);
+  };
+
   // Directional key light casting soft studio floor shadow (active on Full tier, disabled on Phone tier)
   const keyLight = new THREE.DirectionalLight(0xffffff, 1.35);
   keyLight.position.set(centerXM + 0.55, -0.45, 1.35);
@@ -313,7 +397,7 @@ export function createEngineScene(
   keyLight.castShadow = effectiveTier === 'full';
   keyLight.shadow.mapSize.set(2048, 2048);
   keyLight.shadow.camera.near = 0.3;
-  // Widened slightly from M2 (±0.65 m, far = 2.8 m) so all 8 cylinders cast unclipped shadows onto Z = -0.245 m
+  // Covers both unexploded and e = 1 exploded engine + floor shadows without clipping
   keyLight.shadow.camera.far = 2.8;
   keyLight.shadow.camera.left = -0.65;
   keyLight.shadow.camera.right = 0.65;
@@ -325,7 +409,7 @@ export function createEngineScene(
   scene.add(keyLight);
   scene.add(keyLight.target);
 
-  // Dark matte studio ground disc at Z = -0.245 m (21.4 mm below registered exterior oil-pan sump Z = -0.2236 m)
+  // Dark matte studio ground disc at Z = -0.245 m (explicitly excluded from clippableMaterials per M4 §4)
   const groundSegments = 64;
   const groundGeo = new THREE.CircleGeometry(18, groundSegments);
   const groundMat = new THREE.MeshStandardMaterial({
@@ -342,10 +426,11 @@ export function createEngineScene(
   groundMesh.receiveShadow = true;
   scene.add(groundMesh);
 
-  // Axisymmetric turned main crankshaft (Spec §3, unrotated static mesh)
+  // Axisymmetric turned main crankshaft (unrotated static mesh, does not spread on explode; clipped per M4 §4b)
   const mainShaft = buildMainCrankShaftMesh(blockLengthM, layout.mainShaftRadiusMm / 1000);
   geometriesToDispose.add(mainShaft.geometry);
   materialsToDispose.add(mainShaft.material);
+  registerClippableMaterial(mainShaft.material);
   scene.add(mainShaft.mesh);
 
   // Load Poly Haven CC0 2k studio HDRI via RGBELoader + PMREMGenerator
@@ -387,6 +472,7 @@ export function createEngineScene(
       cylinder: cyl,
       bank: cl.bank,
       stationIndex: cl.stationIndex,
+      stationCenterXMm: cl.stationCenterXMm,
       stationCenterXM: cl.stationCenterXM,
       rodSeatXM: cl.rodSeatXM,
       axisW,
@@ -417,6 +503,10 @@ export function createEngineScene(
   let v8Batches: DetailedV8Batches | null = null;
   let exteriorShell: LoadedExteriorShell | null = null;
   let exteriorVisible = false;
+  let xrayEnabled = false;
+  let explodeFactor = 0;
+  let exteriorMaterialsGhosted = false;
+  const exteriorMaterialSnapshots = new Map<THREE.Material, MaterialTransparencySnapshot>();
   let lastState: CrankState = computeState(config, 0, 900, valveCfg);
 
   // Reusable scratch math objects (zero per-frame heap allocations)
@@ -435,8 +525,12 @@ export function createEngineScene(
   const localRotQuat = new THREE.Quaternion();
   const tempQuat = new THREE.Quaternion();
   const instanceMat = new THREE.Matrix4();
+  const projWorldVec = new THREE.Vector3();
+  const projViewVec = new THREE.Vector3();
+  const projNdcVec = new THREE.Vector3();
   const sharedPinYByStation = [0, 0, 0, 0];
   const sharedPinZByStation = [0, 0, 0, 0];
+  const stationSpreadXMByStation = [0, 0, 0, 0];
 
   const setBankWorldPos = (
     out: THREE.Vector3,
@@ -444,9 +538,10 @@ export function createEngineScene(
     localXM: number,
     localWM: number,
     localBM: number,
+    spreadXM = 0,
   ): THREE.Vector3 => {
     out.set(
-      ct.stationCenterXM + localXM,
+      ct.stationCenterXM + spreadXM + localXM,
       localWM * ct.axisW.y + localBM * ct.axisB.y,
       localWM * ct.axisW.z + localBM * ct.axisB.z,
     );
@@ -476,14 +571,58 @@ export function createEngineScene(
     return dist;
   };
 
+  // M4 §3: Re-applied whenever explodeFactor changes (at e = 0, offsets are strictly 0 -> exact M3 matrices)
+  const applyHeadAndInjectorTransforms = (batches: DetailedV8Batches): void => {
+    for (let cIdx = 0; cIdx < cylTransforms.length; cIdx += 1) {
+      const ct = cylTransforms[cIdx]!;
+      const headOffset = computePartGroupExplodeOffsetMm(
+        'head',
+        ct.stationCenterXMm,
+        layout.blockCenterXMm,
+        explodeFactor,
+      );
+      const injOffset = computePartGroupExplodeOffsetMm(
+        'injector',
+        ct.stationCenterXMm,
+        layout.blockCenterXMm,
+        explodeFactor,
+      );
+
+      setBankWorldPos(
+        posVec,
+        ct,
+        0,
+        0,
+        deckBM + headOffset.dbMm / 1000,
+        headOffset.dxMm / 1000,
+      );
+      instanceMat.compose(posVec, ct.meshQuat, unitScaleVec);
+      batches.head.setMatrixAt(cIdx, instanceMat);
+
+      setBankWorldPos(posVec, ct, 0, 0, deckBM + injOffset.dbMm / 1000, injOffset.dxMm / 1000);
+      instanceMat.compose(posVec, ct.meshQuat, unitScaleVec);
+      batches.injector.setMatrixAt(cIdx, instanceMat);
+    }
+    batches.head.commit();
+    batches.injector.commit();
+  };
+
   const applyV8KinematicState = (
     batches: DetailedV8Batches,
     state: CrankState,
     normalizedTheta: number,
   ): void => {
-    // 1. Update the 4 shared-pin crank throws (one per station, driven by station's RH cylinder phase)
+    const headLiftM = computeHeadLiftMm(explodeFactor) / 1000;
+    const lifterLiftM = computeLifterLiftMm(explodeFactor) / 1000;
+
+    // 1. Update the 4 shared-pin crank throws (core pin X + station spread offset per M4 §3)
     for (let sIdx = 0; sIdx < 4; sIdx += 1) {
       const station = layout.stations[sIdx]!;
+      const spreadXM =
+        computeStationSpreadOffsetXMm(station.centerXMm, layout.blockCenterXMm, explodeFactor) /
+        1000;
+      stationSpreadXMByStation[sIdx] = spreadXM;
+
       const [stationX, pinY, pinZ] = crankPinPositionM(
         config,
         valveCfg,
@@ -503,7 +642,7 @@ export function createEngineScene(
       aimY.crossVectors(aimZ, aimX).normalize();
       aimMat.makeBasis(aimX, aimY, aimZ);
       aimQuat.setFromRotationMatrix(aimMat);
-      posVec.set(stationX, 0, 0);
+      posVec.set(stationX + spreadXM, 0, 0);
       instanceMat.compose(posVec, aimQuat, unitScaleVec);
       batches.crankThrow.setMatrixAt(sIdx, instanceMat);
     }
@@ -521,12 +660,17 @@ export function createEngineScene(
     }
 
     let stdPistonIdx = 0;
+    const explodedDeckBM = deckBM + headLiftM;
+    const explodedSpringSeatBM = springSeatBM + headLiftM;
+    const explodedRockerShaftBM = rockerShaftBM + headLiftM;
+    const explodedLifterRestBM = lifterRestBM + lifterLiftM;
 
     // 2. Update all 8 cylinders' pistons, rods, valves, springs, bridges, rockers, lifters, and pushrods
     for (let cIdx = 0; cIdx < cylTransforms.length; cIdx += 1) {
       const ct = cylTransforms[cIdx]!;
       const cyl = ct.cylinder;
       const sIdx = ct.stationIndex;
+      const spreadXM = stationSpreadXMByStation[sIdx]!;
       const pinY = sharedPinYByStation[sIdx]!;
       const pinZ = sharedPinZByStation[sIdx]!;
 
@@ -537,8 +681,8 @@ export function createEngineScene(
 
       const wristBM = tdcWristBM - pM;
 
-      // 2a. Piston (centered on bore plane at stationCenterXM)
-      setBankWorldPos(posVec, ct, 0, 0, wristBM);
+      // 2a. Piston (centered on bore plane at stationCenterXM + spreadXM, 0 bore lift)
+      setBankWorldPos(posVec, ct, 0, 0, wristBM, spreadXM);
       instanceMat.compose(posVec, ct.meshQuat, unitScaleVec);
       if (cyl === firingCylinder) {
         batches.pistonFiring.setMatrixAt(0, instanceMat);
@@ -547,13 +691,14 @@ export function createEngineScene(
         stdPistonIdx += 1;
       }
 
-      // 2b. Connecting rod on shared crankpin journal at rodSeatXM (exact rodLength, zero scaling)
-      pinSeatVec.set(ct.rodSeatXM, pinY, pinZ);
-      wristSeatVec.set(ct.rodSeatXM, wristBM * ct.axisB.y, wristBM * ct.axisB.z);
+      // 2b. Connecting rod on shared crankpin journal at rodSeatXM + spreadXM (exact rodLength preserved)
+      const explodedRodSeatXM = ct.rodSeatXM + spreadXM;
+      pinSeatVec.set(explodedRodSeatXM, pinY, pinZ);
+      wristSeatVec.set(explodedRodSeatXM, wristBM * ct.axisB.y, wristBM * ct.axisB.z);
       composeAimMatrix(instanceMat, pinSeatVec, wristSeatVec, ct.axisB, 1);
       batches.conrod.setMatrixAt(cIdx, instanceMat);
 
-      // 2c. Valves & helical springs (2 intake at +W, 2 exhaust at -W)
+      // 2c. Valves & helical springs (2 intake at +W, 2 exhaust at -W; B shifted by +headLiftM)
       const intakeSpringScaleZ = (springInstalledLenM - intakeLiftM) / springInstalledLenM;
       const exhaustSpringScaleZ = (springInstalledLenM - exhaustLiftM) / springInstalledLenM;
 
@@ -561,39 +706,67 @@ export function createEngineScene(
         const xOffM = vPair === 0 ? -valveHalfPairXM : +valveHalfPairXM;
         const inst16 = cIdx * 2 + vPair;
 
-        setBankWorldPos(posVec, ct, xOffM, +valveRowOffsetM, deckBM + valveInsetM - intakeLiftM);
+        setBankWorldPos(
+          posVec,
+          ct,
+          xOffM,
+          +valveRowOffsetM,
+          explodedDeckBM + valveInsetM - intakeLiftM,
+          spreadXM,
+        );
         instanceMat.compose(posVec, ct.meshQuat, unitScaleVec);
         batches.intakeValve.setMatrixAt(inst16, instanceMat);
 
-        setBankWorldPos(posVec, ct, xOffM, +valveRowOffsetM, springSeatBM);
+        setBankWorldPos(posVec, ct, xOffM, +valveRowOffsetM, explodedSpringSeatBM, spreadXM);
         scaleVec.set(1, 1, intakeSpringScaleZ);
         instanceMat.compose(posVec, ct.meshQuat, scaleVec);
         batches.intakeSpring.setMatrixAt(inst16, instanceMat);
 
-        setBankWorldPos(posVec, ct, xOffM, -valveRowOffsetM, deckBM + valveInsetM - exhaustLiftM);
+        setBankWorldPos(
+          posVec,
+          ct,
+          xOffM,
+          -valveRowOffsetM,
+          explodedDeckBM + valveInsetM - exhaustLiftM,
+          spreadXM,
+        );
         instanceMat.compose(posVec, ct.meshQuat, unitScaleVec);
         batches.exhaustValve.setMatrixAt(inst16, instanceMat);
 
-        setBankWorldPos(posVec, ct, xOffM, -valveRowOffsetM, springSeatBM);
+        setBankWorldPos(posVec, ct, xOffM, -valveRowOffsetM, explodedSpringSeatBM, spreadXM);
         scaleVec.set(1, 1, exhaustSpringScaleZ);
         instanceMat.compose(posVec, ct.meshQuat, scaleVec);
         batches.exhaustSpring.setMatrixAt(inst16, instanceMat);
       }
 
-      // 2d. Valve bridges (intake at cIdx*2, exhaust at cIdx*2 + 1)
-      setBankWorldPos(posVec, ct, 0, +valveRowOffsetM, rockerShaftBM - intakeLiftM);
+      // 2d. Valve bridges (intake at cIdx*2, exhaust at cIdx*2 + 1; B shifted by +headLiftM)
+      setBankWorldPos(
+        posVec,
+        ct,
+        0,
+        +valveRowOffsetM,
+        explodedRockerShaftBM - intakeLiftM,
+        spreadXM,
+      );
       instanceMat.compose(posVec, ct.meshQuat, unitScaleVec);
       batches.bridge.setMatrixAt(cIdx * 2, instanceMat);
 
-      setBankWorldPos(posVec, ct, 0, -valveRowOffsetM, rockerShaftBM - exhaustLiftM);
+      setBankWorldPos(
+        posVec,
+        ct,
+        0,
+        -valveRowOffsetM,
+        explodedRockerShaftBM - exhaustLiftM,
+        spreadXM,
+      );
       instanceMat.compose(posVec, ct.meshQuat, unitScaleVec);
       batches.bridge.setMatrixAt(cIdx * 2 + 1, instanceMat);
 
-      // 2e. Forged rocker castings (exact asin(lift / valveRowOffset), RH vs X-mirrored LH batches)
+      // 2e. Forged rocker castings (shaft origin takes +headLiftM so live cup positions follow)
       const thetaIntake = Math.asin(Math.min(1, Math.max(-1, intakeLiftM / valveRowOffsetM)));
       const thetaExhaust = Math.asin(Math.min(1, Math.max(-1, exhaustLiftM / valveRowOffsetM)));
 
-      setBankWorldPos(posVec, ct, 0, 0, rockerShaftBM);
+      setBankWorldPos(posVec, ct, 0, 0, explodedRockerShaftBM, spreadXM);
 
       localRotQuat.setFromAxisAngle(UNIT_X_AXIS, -thetaIntake);
       tempQuat.multiplyQuaternions(ct.meshQuat, localRotQuat);
@@ -613,9 +786,16 @@ export function createEngineScene(
         batches.lhExhaustRocker.setMatrixAt(sIdx, instanceMat);
       }
 
-      // 2f. Lifters & leaning two-point pushrods (Spec §4 asymmetric gallery layout)
+      // 2f. Lifters (+lifterLiftM) & leaning two-point pushrods (bottom +lifterLiftM -> cup +headLiftM)
       const intakeRiseM = rockerCupWM * Math.sin(thetaIntake);
-      setBankWorldPos(lifterTopVec, ct, +intakeLifterXM, +intakeLifterWM, lifterRestBM + intakeRiseM);
+      setBankWorldPos(
+        lifterTopVec,
+        ct,
+        +intakeLifterXM,
+        +intakeLifterWM,
+        explodedLifterRestBM + intakeRiseM,
+        spreadXM,
+      );
       instanceMat.compose(lifterTopVec, ct.meshQuat, unitScaleVec);
       batches.lifter.setMatrixAt(cIdx * 2, instanceMat);
 
@@ -624,7 +804,8 @@ export function createEngineScene(
         ct,
         +rockerCupXM,
         -rockerCupWM * Math.cos(thetaIntake),
-        rockerShaftBM + intakeRiseM,
+        explodedRockerShaftBM + intakeRiseM,
+        spreadXM,
       );
       const intakeLiveLenM = lifterTopVec.distanceTo(cupLiveVec);
       composeAimMatrix(
@@ -637,7 +818,14 @@ export function createEngineScene(
       batches.pushrod.setMatrixAt(cIdx * 2, instanceMat);
 
       const exhaustRiseM = rockerCupWM * Math.sin(thetaExhaust);
-      setBankWorldPos(lifterTopVec, ct, exhaustLifterXM, +exhaustLifterWM, lifterRestBM + exhaustRiseM);
+      setBankWorldPos(
+        lifterTopVec,
+        ct,
+        exhaustLifterXM,
+        +exhaustLifterWM,
+        explodedLifterRestBM + exhaustRiseM,
+        spreadXM,
+      );
       instanceMat.compose(lifterTopVec, ct.meshQuat, unitScaleVec);
       batches.lifter.setMatrixAt(cIdx * 2 + 1, instanceMat);
 
@@ -646,7 +834,8 @@ export function createEngineScene(
         ct,
         -rockerCupXM,
         +rockerCupWM * Math.cos(thetaExhaust),
-        rockerShaftBM + exhaustRiseM,
+        explodedRockerShaftBM + exhaustRiseM,
+        spreadXM,
       );
       const exhaustLiveLenM = lifterTopVec.distanceTo(cupLiveVec);
       composeAimMatrix(
@@ -673,6 +862,40 @@ export function createEngineScene(
     batches.lhExhaustRocker.commit();
     batches.lifter.commit();
     batches.pushrod.commit();
+  };
+
+  // M4 §5: Synchronize exterior shell group visibility (exteriorChecked || xrayEnabled) and ghosting state
+  const syncExteriorShellState = (): void => {
+    if (!exteriorShell) return;
+
+    exteriorShell.group.visible = exteriorVisible || xrayEnabled;
+
+    if (xrayEnabled && !exteriorMaterialsGhosted) {
+      for (const mat of exteriorShell.materials) {
+        exteriorMaterialSnapshots.set(mat, {
+          transparent: mat.transparent,
+          opacity: mat.opacity,
+          depthWrite: mat.depthWrite,
+        });
+        mat.transparent = true;
+        mat.opacity = XRAY_GHOST_OPACITY;
+        mat.depthWrite = false;
+        mat.needsUpdate = true;
+      }
+      exteriorMaterialsGhosted = true;
+    } else if (!xrayEnabled && exteriorMaterialsGhosted) {
+      for (const mat of exteriorShell.materials) {
+        const snap = exteriorMaterialSnapshots.get(mat);
+        if (snap) {
+          mat.transparent = snap.transparent;
+          mat.opacity = snap.opacity;
+          mat.depthWrite = snap.depthWrite;
+          mat.needsUpdate = true;
+        }
+      }
+      exteriorMaterialSnapshots.clear();
+      exteriorMaterialsGhosted = false;
+    }
   };
 
   // Load all 10 part GLBs and build batched V8 InstancedMeshes
@@ -713,6 +936,7 @@ export function createEngineScene(
           for (const p of prims) {
             geometriesToDispose.add(p.geometry);
             materialsToDispose.add(p.material);
+            registerClippableMaterial(p.material);
           }
         };
 
@@ -772,6 +996,7 @@ export function createEngineScene(
         );
         for (const m of pistonFiringRes.createdMaterials) {
           materialsToDispose.add(m);
+          registerClippableMaterial(m);
         }
         const pistonFiring = pistonFiringRes.batch;
 
@@ -826,17 +1051,6 @@ export function createEngineScene(
         const pushrod = createInstancedBatch('pushrod', pushrodPrims, 16, root).batch;
         const lifter = createInstancedBatch('lifter', lifterPrims, 16, root).batch;
 
-        // Static transforms for the 8 head sections and 8 fuel injectors
-        for (let cIdx = 0; cIdx < cylTransforms.length; cIdx += 1) {
-          const ct = cylTransforms[cIdx]!;
-          setBankWorldPos(posVec, ct, 0, 0, deckBM);
-          instanceMat.compose(posVec, ct.meshQuat, unitScaleVec);
-          head.setMatrixAt(cIdx, instanceMat);
-          injector.setMatrixAt(cIdx, instanceMat);
-        }
-        head.commit();
-        injector.commit();
-
         const allBatches: InstancedPartBatch[] = [
           pistonStandard,
           pistonFiring,
@@ -881,6 +1095,7 @@ export function createEngineScene(
         };
 
         scene.add(root);
+        applyHeadAndInjectorTransforms(v8Batches);
         applyV8KinematicState(
           v8Batches,
           lastState,
@@ -892,7 +1107,7 @@ export function createEngineScene(
       console.error('Failed to load V8 detailed GLB assembly:', err);
     });
 
-  // Load, deduplicate, merge, and register Duramax_LLY_2005_66L_V8.glb (Spec §5)
+  // Load, deduplicate, merge, and register Duramax_LLY_2005_66L_V8.glb (M3 §5, M4 §§4–5)
   void loadRegisteredExteriorShell(
     partLoader,
     `${baseUrl}Duramax_LLY_2005_66L_V8.glb`,
@@ -906,10 +1121,13 @@ export function createEngineScene(
         return;
       }
       exteriorShell = loaded;
-      loaded.group.visible = exteriorVisible;
       for (const g of loaded.geometries) geometriesToDispose.add(g);
-      for (const m of loaded.materials) materialsToDispose.add(m);
+      for (const m of loaded.materials) {
+        materialsToDispose.add(m);
+        registerClippableMaterial(m);
+      }
       for (const t of loaded.textures) texturesToDispose.add(t);
+      syncExteriorShellState();
       scene.add(loaded.group);
     })
     .catch((err) => {
@@ -959,12 +1177,126 @@ export function createEngineScene(
 
   const setExteriorVisible = (visible: boolean): void => {
     exteriorVisible = visible;
-    if (exteriorShell) {
-      exteriorShell.group.visible = visible;
-    }
+    syncExteriorShellState();
   };
 
   const getExteriorVisible = (): boolean => exteriorVisible;
+
+  const setXrayEnabled = (enabled: boolean): void => {
+    xrayEnabled = enabled;
+    syncExteriorShellState();
+  };
+
+  const getXrayEnabled = (): boolean => xrayEnabled;
+
+  const setExplodeFactor = (factor: number): void => {
+    const next = clampExplodeFactor(factor);
+    if (next === explodeFactor) {
+      return;
+    }
+    explodeFactor = next;
+    if (v8Batches) {
+      applyHeadAndInjectorTransforms(v8Batches);
+      applyV8KinematicState(
+        v8Batches,
+        lastState,
+        normalizeAngle720(lastState.crankAngleDeg),
+      );
+    }
+  };
+
+  const getExplodeFactor = (): number => explodeFactor;
+
+  const setSectionState = (mode: SectionMode, positionMm?: number): void => {
+    sectionMode = mode;
+    if (mode === 'off') {
+      activeClippingPlanes = null;
+    } else {
+      const targetPosMm =
+        positionMm !== undefined ? positionMm : SECTION_RANGES_MM[mode].defaultMm;
+      sectionPositionMm = clampSectionPositionMm(mode, targetPosMm);
+      buildSectionPlane(mode, sectionPositionMm, sectionPlane);
+      activeClippingPlanes = [sectionPlane];
+    }
+    for (const mat of clippableMaterials) {
+      mat.clippingPlanes = activeClippingPlanes;
+    }
+  };
+
+  const getSectionState = (): SectionState => ({
+    mode: sectionMode,
+    positionMm: sectionPositionMm,
+  });
+
+  const projectLabelAnchors = (
+    viewportWidthPx: number,
+    viewportHeightPx: number,
+  ): ProjectedLabelAnchor[] => {
+    camera.updateMatrixWorld();
+    const evaluated = evaluateLabelAnchors(
+      lastState,
+      explodeFactor,
+      config,
+      valveCfg,
+      detailCfg,
+      layout,
+    );
+
+    return evaluated.map((anchor) => {
+      const allowedByView = isLabelVisibleUnderViewRules(anchor.category, anchor.worldM, {
+        exteriorVisible,
+        xrayEnabled,
+        sectionMode,
+        sectionPositionMm,
+      });
+
+      projWorldVec.set(anchor.worldM[0], anchor.worldM[1], anchor.worldM[2]);
+
+      // Direct signed-distance check against the live THREE.Plane when a section is active
+      if (sectionMode !== 'off' && sectionPlane.distanceToPoint(projWorldVec) < 0) {
+        return {
+          id: anchor.id,
+          text: anchor.text,
+          xPx: 0,
+          yPx: 0,
+          visible: false,
+        };
+      }
+
+      // Behind-camera check in view space (camera looks down -Z; points with z >= -near are behind/clipped)
+      projViewVec.copy(projWorldVec).applyMatrix4(camera.matrixWorldInverse);
+      if (projViewVec.z >= -camera.near) {
+        return {
+          id: anchor.id,
+          text: anchor.text,
+          xPx: 0,
+          yPx: 0,
+          visible: false,
+        };
+      }
+
+      projNdcVec.copy(projWorldVec).project(camera);
+      const xPx = (projNdcVec.x * 0.5 + 0.5) * viewportWidthPx;
+      const yPx = (-projNdcVec.y * 0.5 + 0.5) * viewportHeightPx;
+
+      const inClipDepth = projNdcVec.z >= -1 && projNdcVec.z <= 1;
+      const inViewport =
+        Number.isFinite(xPx) &&
+        Number.isFinite(yPx) &&
+        xPx >= 0 &&
+        xPx <= viewportWidthPx &&
+        yPx >= 0 &&
+        yPx <= viewportHeightPx;
+
+      return {
+        id: anchor.id,
+        text: anchor.text,
+        xPx,
+        yPx,
+        visible: allowedByView && inClipDepth && inViewport,
+      };
+    });
+  };
 
   const setQualityMode = (mode: QualityMode): void => {
     qualityMode = mode;
@@ -1017,6 +1349,10 @@ export function createEngineScene(
       hdriLoaded,
       exteriorLoaded: exteriorShell !== null,
       exteriorVisible,
+      xrayEnabled,
+      explodeFactor,
+      sectionMode,
+      sectionPositionMm,
       exteriorMergedMeshes: exteriorShell ? exteriorShell.mergedMeshCount : 0,
       exteriorSceneTriangles: exteriorShell ? exteriorShell.totalTriangles : 0,
       internalSceneTriangles: v8Batches ? v8Batches.totalTriangles : 0,
@@ -1064,6 +1400,8 @@ export function createEngineScene(
     for (const tex of texturesToDispose) {
       tex.dispose();
     }
+    exteriorMaterialSnapshots.clear();
+    clippableMaterials.clear();
     renderer.dispose();
     renderer.domElement.remove();
   };
@@ -1072,6 +1410,13 @@ export function createEngineScene(
     update,
     setExteriorVisible,
     getExteriorVisible,
+    setXrayEnabled,
+    getXrayEnabled,
+    setExplodeFactor,
+    getExplodeFactor,
+    setSectionState,
+    getSectionState,
+    projectLabelAnchors,
     setQualityMode,
     getQualityMode,
     getEffectiveQualityTier,
