@@ -7,7 +7,9 @@ declare module 'node:fs' {
     isFile(): boolean;
   }
 
+  export function existsSync(path: string): boolean;
   export function readdirSync(path: string, options: { withFileTypes: true }): Dirent[];
+  export function readFileSync(path: string): Uint8Array;
   export function readFileSync(path: string, encoding: 'utf-8' | 'utf8'): string;
 }
 
