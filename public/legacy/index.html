@@ -99,7 +99,7 @@
     <div class="top-btns">
      <button id="btn-ar-modal" type="button" class="act-btn glass"><span class="dot" style="background:#fbbf24"></span><span>Mobile AR</span></button>
      <button id="btn-audio" type="button" class="act-btn glass"><span id="audio-dot" class="dot" style="background:#64748b"></span><span id="audio-label">Sound Off</span></button>
-     <a href="Duramax_LLY_2005_66L_V8.glb" download="Duramax_LLY_2005_66L_V8.glb" class="act-btn primary btn-link">.GLB</a>
+     <a href="../Duramax_LLY_2005_66L_V8.glb" download="Duramax_LLY_2005_66L_V8.glb" class="act-btn primary btn-link">.GLB</a>
     </div>
    </div>
    <div class="cam-strip">
@@ -203,7 +203,7 @@
    </div>
    <div style="padding:14px">
     <div style="height:340px;border-radius:12px;overflow:hidden;border:1px solid #334155;background:#05070b">
-     <model-viewer src="Duramax_LLY_2005_66L_V8.glb" alt="2005 Chevrolet Duramax LLY 6.6L V8 3D Model" camera-controls auto-rotate shadow-intensity="1" exposure="1.1" ar ar-modes="webxr scene-viewer quick-look" touch-action="none" style="width:100%;height:100%;--poster-color:transparent"></model-viewer>
+     <model-viewer src="../Duramax_LLY_2005_66L_V8.glb" alt="2005 Chevrolet Duramax LLY 6.6L V8 3D Model" camera-controls auto-rotate shadow-intensity="1" exposure="1.1" ar ar-modes="webxr scene-viewer quick-look" touch-action="none" style="width:100%;height:100%;--poster-color:transparent"></model-viewer>
     </div>
     <div style="font-size:11px;color:#94a3b8;margin-top:8px">On mobile, tap the AR cube button inside the viewer above to place the 6.6L Duramax LLY V8 in your space.</div>
    </div>
@@ -310,7 +310,7 @@
    const partGroups = {}, pickMeshes = [], xrayMats = [], bayGroups = [], anim = { pulleys:[], fan:null, turboWheel:null, crank:null, pistons:[], beltMap:null };
    const resBump = makeResonatorBump();
    new THREE.GLTFLoader().load(
-    'Duramax_LLY_2005_66L_V8.glb',
+    '../Duramax_LLY_2005_66L_V8.glb',
     (gltf) => {
      const root = gltf.scene.getObjectByName('Duramax_LLY_2005_66L_V8') || gltf.scene;
      engineRoot.add(root);
@@ -579,7 +579,7 @@
   </header>
 
   <model-viewer
-    src="Duramax_LLY_2005_66L_V8.glb"
+    src="../Duramax_LLY_2005_66L_V8.glb"
     alt="3D model of a 2005 Duramax LLY 6.6 liter V8 diesel engine"
     camera-controls
     auto-rotate
