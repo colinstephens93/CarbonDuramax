@@ -48,7 +48,8 @@ All facts below are verified directly against the installed `three@0.187.0` and 
 
 Both `three/package.json` and `@types/three/package.json` export `./addons/*` and `./examples/jsm/*` mapped to `./examples/jsm/*`:
 
-- **glTF / GLB loader:** `import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';` (or `'three/examples/jsm/loaders/GLTFLoader.js'`)
+- **glTF / GLB loader:** `import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js';` (or `'three/examples/jsm/loaders/GLTFLoader.js'`)
+- **HDR / RGBE environment loader:** `import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';` (in `0.187.0`, `RGBELoader` is a deprecated subclass alias of `HDRLoader` from `'three/addons/loaders/HDRLoader.js'` introduced in r180; both inherit `load` and `loadAsync` from `DataTextureLoader` with default `type = HalfFloatType` and `LinearSRGBColorSpace`)
 - **Draco geometry decompression:** `import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';`
 - **KTX2 texture loader:** `import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';`
 - **Meshopt decoder:** `import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';`
@@ -62,3 +63,20 @@ Both `three/package.json` and `@types/three/package.json` export `./addons/*` an
   - `CylinderGeometry(radiusTop = 1, radiusBottom = 1, height = 1, radialSegments = 32, ...)` builds a cylinder centered at the origin along **local `+Y`** (`[-height/2, +height/2]`). `BufferGeometry.rotateX(rad)` / `rotateZ(rad)` transforms vertex attributes in place once at creation.
   - `EdgesGeometry(geometry = null, thresholdAngle = 1)` paired with `LineSegments(edges, new LineBasicMaterial(...))` renders hard-edge wireframes for static `BoxGeometry` enclosures.
 - **Materials & lighting:** `HemisphereLight(skyColor, groundColor, intensity)` and `DirectionalLight(color, intensity)` illuminate `MeshStandardMaterial` meshes (`emissive` `Color` + `emissiveIntensity` `number` used for firing-window piston highlights).
+
+## Milestone 2 Detailed GLB & Draft Studio Look APIs (`0.187.0`)
+
+- **`GLTFLoader` & single Asset Contract frame conversion (`src/renderer/partLoader.ts`):**
+  - `GLTFLoader.loadAsync(url)` resolves a `GLTF` object (`{ scene: THREE.Group, scenes, animations, cameras, asset, parser, userData }`) whose Metallic-Roughness PBR materials instantiate as `THREE.MeshStandardMaterial` (or `THREE.MeshPhysicalMaterial` when glTF PBR extensions are present).
+  - Blender authors parts with `+Z` along the bore axis, `+X` along the crank axis, and `+Y` toward the valley (`W`), then exports with glTF Y-up ON (`R_x(-90°)`), placing the bore axis along glTF `+Y` and valley `W` along glTF `-Z`.
+  - Wrapping a cloned node from `gltf.scene.getObjectByName(nodeName)` inside an inner conversion group with `rotation.x = +Math.PI / 2` (`R_x(+90°)`) and returning an outer `THREE.Group` restores part-local `(+X crank, +Y valley W, +Z bore)` exactly once (`R_x(+90°) · R_x(-90°) = I`). Scaling `outerGroup.scale.set(1, 1, factor)` scales strictly along part-local `+Z` before `outerGroup.quaternion` rotates into world space (`M = T · R · S`).
+- **`RGBELoader` + `PMREMGenerator` studio IBL:**
+  - `new THREE.PMREMGenerator(renderer)`: `pmremGenerator.compileEquirectangularShader()` precompiles the equirectangular-to-PMREM shader; `const rt = pmremGenerator.fromEquirectangular(hdrTexture)` returns a `WebGLCubeRenderTarget` (`rt.texture` assigned to `scene.environment`, while `scene.background = new THREE.Color(0x0b0b0d)` keeps the backdrop dark).
+  - Because `PMREMGenerator.fromEquirectangular` builds a Y-up cubemap while the project frame is Z-up, `scene.environmentRotation.set(Math.PI / 2, 0, 0)` rotates the IBL lookup so the studio softbox zenith (`+Y`) illuminates from `+Z` (overhead); `scene.environmentIntensity` scales IBL contribution across all physical materials.
+  - Dispose both the source `hdrTexture` and `pmremGenerator` immediately after `fromEquirectangular(hdrTexture)`; retain `rt` and call `rt.dispose()` on scene teardown.
+- **Tone mapping, studio fog, & soft directional shadows:**
+  - `renderer.toneMapping = THREE.ACESFilmicToneMapping` with `renderer.toneMappingExposure = 1.1`.
+  - `renderer.shadowMap.enabled = true` and `renderer.shadowMap.type = THREE.PCFSoftShadowMap`.
+  - `DirectionalLight.castShadow = true` uses an `OrthographicCamera` at `light.shadow.camera` (`left`, `right`, `top`, `bottom`, `near`, `far`), `light.shadow.mapSize.set(2048, 2048)`, `light.shadow.bias`, `light.shadow.normalBias`, and `light.shadow.radius` (blur radius supported by `PCFSoftShadowMap`). Add `light.target` to `scene` when setting a non-origin `light.target.position`; only meshes with `mesh.castShadow = true` render in the shadow pass (`groundMesh.receiveShadow = true` receives shadows).
+  - `CircleGeometry(radius, segments)` (like `PlaneGeometry`) lies in local `XY` with `+Z` normal — directly horizontal in the project's Z-up frame without rotation; pairing a large dark ground disc with `scene.fog = new THREE.FogExp2(0x0b0b0d, density)` blends the distant floor edge seamlessly into `scene.background`.
+  - **`WebGLRenderer.info.render` accounting:** With `renderer.info.autoReset = true` (default), `info.reset()` runs once at the start of `renderer.render(scene, camera)` **before** `shadowMap.render(...)`. Consequently, `renderer.info.render.calls` and `renderer.info.render.triangles` report the combined per-frame total across both the directional shadow-map pass (`castShadow = true` meshes) and the main camera pass.

@@ -204,7 +204,7 @@ export function mountEngineUi(
 
   const bannerSubtitle = document.querySelector('#title-banner p');
   if (bannerSubtitle) {
-    bannerSubtitle.textContent = 'Milestone 1 — 8-Cylinder Kinematic Core (Primitives)';
+    bannerSubtitle.textContent = 'Milestone 2 — Cylinder 1 Detailed Assembly + Draft Studio Look';
   }
 
   let isPlaying = true;
@@ -327,11 +327,11 @@ export function mountEngineUi(
   panel.append(topRow, rpmGroup, scrubGroup, readoutGrid);
   document.body.appendChild(panel);
 
-  // On-screen illustrative caption (required by D-012 and M1 spec Deliverable 4)
+  // On-screen illustrative caption (required by D-012, M1 Deliverable 4, and M2 Draft Studio Look)
   const caption = document.createElement('div');
   caption.id = 'm1-illustrative-caption';
   caption.textContent =
-    'Illustrative geometry & timing: Valve timing/lift profiles and placeholder dimensions (rod length, bore pitch, deck gap, crank webs) are illustrative placeholders, not verified LLY measurements.';
+    'Illustrative geometry, part shapes & timing: Detailed Cylinder 1 part shapes (piston bowl/rings, rod, crank throw, head section, valves, springs, bridges, rockers, pushrods, lifters, injector), valve timing/lift profiles, and placeholder dimensions are illustrative placeholders, not verified LLY measurements.';
   document.body.appendChild(caption);
 
   const updatePlayButtonLabel = (): void => {
