@@ -1,0 +1,119 @@
+# Spec — Milestone 2: One Detailed Cylinder + Draft Studio Look
+
+Project: Duramax LLY Engine Lab · Governing plan: `docs/PLAN.md` v2.2 (Milestone 2) · Decisions: D-004, D-011, D-012, D-024, D-028, D-029, D-030
+Task branch: **`m2-detailed-cylinder`** (from `main`) · Builder: owner in Antigravity, from this spec · Verifier/integrator: Buckley
+Decisions recorded with this spec: D-033 (budgets set at M2 exit — see Deliverable 8).
+Prerequisite: Milestone 1 merged (kinematic core, primitive renderer, UI with scrubber).
+
+## Goal
+
+Replace cylinder 1's primitive shapes with a detailed, Blender-built part assembly — piston, connecting rod, crank throw, head section, 4 valves with springs, pushrods with lifters, rocker arms with bridges, and the center injector — that runs on the **unchanged Milestone 1 math core**, proving the plan's asset contract in practice. Add the **draft** studio look (dark environment, CC0 HDRI lighting, PBR materials; confirmed at Milestone 3, not locked here). Measure frame time and triangle/draw-call counts, extrapolate to 8 cylinders, and propose the per-tier budgets Milestone 3 will confirm.
+
+## Normative rules
+
+**No core changes.** `src/core/` (including `interfaces.ts` and `kinematics.ts`), `src/config/engineConfig.ts`, and `src/config/valveConfig.ts` are not modified. The detailed assembly is driven only by the existing core outputs (`computeState`, `crankPinPositionM`, `bankBoreAxis`, `phaseOffsetDeg`) plus the renderer-side derivations defined below. This is the plan's Milestone 2 exit condition: detailed parts run on the Milestone 1 math with no code changes to it.
+
+**One cylinder only.** Cylinder 1 (RH bank, front station, x = 3.5 × borePitch) gets the detailed assembly. Its M1 primitives (piston, rod, crank webs, valve discs) are removed. Cylinders 2–8 keep their M1 primitives exactly, including cylinder 2 at the same station.
+
+**Config is the single source of dimensions.** Every interface dimension (defined below) lives in a new placeholder config, `src/config/detailConfig.ts`, as `ProvenancedValue`s with confidence `'placeholder'`. The Blender script reads dimensions only from a generated `assets-src/dimensions.json` (Deliverable 3); it contains no hard-coded interface dimensions. Shape detail that is not an interface dimension (ring groove widths, crown bowl profile, web fillet proportions) is the modeler's craft inside the script and is understood to be illustrative.
+
+**Asset contract in practice** (per PLAN.md): meters in models; every moving part's origin on its rotation/slide axis; naming `<system>_<part>_<instance>_<variant>`; code-driven motion only, no Blender animation; per-file provenance. Authoring frame in Blender: bore axis = +Z, crank-axis direction = +X, origin at the part pivot. Export with the glTF exporter's Y-up option ON, so files on disk are standard glTF (bore axis becomes +Y in file space). The renderer applies the frame conversion exactly once, in the part loader (Deliverable 5).
+
+## The assembly (cylinder 1)
+
+Local part frame after loading: origin at pivot, +Z along the bore axis (toward the head), +X along the crank axis (toward the front of the engine). Positions along the bore axis are measured from the crank axis.
+
+Reference points (all from configs, meters in code):
+- Wrist-pin point at cycle angle α: on the bore axis at distance (r + L − p(α)) from the crank axis (per the Milestone 1 definitions; equivalently the `crankPinPositionM` point + √(L² − r²sin²α) along the bore axis − r·sinα along the in-plane perpendicular).
+- Deck plane: along the bore axis at (r + L) + pistonCompressionHeight + deckGap, where pistonCompressionHeight is the piston's pin-axis-to-crown height from the detail config and deckGap is from `valveConfig` (2 mm). At TDC the piston crown sits deckGap below the deck plane.
+- Valve seats: each valve head's underside sits valveInset **above** the deck plane (recessed into the head; visual only — the core's clearance math is unaffected). Valves are parallel to the bore axis. Four valves in a rectangle around the central injector: rows at ±valveRowOffset along the in-bank-plane perpendicular to the bore, pairs spaced valvePairSpacing along X. Intake pair on the valley side, exhaust pair on the outer side (builder records which is which in a comment and stays consistent with the lift channel each valve follows).
+
+Parts (one GLB each, in `public/models/`, variant `stock`):
+
+| File | Contents | Pivot / motion |
+| --- | --- | --- |
+| `rot_piston_c1_stock.glb` | Piston: crown with a shallow bowl, 3 ring grooves with rings, skirt, wrist pin. One node `rot_piston_c1_stock`. | Origin at wrist-pin axis center. Renderer positions it at the wrist-pin point, oriented to the bank. Does not rotate (slides along bore). |
+| `rot_conrod_c1_stock.glb` | Connecting rod: big-end cap with bolts, tapered beam, small end. Node `rot_conrod_c1_stock`, plus a child node `rot_conrod_smallend_c1_stock` whose origin is the small-end (wrist pin) center. | Origin at big-end (crank pin) center, +Z toward the small end, small-end center exactly rodLengthMm from the origin. Renderer places origin at the crank-pin point and aims +Z at the wrist-pin point (no scaling — the core geometry makes the distance exactly L). Aim convention: part-local +X kept as close to the project +X (crank axis) as the aim allows — the rod swings in the bore/valley plane, so this is well-defined. |
+| `rot_crankthrow_c1_stock.glb` | Two crank webs (counterweighted) + pin journal for station 1, RH throw. Node `rot_crankthrow_c1_stock`, plus a child node `rot_crankpin_c1_stock` whose origin is the pin center. | Origin on the crank axis at the throw's local x = 0 (the renderer translates the part to station x). Renderer rotates it about the crank axis so the pin center coincides with `crankPinPositionM` for cylinder 1 at every angle. |
+| `sta_head_c1_stock.glb` | Head section for one cylinder: deck block with 4 valve guides, injector bore, rocker shaft pedestals. Node `sta_head_c1_stock`. | Static. Deck underside in the deck plane; positioned from config values only. |
+| `val_valve_intake_stock.glb` | One intake valve (head, stem, tip) as node `val_valve_intake_stock`, plus its spring (helical or stacked-torus representation with a retainer at its top) as separate node `val_spring_intake_stock` in the same file. | Valve origin at the valve head underside center (the seat point); renderer places two instances, each translating along the bore axis by the intake lift. **Spring node origin at its seat (fixed) end**; renderer places that origin at the spring seat point (layout table) and scales the spring along the bore axis about that origin by (installedLength − lift) / installedLength. |
+| `val_valve_exhaust_stock.glb` | Same, exhaust: nodes `val_valve_exhaust_stock`, `val_spring_exhaust_stock`. | As above, with exhaust lift. |
+| `val_pushrod_stock.glb` | One pushrod (tube with ball/cup ends) as node `val_pushrod_stock`, plus one lifter (short cylinder with a roller or flat foot) as node `val_lifter_stock` in the same file. | Two instances (intake/exhaust), placed per the layout table and the rocker derivation below: the lifter translates along the bore axis by the pushrod rise; the pushrod is stretched/oriented between the lifter top point and the rotated rocker tail point. Aim convention as for the rod (+X toward project +X). |
+| `val_rocker_stock.glb` | One rocker arm: shaft boss, pushrod-side arm with adjuster, valve-side arm with a curved pad. Node `val_rocker_stock`. | Origin at the rocker shaft axis. Two instances. Renderer rotates each about the shaft axis (direction along X) by θr = asin(lift / valveRowOffset) per the derivation section — exact, not small-angle — with the sign per channel so the pad side moves toward the piston as lift increases. |
+| `val_bridge_stock.glb` | One valve bridge: bar spanning a pair of valve stem tips with two guide posts and a top pad boss (the ≥ 3 mm rocker overlap allowance). Node `val_bridge_stock`. | Two instances. Renderer positions each on its pair's stem tips, translated along the bore axis by that channel's lift; contact with the rocker pad is visual, per the derivation section. |
+| `fuel_injector_c1_stock.glb` | Center injector: nozzle tip at the deck, body, top connector. Node `fuel_injector_c1_stock`. | Static, on the bore axis. |
+
+Detail level: recognizable machined parts built from Blender primitives/lathe profiles — not CAD. Budget: ≤ 15,000 triangles per part file, ≤ 60,000 for the whole assembly.
+
+**Valvetrain layout (normative).** Bank-local coordinates for cylinder 1: X along the crank axis (0 at the station center, + toward the front), W in the bank plane perpendicular to the bore (+ toward the valley), B along the bore axis measured from the crank axis. The deck plane sits at B = 266.5 mm ((r + L) + pistonCompressionHeight + deckGap = 212.5 + 52 + 2, all from config). Layout points (mm):
+
+| Feature | Position |
+| --- | --- |
+| Valve centers | intake (X ±22, W +23), exhaust (X ±22, W −23) — valvePairSpacing / 2 and ±valveRowOffset |
+| Stem tips | B = 371.5 (deck + valveStemLength 105) |
+| Spring seats | at the valve centers, B = 311.5 (deck + springSeatHeight 45); spring installed length = springFreeLength 48, so retainer undersides at B = 359.5 |
+| Bridges | centers (X 0, W ±23); underside B = 366.5 (stem tips socket 5 into the bridge); bridgeThickness 10 → top at B = 376.5 |
+| Rocker shaft axis | the line W = 0, B = 376.5 (deck + rockerShaftHeight 110), direction **along X**; head pedestals rise to this line |
+| Rocker pads | contact the bridge tops at (X 0, W ±23, B 376.5) at rest — arms horizontal at rest |
+| Rocker tails (pushrod contact) | (X +30 intake / −30 exhaust, W +19, B 376.5) at rest — rockerTailXOffset / rockerTailValleyOffset |
+| Pushrods | parallel to the bore at (X ±30 per channel, W +19 = pushrodValleyOffset); bottom rest point = lifter top at B = 130 (lifterTopBoreOffset) |
+| Lifters | translate along the bore axis; the lifter/pushrod line's radial distance from the crank axis is √(130² + 19²) ≈ 131 mm, clearing the crank-web sweep (radius 62) |
+
+Nominal pushrod length 246 mm ≈ 376.5 − 130 (the renderer stretches the pushrod between its two live endpoints regardless; see below).
+
+**Rocker/pushrod derivation (renderer-side, from core lift only).** For each channel (intake, exhaust) with lift ℓ (meters, from `computeState`):
+- Rocker angle θr = asin(ℓ / valveRowOffset): the pad's W-distance from the shaft axis is valveRowOffset (23 mm) and the arm is horizontal at rest, so the pad's motion along the bore is exactly 23·sin θr = ℓ. Rotation sign per channel so the pad side moves toward the piston as lift increases (the exhaust pad, at W −23, takes the opposite sign; its tail still rises).
+- The tail point is the tail rest offset (W +19, B 0 relative to the shaft line, at the channel's tail X) rotated about the shaft axis by θr.
+- Pushrod rise = 19·sin θr = ℓ × 19/23 (rockerTailValleyOffset × sin θr). The lifter translates along the bore axis by the rise.
+- The pushrod is drawn between the lifter-top point (rest point + rise along the bore) and the rotated tail point. Its length change over the cycle is < 0.1 mm (the tail's W-motion is second-order), so the two-point method is invisible here.
+- Bridges translate along the bore by ℓ, carried on the stem tips. Rocker-pad/bridge contact is visual: model a ≥ 3 mm overlap allowance (e.g., a pad boss on the bridge top), which absorbs the pad's lateral scrub of ≈ 23(1 − cos θr) ≈ 1.9 mm at maximum lift.
+
+All constants come from the detail config. No other motion inputs are introduced.
+
+## Draft studio look (D-024 — draft at M2, confirmed at M3)
+
+- **HDRI:** one Poly Haven studio HDRI (CC0), 2k .hdr, committed at `public/hdri/<asset_name>_2k.hdr`. Outdoor/nature HDRIs are out of scope — studio or indoor only. Recorded in the provenance file (Deliverable 7) with its Poly Haven page URL and CC0 license.
+- **Renderer:** load with `RGBELoader`, build the environment with `PMREMGenerator`; `scene.environment` = the environment texture; `scene.background` = solid dark color (0x0b0b0d) — the HDRI lights, it is not the backdrop. Tone mapping ACESFilmic, exposure 1.1. **The Milestone 1 lights are removed** (hemisphere and fill); lighting is the HDRI environment plus one directional key light casting a soft shadow onto a large dark ground plane (roughness 0.95, metalness 0) positioned below the engine; only the detailed assembly casts shadows in this milestone. The M1 per-bank wireframe/translucent enclosures are unchanged (the detailed cylinder remains visible through them).
+- **Materials** (MeshStandardMaterial or MeshPhysicalMaterial, assigned in Blender or at load — builder's choice, recorded in the measurements doc): piston cast aluminum (metalness 0.9, roughness 0.38); rod forged steel (0.85, 0.42); crank webs/journal steel (0.9, 0.3); head cast aluminum (0.75, 0.55); valves steel (0.9, 0.25); springs blued steel (0.8, 0.45); pushrods/rockers/bridges steel (0.85, 0.35); injector steel with a dark polymer top (0.4, 0.6). M1 primitive cylinders keep their existing materials.
+- The on-screen illustrative caption stays, and its text is extended to cover the detailed parts' shapes (still one visible caption).
+
+## Deliverables
+
+1. **Detail config** `src/config/detailConfig.ts` — declares/exports `interface DetailConfig` (in this file; `interfaces.ts` stays frozen) and `export const detailConfig: DetailConfig`. Every field a `ProvenancedValue`, confidence `'placeholder'`, source citing the Rev C unknowns / D-011–D-012 placeholder policy: pistonCompressionHeightMm (52, 'mm'), pistonSkirtClearanceMm (0.15, 'mm'), wristPinDiameterMm (33, 'mm'), pinJournalDiameterMm (60, 'mm'), crankWebThicknessMm (18, 'mm'), crankWebRadiusMm (62, 'mm'), valveIntakeHeadMm (38, 'mm'), valveExhaustHeadMm (35, 'mm'), valveStemMm (7, 'mm'), valveStemLengthMm (105, 'mm'), valveInsetMm (1, 'mm'), valvePairSpacingMm (44, 'mm'), valveRowOffsetMm (23, 'mm'), springFreeLengthMm (48, 'mm'), springDiameterMm (26, 'mm'), springSeatHeightMm (45, 'mm'), bridgeThicknessMm (10, 'mm'), rockerShaftHeightMm (110, 'mm' — above the deck plane), rockerTailValleyOffsetMm (19, 'mm'), rockerTailXOffsetMm (30, 'mm'), pushrodValleyOffsetMm (19, 'mm'), pushrodLengthMm (246, 'mm'), pushrodDiameterMm (9, 'mm'), lifterTopBoreOffsetMm (130, 'mm'), injectorBodyMm (24, 'mm'), injectorLengthMm (120, 'mm').
+2. **Part GLBs** in `public/models/` — the 10 files in the table above, built by the script in Deliverable 4.
+3. **Dimensions bridge:** `assets-src/dimensions.json` — a flat JSON object with every detail-config value above plus `boreMm`, `strokeMm`, `crankThrowMm`, `rodLengthMm` from `engineConfig` and `borePitch`, `maxLift`, `deckGap` from `valveConfig`. **JSON keys are exactly the TypeScript field names** (note the valveConfig fields carry no `Mm` suffix), values in mm. It is generated from the configs by the builder (a small script under `tools/` is welcome but the committed JSON is the artifact) and kept honest by Test 2 below.
+4. **Blender build script** `assets-src/blender/build_cylinder1.py` — runnable headless: `blender --background --python assets-src/blender/build_cylinder1.py -- --out public/models`. Reads only `assets-src/dimensions.json` for interface dimensions; builds all 10 GLBs with contract naming, pivot origins, meter units, Y-up export. It also builds the plan's axis-conversion fixture: `assets-src/fixture/axis_fixture.glb` (not deployed) — three thin boxes authored along the Blender axes with lengths X 30 / Y 60 / Z 90 mm, checked by Test 6. `assets-src/README.md` documents the regeneration command and the Blender version used. GLBs and the HDRI are stored **uncompressed** at this milestone; meshopt/KTX2 compression is deferred to Milestone 3's budget confirmation.
+5. **Renderer integration** — part loader in the renderer (`src/renderer/`) applying the frame conversion once per loaded part: the loaded glTF scene is wrapped so glTF +Y (bore) maps to the part-local +Z, glTF +X stays +X (rotation about X by +90°), documented in `docs/THREE_API_NOTES.md` along with any other new three APIs used (GLTFLoader, RGBELoader, PMREMGenerator). `engineScene.ts` gains the detailed cylinder-1 assembly driven per the motion rules above; cylinder 1's primitives are removed, cylinders 2–8 untouched in behavior. The studio look (above) is applied. Firing highlight: applied to the detailed piston for cylinder 1 exactly as for primitives — traverse the loaded piston group, clone its materials, and set the highlight emissive on all of them (the GLB carries several PBR materials).
+6. **Measurements doc** `docs/M2-MEASUREMENTS.md` — per-part triangle counts (from the GLB files), total assembly triangles, scene draw calls and rendered triangle count observed at runtime (`renderer.info`), the frame-time method (machine + browser, 10 s average at 900 RPM, camera framing the whole engine) and result, an ×8 extrapolation for the full detailed engine, and a per-tier budget table (desktop / phone: total triangles, draw calls, texture+HDRI memory). **These budgets are the set budgets from Milestone 2 exit** (per D-025 as clarified by D-033): the owner approves them at the Milestone 2 preview, and Milestone 3's job is to verify the full engine complies — not to set them again.
+7. **Provenance** `assets-src/PROVENANCE.md` — one entry per GLB (built from `build_cylinder1.py` + `dimensions.json`; shapes illustrative, dimensions from placeholder config) and one for the HDRI (Poly Haven asset name, page URL, CC0).
+8. **Docs:** this spec is added to the repo by Buckley, not the builder. Builder updates `docs/THREE_API_NOTES.md` per Deliverable 5. No changes to `docs/PLAN.md`. Buckley records **D-033** in `docs/DECISIONS.md` alongside this spec (per the anti-drift rule): "Per-tier budgets are set at Milestone 2 exit from the detailed cylinder's measurements, owner-approved at the M2 preview and recorded in `docs/M2-MEASUREMENTS.md`; Milestone 3 verifies the full engine complies. This clarifies D-025 and the plan's M2/M3 budget wording." Buckley also updates `docs/OPEN_ITEMS.md` when the milestone closes.
+
+## Tests (all must pass in CI, plus all M1/M0 tests still green)
+
+New file `src/assets/glbContract.test.ts` (node environment, reads files with `fs`; parse the GLB JSON chunk directly — no three import):
+
+1. **Files and names:** all 10 GLBs exist under `public/models/`, start with the `glTF` magic, and their JSON chunk contains the contract node names from the table (valve files contain both the valve node and the spring node; pushrod file contains pushrod and lifter nodes; crankthrow file contains the pin child node).
+2. **Dimensions sync:** `assets-src/dimensions.json` parsed and compared field-by-field to `detailConfig`, `engineConfig`, and `valveConfig` values — exact equality (they are the same numbers in mm). Any drift fails.
+3. **Bounds and node geometry vs config (in glTF file space, bore axis = +Y):** piston bounding box width/depth ≈ boreMm − pistonSkirtClearanceMm within 1 mm, height ≤ pistonCompressionHeightMm + 25 mm (crown-to-skirt allowance); the rod's small-end child node translation is ≈ rodLengthMm from the rod origin within 0.5 mm (node-to-node — a bounding box would include big-end cap and small-end boss overhang and is not used for the rod); intake valve head diameter ≈ valveIntakeHeadMm within 1 mm (from its mesh bounds); crankthrow pin node translation ≈ (0, +crankThrowMm, 0) within 0.5 mm per component — at α = 0 the pin sits on the bore axis, so this pins the export's orientation, not just the radius. (Bounds from accessor min/max in local space; composing node transforms where needed is the builder's implementation choice, tolerances as stated.)
+4. **Pivots:** the piston node's world translation in its file is (0, 0, 0) within 1e-6 (origin at the pivot, per contract); same for the rocker node and the crankthrow node.
+5. **Budgets:** each GLB's total triangle count (sum over mesh primitives of index/position counts — valid because the files are uncompressed at this milestone) ≤ 15,000, and the assembly total ≤ 60,000.
+6. **Axis fixture:** `assets-src/fixture/axis_fixture.glb` parses, and its total bounding-box extents in file space are ≈ X 30 mm, Y 90 mm, Z 60 mm, each within 1 mm — proving the Blender→glTF Y-up conversion maps the authored bore axis (Blender +Z, the 90 mm box) to file +Y, and the authored Blender +Y (60 mm box) to file Z.
+
+Existing architecture test still applies: GLTFLoader/RGBELoader used only under `src/renderer/`.
+
+## Acceptance criteria (Buckley verifies)
+
+1. CI green on the PR (typecheck, all tests including the new contract tests, build); branch protection intact.
+2. Buckley re-runs `build_cylinder1.py` with a local Blender and the contract tests pass against the regenerated GLBs (script reproducibility — byte-identical output is not required).
+3. After merge, the deployed site shows cylinder 1 detailed — piston with rings, rod, crank throw, 4 valves with springs, moving pushrods/rockers/bridges, center injector — under the draft studio look (dark scene, HDRI-lit PBR materials), cylinders 2–8 still primitive, all M1 controls working, extended illustrative caption visible.
+4. Phasing spot-check unchanged: scrubber θ = 0 / 90 / 180 → firing cylinders 1 / 2 / 7 (cylinder 1's detailed piston highlights at θ = 0).
+5. `docs/M2-MEASUREMENTS.md` present with the ×8 extrapolation and the set per-tier budget table; provenance file complete.
+6. No changes to `src/core/`, `src/config/engineConfig.ts`, `src/config/valveConfig.ts`, the legacy viewer, or the exterior GLB.
+
+## Out of scope (do not build)
+
+Replicating the detail to cylinders 2–8 (M3), registering the exterior GLB (M3), locking the studio look (M3 confirms), explode/cutaway/x-ray/labels (M4), performance model (M5), camshaft/lifter-bore internals beyond the lifter part, turbo and all other systems, sound.
+
+## Antigravity task prompt (owner pastes this)
+
+> You are building Milestone 2 (One Detailed Cylinder + Draft Studio Look) of the Duramax LLY Engine Lab in this repo clone. First read `docs/PLAN.md`, `docs/DECISIONS.md`, and the full spec at `docs/specs/M2-detailed-cylinder.md` — the spec's part table, reference points, and rocker/pushrod derivation are normative: implement exactly as written; where the spec is silent, ask rather than invent. Work on branch `m2-detailed-cylinder` (create it from `main`). Deliver exactly: `src/config/detailConfig.ts` with the spec's placeholder provenanced values; the 10 part GLBs in `public/models/` built by `assets-src/blender/build_cylinder1.py` reading interface dimensions only from `assets-src/dimensions.json` (which you generate from the TS configs), with `assets-src/README.md` and `assets-src/PROVENANCE.md`; the renderer integration (part loader with the single frame conversion, detailed cylinder-1 assembly driven only by the existing core outputs, cylinder 1 primitives removed, draft studio look with a Poly Haven CC0 2k studio HDRI, firing highlight on the detailed piston); `docs/M2-MEASUREMENTS.md` with measured triangles/draw calls/frame time, the ×8 extrapolation, and the per-tier budget table; the six contract tests in `src/assets/glbContract.test.ts`; and `docs/THREE_API_NOTES.md` updates for the new three APIs. Do not modify anything under `src/core/`, `src/config/engineConfig.ts`, `src/config/valveConfig.ts`, the legacy viewer, or the exterior GLB. All existing tests must keep passing; typecheck, full test suite, and build must pass locally. Do not build anything in the Out of scope list. When finished, commit with clear messages and push the branch; do not merge it and do not open the pull request — say what you built, what you verified locally, the Blender version used, and anything you were unsure about.
