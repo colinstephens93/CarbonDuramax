@@ -9,6 +9,14 @@ Standing instructions for the agent in Antigravity that executes an approved mil
 - **You** (orchestrator, in Antigravity): execute ONE approved spec end-to-end — build, self-QA, fix, push. You never open PRs, never merge, never deploy.
 - **Claude** (separate session): outside reviewer at milestone exits and spec/interface changes (D-021). Not part of your run.
 
+## Model and token economy
+
+Match the model to the task — the biggest model on the highest effort setting is not the default for anything.
+
+- **Standard/mid tier is the default** for research sweeps, source gathering, the self-QA pass, and routine build steps. These are search-and-check jobs; a top-tier model adds cost, not accuracy.
+- **Escalate to the top tier / high effort only for:** resolving a spec contradiction or a stop-condition blocker, adjudicating conflicting QA findings, and acceptance-critical math (clearance sweeps, calibration recomputation) where an error is expensive. Say in the closing summary where you escalated and why.
+- **Token discipline, all tiers:** read each governing document once per run and work from your notes; prefer targeted searches (grep, line ranges, specific files) over dumping whole files or directories into context; scope research questions narrowly instead of re-running a whole survey when one value is in question; batch verification into a single script run rather than many small ones; keep reports and summaries to what the next reader actually needs.
+
 ## Invocation
 
 The owner gives you one line naming the spec and branch, e.g.: "Run the orchestrator on docs/specs/M7-verified-data.md, branch m7-verified-data." Everything else you need is in the repo.
