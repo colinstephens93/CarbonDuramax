@@ -6,12 +6,17 @@ export {
   type CameraPose,
   type EngineRenderStats,
   type EngineSceneController,
+  type EngineSceneOptions,
   type ProjectedLabelAnchor,
   type QualityMode,
   type QualityTier,
   type SectionState,
 } from './engineScene';
-export { loadRegisteredExteriorShell, type LoadedExteriorShell } from './exteriorLoader';
+export {
+  loadRegisteredExteriorShell,
+  type ExteriorPreservedSubtreeSpec,
+  type LoadedExteriorShell,
+} from './exteriorLoader';
 export {
   bankFrameAxes,
   bankLocalToWorldMm,
@@ -29,12 +34,25 @@ export {
 } from './layout';
 export {
   createPartLoader,
+  extractAllPartPrimitives,
   extractPartInstance,
   extractPartPrimitives,
   loadPartGltf,
   wrapInPartLocalFrame,
   type ExtractedPartPrimitive,
 } from './partLoader';
+export {
+  computeVariantExplodeOffsetMm,
+  EXTERIOR_PRESERVED_SUBTREES,
+  EXTERIOR_PRESERVED_TRIANGLES,
+  EXTERNAL_VISUAL_SLOTS,
+  SHELL_PARTS_REPLACED_BY_SLOT,
+  VARIANT_TRIANGLE_CAPS,
+  VISUAL_VARIANT_SLOTS,
+  type ExternalVisualSlotId,
+  type VisualVariantDescriptor,
+} from './partVariants';
+export { loadVariantScene, type LoadedVariantScene } from './variantLoader';
 export {
   clampExplodeFactor,
   clampSectionPositionMm,

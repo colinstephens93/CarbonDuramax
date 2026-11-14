@@ -325,6 +325,12 @@ function injectStyles(): void {
       font-size: 11.5px;
       cursor: pointer;
     }
+    .m8-build-note {
+      margin: 7px 0 0;
+      font-size: 10.5px;
+      line-height: 1.35;
+      color: #94a3b8;
+    }
     .m6-build-violations {
       margin-top: 8px;
       padding: 6px 8px;
@@ -592,6 +598,7 @@ export interface EngineUiOptions {
   onSectionChange?: (mode: UiSectionMode, positionMm: number) => void;
   onXrayChange?: (enabled: boolean) => void;
   onLabelsChange?: (enabled: boolean) => void;
+  onBuildChange?: (build: Build) => void;
   dyno?: DynoComparisonData;
 }
 
@@ -622,7 +629,7 @@ export function mountEngineUi(
 
   const bannerSubtitle = document.querySelector('#title-banner p');
   if (bannerSubtitle) {
-    bannerSubtitle.textContent = 'Milestone 7 — Verified LLY Data';
+    bannerSubtitle.textContent = 'Milestone 8 — 3D Part Variants';
   }
 
   let isPlaying = true;
@@ -958,13 +965,18 @@ export function mountEngineUi(
     buildSlotsContainer.appendChild(slotRow);
   }
 
+  const buildNoteEl = document.createElement('p');
+  buildNoteEl.className = 'm8-build-note';
+  buildNoteEl.textContent =
+    '3D variants: exterior parts render with the Exterior shell shown (Exterior or X-Ray); the low-compression piston renders in the internal assembly.';
+
   const buildViolationsEl = document.createElement('div');
   buildViolationsEl.className = 'm6-build-violations';
   buildViolationsEl.setAttribute('role', 'status');
   buildViolationsEl.setAttribute('aria-live', 'polite');
   buildViolationsEl.style.display = 'none';
 
-  buildGroup.append(buildTitle, buildSlotsContainer, buildViolationsEl);
+  buildGroup.append(buildTitle, buildSlotsContainer, buildNoteEl, buildViolationsEl);
 
   // Milestone 5–6 Dyno section (directly below Build, present in both quality tiers; Spec §4.2)
   const dynoHandle: DynoSectionHandle | null = options?.dyno
@@ -985,6 +997,8 @@ export function mountEngineUi(
       name: 'Modified build',
       selections,
     };
+
+    options?.onBuildChange?.(modifiedBuild);
 
     const violations = checkCompatibility(modifiedBuild, fullCatalog);
     if (violations.length > 0) {
@@ -1019,11 +1033,11 @@ export function mountEngineUi(
   panel.appendChild(readoutGrid);
   document.body.appendChild(panel);
 
-  // On-screen illustrative caption (M7 Spec §4.4)
+  // On-screen illustrative caption (M8 Spec §5.1)
   const caption = document.createElement('div');
   caption.id = 'm1-illustrative-caption';
   caption.textContent =
-    'Illustrative geometry, part shapes & timing: Bore spacing, deck height and piston protrusion, valve timing events, duration, and lift profile shape, lifter gallery placement, detailed part shapes, and the registered exterior shell remain illustrative placeholders, not verified LLY measurements.';
+    'Illustrative geometry, part shapes & timing: Bore spacing, deck height and piston protrusion, valve timing events, duration, and lift profile shape, lifter gallery placement, detailed part shapes, aftermarket variant part shapes and their service positions, and the registered exterior shell remain illustrative placeholders, not verified LLY measurements.';
   document.body.appendChild(caption);
 
   const updatePlayButtonLabel = (): void => {

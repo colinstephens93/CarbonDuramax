@@ -61,8 +61,11 @@ Each milestone ends only when its exit criteria pass in CI or are signed off by 
 7. **Verified LLY data**
    - Replace illustrative placeholder dimensions with published values where credible sources exist (L7 data survey), upgrading provenance labels; per-valve lift from published lobe lift and rocker ratios; geometry regenerated from the upgraded config; disclaimer banner reduced to what remains illustrative.
    - Exit: upgraded values pinned by config tests with sources in `docs/M7-DATA.md`; piston-to-valve clearance recomputed, non-negative across 720° for both valves; budgets still pass.
+8. **3D visual part variants**
+   - The catalog's `modelPath` becomes real for the parts whose modification has an honest visible signature: large turbo, high-flow intake, 4-inch exhaust, upgraded intercooler (replacing the shipped stock representation where one exists, or appearing at a documented service point where the shipped scene has none), and the low-compression pistons (internal assembly, exploded/cutaway views). Stock selections keep the shipped scene; the remaining internal variants are recorded out of scope with reasons.
+   - Exit: selecting each modified visual variant swaps/shows its 3D model and restoring stock restores the shipped scene; the variant GLBs pass the asset contract (caps, envelopes, interface datums); D-033 budgets pass in the worst-case build with measured numbers; RF-1…RF-7 unchanged for stock builds.
 
-After 7: capped cutaway sections, shareable builds, and engine sound are candidates.
+After 8: capped cutaway sections, shareable builds, engine sound, stock vehicle-side hardware models, and the remaining internal-part visual variants (rods, injectors, CP3, camshaft, heads) are candidates.
 
 ## Asset contract and placeholder geometry
 

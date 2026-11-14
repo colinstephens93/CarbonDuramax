@@ -28,7 +28,21 @@ On Windows PowerShell when `blender` is not on `PATH`:
 & "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" --background --python assets-src/blender/build_cylinder1.py -- --out public/models
 ```
 
-### 3. Verify against the GLB contract test suite
+### 3. Regenerate all 5 Milestone 8 variant GLBs (`public/models/variants/`)
+
+Variant dimensions and interface datums are pinned in `assets-src/variant_dimensions.json`; `assets-src/blender/build_variants.py` reads `assets-src/dimensions.json` + `assets-src/variant_dimensions.json`, generates the 5 variant GLBs, and runs the logged envelope, marker, non-penetration, dish-volume, and GLB read-back assertions:
+
+```bash
+blender --background --python assets-src/blender/build_variants.py -- --out public/models/variants
+```
+
+On Windows PowerShell when `blender` is not on `PATH`:
+
+```powershell
+& "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" --background --python assets-src/blender/build_variants.py -- --out public/models/variants
+```
+
+### 4. Verify against the GLB contract and variant asset test suites
 
 ```bash
 npm test

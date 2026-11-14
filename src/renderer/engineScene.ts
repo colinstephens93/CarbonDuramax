@@ -15,10 +15,18 @@ import { loadRegisteredExteriorShell, type LoadedExteriorShell } from './exterio
 import { computeEngineLayout } from './layout';
 import {
   createPartLoader,
+  extractAllPartPrimitives,
   extractPartPrimitives,
   loadPartGltf,
   type ExtractedPartPrimitive,
 } from './partLoader';
+import {
+  computeVariantExplodeOffsetMm,
+  EXTERIOR_PRESERVED_SUBTREES,
+  SHELL_PARTS_REPLACED_BY_SLOT,
+  type VisualVariantDescriptor,
+} from './partVariants';
+import { loadVariantScene, type LoadedVariantScene } from './variantLoader';
 import {
   clampExplodeFactor,
   clampSectionPositionMm,
@@ -69,6 +77,11 @@ export interface ProjectedLabelAnchor {
   visible: boolean;
 }
 
+export interface EngineSceneOptions {
+  /** Every variant entry the catalog says has a 3D model; loaded at startup, attached only when selected. */
+  readonly visualVariants?: readonly VisualVariantDescriptor[];
+}
+
 export interface EngineRenderStats {
   calls: number;
   triangles: number;
@@ -78,6 +91,12 @@ export interface EngineRenderStats {
   detailedLoaded: boolean;
   hdriLoaded: boolean;
   exteriorLoaded: boolean;
+  variantsLoaded: boolean;
+  failedVariantIds: string[];
+  visibleVariantModels: string[];
+  variantSceneTriangles: number;
+  pistonVariantActive: boolean;
+  visibleSceneTriangles: number;
   exteriorVisible: boolean;
   xrayEnabled: boolean;
   explodeFactor: number;
@@ -104,6 +123,13 @@ export interface EngineSceneController {
   getExplodeFactor(): number;
   setSectionState(mode: SectionMode, positionMm?: number): void;
   getSectionState(): SectionState;
+  setVisualVariantSelections(selections: readonly VisualVariantDescriptor[]): void;
+  getVisualVariantState(): {
+    readonly activeVariantIds: readonly string[];
+    readonly attachedVariantIds: readonly string[];
+    readonly shellPartsHidden: readonly string[];
+    readonly pistonVariantActive: boolean;
+  };
   projectLabelAnchors(viewportWidthPx: number, viewportHeightPx: number): ProjectedLabelAnchor[];
   setQualityMode(mode: QualityMode): void;
   getQualityMode(): QualityMode;
@@ -121,6 +147,13 @@ interface InstancedPartBatch {
   readonly totalTriangles: number;
   setMatrixAt(instanceIndex: number, matrix: THREE.Matrix4): void;
   commit(): void;
+}
+
+interface PistonBatchSet {
+  readonly standard: InstancedPartBatch;
+  readonly firing: InstancedPartBatch;
+  readonly firingMaterials: THREE.Material[];
+  readonly totalTriangles: number;
 }
 
 interface DetailedV8Batches {
@@ -197,6 +230,7 @@ function createInstancedBatch(
   count: number,
   parent: THREE.Group,
   materialOverride?: (srcMat: THREE.MeshStandardMaterial) => THREE.MeshStandardMaterial,
+  attachToParent = true,
 ): {
   batch: InstancedPartBatch;
   createdMaterials: THREE.Material[];
@@ -217,7 +251,9 @@ function createInstancedBatch(
     // Instances span the full 8-cylinder V8 envelope; disable local-origin sphere culling
     // so close-up camera inspections (e.g. RF-2 on Cylinder 1 head) never drop visible instances.
     instMesh.frustumCulled = false;
-    parent.add(instMesh);
+    if (attachToParent) {
+      parent.add(instMesh);
+    }
     meshes.push(instMesh);
     perInstanceTris += prim.triangles;
   });
@@ -327,6 +363,7 @@ export function createEngineScene(
   config: EngineConfig,
   valveCfg: ValveConfig,
   detailCfg: DetailConfig = defaultDetailConfig,
+  options?: EngineSceneOptions,
 ): EngineSceneController {
   const layout = computeEngineLayout(config, valveCfg, detailCfg);
   const blockLengthM = layout.blockLengthMm / 1000;
@@ -371,6 +408,7 @@ export function createEngineScene(
   const geometriesToDispose = new Set<THREE.BufferGeometry>();
   const materialsToDispose = new Set<THREE.Material>();
   const texturesToDispose = new Set<THREE.Texture>();
+  const instancedMeshesToDispose = new Set<THREE.InstancedMesh>();
   let envRenderTarget: THREE.WebGLCubeRenderTarget | null = null;
   let disposed = false;
   let hdriLoaded = false;
@@ -865,6 +903,175 @@ export function createEngineScene(
     batches.pushrod.commit();
   };
 
+  const configuredVariants: readonly VisualVariantDescriptor[] = options?.visualVariants ?? [];
+  let variantsLoaded = configuredVariants.length === 0;
+  const failedVariantIdSet = new Set<string>();
+  const loadedExternalVariants = new Map<
+    string,
+    { readonly descriptor: VisualVariantDescriptor; readonly loaded: LoadedVariantScene }
+  >();
+  const attachedExternalVariantIds = new Set<string>();
+  const loadedPistonPrimsById = new Map<string, ExtractedPartPrimitive[]>();
+  const pistonBatchSetsById = new Map<string, PistonBatchSet>();
+  let stockPistonBatchSet: PistonBatchSet | null = null;
+  let nonPistonInternalTriangles = 0;
+  let attachedPistonVariantId: string | null = null;
+  let selectedVariants: readonly VisualVariantDescriptor[] = [];
+  const shellPartTrianglesById = new Map<string, number>();
+
+  const registerInstancedBatchForDispose = (batch: InstancedPartBatch): InstancedPartBatch => {
+    for (const mesh of batch.meshes) {
+      instancedMeshesToDispose.add(mesh);
+    }
+    return batch;
+  };
+
+  const buildPistonBatchSet = (
+    namePrefix: string,
+    prims: readonly ExtractedPartPrimitive[],
+    parent: THREE.Group,
+    attachToParent: boolean,
+  ): PistonBatchSet => {
+    const stdRes = createInstancedBatch(
+      `${namePrefix}_std`,
+      prims,
+      7,
+      parent,
+      undefined,
+      attachToParent,
+    );
+    const firingRes = createInstancedBatch(
+      `${namePrefix}_firing`,
+      prims,
+      1,
+      parent,
+      (srcMat) => {
+        const copy = srcMat.clone();
+        copy.emissive.copy(FIRING_EMISSIVE_COLOR);
+        copy.emissiveIntensity = FIRING_EMISSIVE_INTENSITY;
+        return copy;
+      },
+      attachToParent,
+    );
+    registerInstancedBatchForDispose(stdRes.batch);
+    registerInstancedBatchForDispose(firingRes.batch);
+    for (const m of firingRes.createdMaterials) {
+      materialsToDispose.add(m);
+      registerClippableMaterial(m);
+    }
+    return {
+      standard: stdRes.batch,
+      firing: firingRes.batch,
+      firingMaterials: firingRes.createdMaterials,
+      totalTriangles: stdRes.batch.totalTriangles + firingRes.batch.totalTriangles,
+    };
+  };
+
+  const ensureVariantPistonBatchSetsBuilt = (): void => {
+    if (!v8Batches) return;
+    for (const [variantId, prims] of loadedPistonPrimsById) {
+      if (!pistonBatchSetsById.has(variantId)) {
+        pistonBatchSetsById.set(
+          variantId,
+          buildPistonBatchSet(`piston_${variantId}`, prims, v8Batches.root, false),
+        );
+      }
+    }
+  };
+
+  // M8 §4.3: Synchronize scene-placed external variant attachment/visibility/explode offsets,
+  // shell preserved-subtree hiding, and instanced piston-batch swapping.
+  const syncVisualVariants = (): void => {
+    ensureVariantPistonBatchSetsBuilt();
+
+    const activeExtById = new Map<string, VisualVariantDescriptor>();
+    const replacedShellPartIds = new Set<string>();
+    let selectedPistonDesc: VisualVariantDescriptor | null = null;
+
+    for (const sel of selectedVariants) {
+      if (sel.slotId === 'pistons') {
+        selectedPistonDesc = sel;
+        continue;
+      }
+      if (loadedExternalVariants.has(sel.variantId)) {
+        activeExtById.set(sel.variantId, sel);
+        const replaced = SHELL_PARTS_REPLACED_BY_SLOT[sel.slotId] ?? [];
+        for (const partId of replaced) {
+          replacedShellPartIds.add(partId);
+        }
+      }
+    }
+
+    for (const id of [...attachedExternalVariantIds]) {
+      if (!activeExtById.has(id)) {
+        const entry = loadedExternalVariants.get(id);
+        if (entry) {
+          entry.loaded.group.visible = false;
+          scene.remove(entry.loaded.group);
+        }
+        attachedExternalVariantIds.delete(id);
+      }
+    }
+
+    const showExternalContext = exteriorVisible || xrayEnabled;
+    for (const [id, sel] of activeExtById) {
+      const entry = loadedExternalVariants.get(id)!;
+      if (!attachedExternalVariantIds.has(id)) {
+        scene.add(entry.loaded.group);
+        attachedExternalVariantIds.add(id);
+      }
+      entry.loaded.group.visible = showExternalContext;
+      const [dxMm, dyMm, dzMm] = computeVariantExplodeOffsetMm(sel.explodeVectorMm, explodeFactor);
+      entry.loaded.group.position.set(dxMm / 1000, dyMm / 1000, dzMm / 1000);
+    }
+
+    if (exteriorShell) {
+      for (const [partId, partGroup] of exteriorShell.partGroups) {
+        partGroup.visible = !replacedShellPartIds.has(partId);
+      }
+    }
+
+    const desiredPistonId =
+      selectedPistonDesc && pistonBatchSetsById.has(selectedPistonDesc.variantId)
+        ? selectedPistonDesc.variantId
+        : null;
+
+    if (v8Batches && stockPistonBatchSet && desiredPistonId !== attachedPistonVariantId) {
+      const prevSet =
+        attachedPistonVariantId !== null
+          ? pistonBatchSetsById.get(attachedPistonVariantId)!
+          : stockPistonBatchSet;
+      const nextSet =
+        desiredPistonId !== null
+          ? pistonBatchSetsById.get(desiredPistonId)!
+          : stockPistonBatchSet;
+
+      for (const m of prevSet.standard.meshes) {
+        v8Batches.root.remove(m);
+      }
+      for (const m of prevSet.firing.meshes) {
+        v8Batches.root.remove(m);
+      }
+      for (const m of nextSet.standard.meshes) {
+        v8Batches.root.add(m);
+      }
+      for (const m of nextSet.firing.meshes) {
+        v8Batches.root.add(m);
+      }
+
+      v8Batches.pistonStandard = nextSet.standard;
+      v8Batches.pistonFiring = nextSet.firing;
+      v8Batches.totalTriangles = nonPistonInternalTriangles + nextSet.totalTriangles;
+      attachedPistonVariantId = desiredPistonId;
+
+      applyV8KinematicState(
+        v8Batches,
+        lastState,
+        normalizeAngle720(lastState.crankAngleDeg),
+      );
+    }
+  };
+
   // M4 §5: Synchronize exterior shell group visibility (exteriorChecked || xrayEnabled) and ghosting state
   const syncExteriorShellState = (): void => {
     if (!exteriorShell) return;
@@ -982,79 +1189,57 @@ export function createEngineScene(
         trackPrimitives(pushrodPrims);
         trackPrimitives(lifterPrims);
 
-        const pistonStandard = createInstancedBatch('piston_std', pistonPrims, 7, root).batch;
-        const pistonFiringRes = createInstancedBatch(
-          'piston_firing',
-          pistonPrims,
-          1,
-          root,
-          (srcMat) => {
-            const copy = srcMat.clone();
-            copy.emissive.copy(FIRING_EMISSIVE_COLOR);
-            copy.emissiveIntensity = FIRING_EMISSIVE_INTENSITY;
-            return copy;
-          },
+        stockPistonBatchSet = buildPistonBatchSet('piston', pistonPrims, root, true);
+        const pistonStandard = stockPistonBatchSet.standard;
+        const pistonFiring = stockPistonBatchSet.firing;
+
+        const conrod = registerInstancedBatchForDispose(
+          createInstancedBatch('conrod', conrodPrims, 8, root).batch,
         );
-        for (const m of pistonFiringRes.createdMaterials) {
-          materialsToDispose.add(m);
-          registerClippableMaterial(m);
-        }
-        const pistonFiring = pistonFiringRes.batch;
+        const crankThrow = registerInstancedBatchForDispose(
+          createInstancedBatch('crankthrow', crankThrowPrims, 4, root).batch,
+        );
+        const head = registerInstancedBatchForDispose(
+          createInstancedBatch('head', headPrims, 8, root).batch,
+        );
+        const injector = registerInstancedBatchForDispose(
+          createInstancedBatch('injector', injectorPrims, 8, root).batch,
+        );
+        const intakeValve = registerInstancedBatchForDispose(
+          createInstancedBatch('intake_valve', intakeValvePrims, 16, root).batch,
+        );
+        const intakeSpring = registerInstancedBatchForDispose(
+          createInstancedBatch('intake_spring', intakeSpringPrims, 16, root).batch,
+        );
+        const exhaustValve = registerInstancedBatchForDispose(
+          createInstancedBatch('exhaust_valve', exhaustValvePrims, 16, root).batch,
+        );
+        const exhaustSpring = registerInstancedBatchForDispose(
+          createInstancedBatch('exhaust_spring', exhaustSpringPrims, 16, root).batch,
+        );
+        const bridge = registerInstancedBatchForDispose(
+          createInstancedBatch('bridge', bridgePrims, 16, root).batch,
+        );
+        const rhIntakeRocker = registerInstancedBatchForDispose(
+          createInstancedBatch('rocker_in_rh', rhIntakeRockerPrims, 4, root).batch,
+        );
+        const rhExhaustRocker = registerInstancedBatchForDispose(
+          createInstancedBatch('rocker_ex_rh', rhExhaustRockerPrims, 4, root).batch,
+        );
+        const lhIntakeRocker = registerInstancedBatchForDispose(
+          createInstancedBatch('rocker_in_lh', lhIntakeRockerPrims, 4, root).batch,
+        );
+        const lhExhaustRocker = registerInstancedBatchForDispose(
+          createInstancedBatch('rocker_ex_lh', lhExhaustRockerPrims, 4, root).batch,
+        );
+        const pushrod = registerInstancedBatchForDispose(
+          createInstancedBatch('pushrod', pushrodPrims, 16, root).batch,
+        );
+        const lifter = registerInstancedBatchForDispose(
+          createInstancedBatch('lifter', lifterPrims, 16, root).batch,
+        );
 
-        const conrod = createInstancedBatch('conrod', conrodPrims, 8, root).batch;
-        const crankThrow = createInstancedBatch('crankthrow', crankThrowPrims, 4, root).batch;
-        const head = createInstancedBatch('head', headPrims, 8, root).batch;
-        const injector = createInstancedBatch('injector', injectorPrims, 8, root).batch;
-        const intakeValve = createInstancedBatch('intake_valve', intakeValvePrims, 16, root).batch;
-        const intakeSpring = createInstancedBatch(
-          'intake_spring',
-          intakeSpringPrims,
-          16,
-          root,
-        ).batch;
-        const exhaustValve = createInstancedBatch(
-          'exhaust_valve',
-          exhaustValvePrims,
-          16,
-          root,
-        ).batch;
-        const exhaustSpring = createInstancedBatch(
-          'exhaust_spring',
-          exhaustSpringPrims,
-          16,
-          root,
-        ).batch;
-        const bridge = createInstancedBatch('bridge', bridgePrims, 16, root).batch;
-        const rhIntakeRocker = createInstancedBatch(
-          'rocker_in_rh',
-          rhIntakeRockerPrims,
-          4,
-          root,
-        ).batch;
-        const rhExhaustRocker = createInstancedBatch(
-          'rocker_ex_rh',
-          rhExhaustRockerPrims,
-          4,
-          root,
-        ).batch;
-        const lhIntakeRocker = createInstancedBatch(
-          'rocker_in_lh',
-          lhIntakeRockerPrims,
-          4,
-          root,
-        ).batch;
-        const lhExhaustRocker = createInstancedBatch(
-          'rocker_ex_lh',
-          lhExhaustRockerPrims,
-          4,
-          root,
-        ).batch;
-        const pushrod = createInstancedBatch('pushrod', pushrodPrims, 16, root).batch;
-        const lifter = createInstancedBatch('lifter', lifterPrims, 16, root).batch;
-
-        const allBatches: InstancedPartBatch[] = [
-          pistonStandard,
-          pistonFiring,
+        const nonPistonBatches: InstancedPartBatch[] = [
           conrod,
           crankThrow,
           head,
@@ -1071,7 +1256,8 @@ export function createEngineScene(
           pushrod,
           lifter,
         ];
-        const totalTriangles = allBatches.reduce((sum, b) => sum + b.totalTriangles, 0);
+        nonPistonInternalTriangles = nonPistonBatches.reduce((sum, b) => sum + b.totalTriangles, 0);
+        const totalTriangles = nonPistonInternalTriangles + stockPistonBatchSet.totalTriangles;
 
         v8Batches = {
           root,
@@ -1102,17 +1288,19 @@ export function createEngineScene(
           lastState,
           normalizeAngle720(lastState.crankAngleDeg),
         );
+        syncVisualVariants();
       },
     )
     .catch((err) => {
       console.error('Failed to load V8 detailed GLB assembly:', err);
     });
 
-  // Load, deduplicate, merge, and register Duramax_LLY_2005_66L_V8.glb (M3 §5, M4 §§4–5)
+  // Load, deduplicate, merge, and register Duramax_LLY_2005_66L_V8.glb (M3 §5, M4 §§4–5, M8 §3.4)
   void loadRegisteredExteriorShell(
     partLoader,
     `${baseUrl}Duramax_LLY_2005_66L_V8.glb`,
     layout.exterior,
+    EXTERIOR_PRESERVED_SUBTREES,
   )
     .then((loaded) => {
       if (disposed) {
@@ -1128,12 +1316,73 @@ export function createEngineScene(
         registerClippableMaterial(m);
       }
       for (const t of loaded.textures) texturesToDispose.add(t);
+      for (const [partId, partGroup] of loaded.partGroups) {
+        let tris = 0;
+        partGroup.traverse((child) => {
+          if (!(child instanceof THREE.Mesh)) return;
+          const geo = child.geometry as THREE.BufferGeometry;
+          const idx = geo.getIndex();
+          const pos = geo.getAttribute('position');
+          tris += idx ? idx.count / 3 : pos ? pos.count / 3 : 0;
+        });
+        shellPartTrianglesById.set(partId, tris);
+      }
       syncExteriorShellState();
+      syncVisualVariants();
       scene.add(loaded.group);
     })
     .catch((err) => {
       console.error('Failed to load registered exterior GLB shell:', err);
     });
+
+  // Preload configured 3D visual variants in parallel; attach only when selected (M8 §4.3)
+  if (configuredVariants.length > 0) {
+    const variantPromises = configuredVariants.map(async (desc) => {
+      const assetUrl = `${baseUrl}${desc.modelPath}`;
+      try {
+        if (desc.slotId === 'pistons') {
+          const gltf = await loadPartGltf(partLoader, assetUrl);
+          const prims = extractAllPartPrimitives(gltf);
+          if (disposed) {
+            for (const p of prims) {
+              p.geometry.dispose();
+              p.material.dispose();
+            }
+            return;
+          }
+          for (const p of prims) {
+            geometriesToDispose.add(p.geometry);
+            materialsToDispose.add(p.material);
+            registerClippableMaterial(p.material);
+          }
+          loadedPistonPrimsById.set(desc.variantId, prims);
+        } else {
+          const loaded = await loadVariantScene(partLoader, assetUrl);
+          if (disposed) {
+            for (const g of loaded.geometries) g.dispose();
+            for (const m of loaded.materials) m.dispose();
+            return;
+          }
+          for (const g of loaded.geometries) geometriesToDispose.add(g);
+          for (const m of loaded.materials) {
+            materialsToDispose.add(m);
+            registerClippableMaterial(m);
+          }
+          loadedExternalVariants.set(desc.variantId, { descriptor: desc, loaded });
+        }
+        syncVisualVariants();
+      } catch (err) {
+        failedVariantIdSet.add(desc.variantId);
+        console.error(`Failed to load visual variant "${desc.variantId}" (${assetUrl}):`, err);
+      }
+    });
+
+    void Promise.allSettled(variantPromises).then(() => {
+      if (disposed) return;
+      variantsLoaded = true;
+      syncVisualVariants();
+    });
+  }
 
   const applyEffectiveQualityTier = (nextTier: QualityTier): void => {
     const tierChanged = nextTier !== effectiveTier;
@@ -1179,6 +1428,7 @@ export function createEngineScene(
   const setExteriorVisible = (visible: boolean): void => {
     exteriorVisible = visible;
     syncExteriorShellState();
+    syncVisualVariants();
   };
 
   const getExteriorVisible = (): boolean => exteriorVisible;
@@ -1186,6 +1436,7 @@ export function createEngineScene(
   const setXrayEnabled = (enabled: boolean): void => {
     xrayEnabled = enabled;
     syncExteriorShellState();
+    syncVisualVariants();
   };
 
   const getXrayEnabled = (): boolean => xrayEnabled;
@@ -1196,6 +1447,7 @@ export function createEngineScene(
       return;
     }
     explodeFactor = next;
+    syncVisualVariants();
     if (v8Batches) {
       applyHeadAndInjectorTransforms(v8Batches);
       applyV8KinematicState(
@@ -1207,6 +1459,53 @@ export function createEngineScene(
   };
 
   const getExplodeFactor = (): number => explodeFactor;
+
+  const setVisualVariantSelections = (selections: readonly VisualVariantDescriptor[]): void => {
+    selectedVariants = [...selections];
+    syncVisualVariants();
+  };
+
+  const getVisualVariantState = (): {
+    readonly activeVariantIds: readonly string[];
+    readonly attachedVariantIds: readonly string[];
+    readonly shellPartsHidden: readonly string[];
+    readonly pistonVariantActive: boolean;
+  } => {
+    const activeVariantIds: string[] = [];
+    const attachedVariantIds: string[] = [];
+    const replacedShellPartIds = new Set<string>();
+
+    for (const sel of selectedVariants) {
+      if (sel.slotId === 'pistons') {
+        if (attachedPistonVariantId === sel.variantId) {
+          activeVariantIds.push(sel.variantId);
+          attachedVariantIds.push(sel.variantId);
+        }
+      } else if (loadedExternalVariants.has(sel.variantId)) {
+        activeVariantIds.push(sel.variantId);
+        if (attachedExternalVariantIds.has(sel.variantId)) {
+          attachedVariantIds.push(sel.variantId);
+        }
+        const replaced = SHELL_PARTS_REPLACED_BY_SLOT[sel.slotId] ?? [];
+        for (const partId of replaced) {
+          replacedShellPartIds.add(partId);
+        }
+      }
+    }
+
+    const shellPartsHidden = EXTERIOR_PRESERVED_SUBTREES.filter((spec) =>
+      exteriorShell
+        ? exteriorShell.partGroups.get(spec.id)?.visible === false
+        : replacedShellPartIds.has(spec.id),
+    ).map((spec) => spec.id);
+
+    return {
+      activeVariantIds,
+      attachedVariantIds,
+      shellPartsHidden,
+      pistonVariantActive: attachedPistonVariantId !== null,
+    };
+  };
 
   const setSectionState = (mode: SectionMode, positionMm?: number): void => {
     sectionMode = mode;
@@ -1340,6 +1639,50 @@ export function createEngineScene(
     const pmremBytes = hdriLoaded ? STUDIO_PMREM_AND_LUT_BYTES : 0;
     const totalVramBytes = pmremBytes + shadowMapBytes + extTextureBytes;
 
+    const showExternalContext = exteriorVisible || xrayEnabled;
+    const visibleVariantModels: string[] = [];
+    let visibleExternalVariantTriangles = 0;
+    let variantSceneTriangles = 0;
+
+    for (const sel of selectedVariants) {
+      if (sel.slotId === 'pistons') {
+        if (v8Batches !== null && attachedPistonVariantId === sel.variantId) {
+          visibleVariantModels.push(sel.variantId);
+          variantSceneTriangles +=
+            pistonBatchSetsById.get(sel.variantId)?.totalTriangles ?? 0;
+        }
+      } else if (showExternalContext && attachedExternalVariantIds.has(sel.variantId)) {
+        const entry = loadedExternalVariants.get(sel.variantId);
+        if (entry) {
+          visibleVariantModels.push(sel.variantId);
+          visibleExternalVariantTriangles += entry.loaded.triangles;
+          variantSceneTriangles += entry.loaded.triangles;
+        }
+      }
+    }
+
+    let visibleShellTriangles = 0;
+    if (exteriorShell && showExternalContext) {
+      visibleShellTriangles = exteriorShell.totalTriangles;
+      for (const [partId, partGroup] of exteriorShell.partGroups) {
+        if (!partGroup.visible) {
+          visibleShellTriangles -= shellPartTrianglesById.get(partId) ?? 0;
+        }
+      }
+    }
+
+    const internalTris = v8Batches ? v8Batches.totalTriangles : 0;
+    const visibleSceneTriangles =
+      internalTris +
+      mainShaft.triangles +
+      groundSegments +
+      visibleShellTriangles +
+      visibleExternalVariantTriangles;
+
+    const failedVariantIds = configuredVariants
+      .filter((d) => failedVariantIdSet.has(d.variantId))
+      .map((d) => d.variantId);
+
     return {
       calls: renderer.info.render.calls,
       triangles: renderer.info.render.triangles,
@@ -1349,6 +1692,12 @@ export function createEngineScene(
       detailedLoaded: v8Batches !== null,
       hdriLoaded,
       exteriorLoaded: exteriorShell !== null,
+      variantsLoaded,
+      failedVariantIds,
+      visibleVariantModels,
+      variantSceneTriangles,
+      pistonVariantActive: attachedPistonVariantId !== null,
+      visibleSceneTriangles,
       exteriorVisible,
       xrayEnabled,
       explodeFactor,
@@ -1356,7 +1705,7 @@ export function createEngineScene(
       sectionPositionMm,
       exteriorMergedMeshes: exteriorShell ? exteriorShell.mergedMeshCount : 0,
       exteriorSceneTriangles: exteriorShell ? exteriorShell.totalTriangles : 0,
-      internalSceneTriangles: v8Batches ? v8Batches.totalTriangles : 0,
+      internalSceneTriangles: internalTris,
       mainShaftTriangles: mainShaft.triangles,
       groundTriangles: groundSegments,
       qualityMode,
@@ -1392,6 +1741,10 @@ export function createEngineScene(
       keyLight.shadow.map.dispose();
       keyLight.shadow.map = null;
     }
+    for (const instMesh of instancedMeshesToDispose) {
+      instMesh.dispose();
+    }
+    instancedMeshesToDispose.clear();
     for (const geo of geometriesToDispose) {
       geo.dispose();
     }
@@ -1417,6 +1770,8 @@ export function createEngineScene(
     getExplodeFactor,
     setSectionState,
     getSectionState,
+    setVisualVariantSelections,
+    getVisualVariantState,
     projectLabelAnchors,
     setQualityMode,
     getQualityMode,
