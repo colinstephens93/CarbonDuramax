@@ -19,7 +19,7 @@ describe('parts catalog', () => {
 
     expect(validate.errors).toBeNull();
     expect(valid).toBe(true);
-    expect(stock).toHaveLength(1);
+    expect(stock).toHaveLength(12);
     expect(stock[0]?.slotId).toBe('turbo');
   });
 });

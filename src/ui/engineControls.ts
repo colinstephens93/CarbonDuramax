@@ -1,11 +1,13 @@
-// Plain-DOM UI controls, readouts, Exterior & Quality controls, Milestone 4 Views group
-// (Explode, Section cutaway, X-Ray, Labels + overlay chips), illustrative caption, and rAF loop
-// (D-007, D-012, D-034; docs/specs/M4-views.md §§3–8).
+// Plain-DOM UI controls, readouts, Exterior & Quality controls, Milestone 4 Views group,
+// Milestone 5 Dyno section, illustrative caption, and rAF loop
+// (D-007, D-012, D-013, D-015, D-034; docs/specs/M4-views.md §§3–8, docs/specs/M5-performance.md §5).
 // Never imports Three.js; drives the renderer strictly through callbacks.
 
 import type { ValveConfig } from '../config/valveConfig';
 import type { CrankState, CylinderId, EngineConfig } from '../core/interfaces';
 import { computeState, phaseOffsetDeg } from '../core/kinematics';
+import type { DynoPointDetail } from '../perf/model';
+import { createDynoSection, type DynoSectionHandle, type DynoUiData } from './dynoChart';
 
 export type UiQualityMode = 'auto' | 'full' | 'phone';
 export type UiSectionMode = 'off' | 'x' | 'y';
@@ -91,7 +93,7 @@ function injectStyles(): void {
       top: 16px;
       right: 16px;
       z-index: 20;
-      width: min(340px, calc(100vw - 32px));
+      width: min(360px, calc(100vw - 32px));
       max-height: calc(100vh - 32px);
       overflow-y: auto;
       box-sizing: border-box;
@@ -255,6 +257,103 @@ function injectStyles(): void {
       line-height: 1.35;
       color: #94a3b8;
     }
+    .m5-dyno-group {
+      padding: 9px 10px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      background: rgba(30, 41, 59, 0.55);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+    }
+    .m5-dyno-header {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: #e2e8f0;
+      margin-bottom: 6px;
+    }
+    .m5-dyno-svg {
+      display: block;
+      width: 100%;
+      height: 190px;
+      cursor: crosshair;
+      touch-action: none;
+    }
+    .m5-svg-marker-label {
+      paint-order: stroke;
+      stroke: rgba(15, 23, 42, 0.92);
+      stroke-width: 2.8px;
+      stroke-linejoin: round;
+    }
+    .m5-dyno-peaks {
+      margin-top: 6px;
+      margin-bottom: 8px;
+      padding: 6px 8px;
+      border-radius: 6px;
+      background: rgba(15, 23, 42, 0.62);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+    }
+    .m5-dyno-peak-line {
+      font-size: 10.75px;
+      line-height: 1.45;
+      color: #e2e8f0;
+      font-variant-numeric: tabular-nums;
+    }
+    .m5-dyno-inspector {
+      padding-top: 7px;
+      border-top: 1px solid rgba(148, 163, 184, 0.16);
+      margin-bottom: 7px;
+    }
+    .m5-inspector-rpm-val {
+      font-weight: 600;
+      color: #f8fafc;
+      font-variant-numeric: tabular-nums;
+    }
+    .m5-inspector-limit-row {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      margin-top: 6px;
+      margin-bottom: 6px;
+      font-size: 11.5px;
+      line-height: 1.35;
+    }
+    .m5-inspector-limit-title {
+      color: #94a3b8;
+      flex-shrink: 0;
+    }
+    .m5-inspector-limit-val {
+      font-weight: 600;
+    }
+    .m5-inspector-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 5px;
+    }
+    .m5-inspector-cell {
+      display: flex;
+      flex-direction: column;
+      padding: 4px 6px;
+      border-radius: 5px;
+      background: rgba(15, 23, 42, 0.58);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+    }
+    .m5-inspector-key {
+      font-size: 9.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #94a3b8;
+    }
+    .m5-inspector-val {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: #f8fafc;
+      font-variant-numeric: tabular-nums;
+    }
+    .m5-dyno-footnote {
+      margin: 0;
+      font-size: 10.5px;
+      line-height: 1.35;
+      color: #94a3b8;
+    }
     .m1-readout-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -364,6 +463,7 @@ export interface EngineUiOptions {
   onSectionChange?: (mode: UiSectionMode, positionMm: number) => void;
   onXrayChange?: (enabled: boolean) => void;
   onLabelsChange?: (enabled: boolean) => void;
+  dyno?: DynoUiData;
 }
 
 export interface EngineUiHandle {
@@ -377,6 +477,8 @@ export interface EngineUiHandle {
   setXrayChecked(checked: boolean): void;
   setLabelsChecked(checked: boolean): void;
   updateLabels(labels: readonly UiProjectedLabel[]): void;
+  setDynoInspectorRpm(rpm: number): void;
+  getDynoSelectedPoint(): DynoPointDetail | null;
   dispose(): void;
 }
 
@@ -390,7 +492,7 @@ export function mountEngineUi(
 
   const bannerSubtitle = document.querySelector('#title-banner p');
   if (bannerSubtitle) {
-    bannerSubtitle.textContent = 'Milestone 4 — Views: Explode, Cutaway, X-Ray, Labels';
+    bannerSubtitle.textContent = 'Milestone 5 — Performance Model & Dyno';
   }
 
   let isPlaying = true;
@@ -678,7 +780,16 @@ export function mountEngineUi(
   const effectiveSpeedReadout = createReadoutCard('Effective Speed');
   const firingCylReadout = createReadoutCard('Firing Cylinder', 'm1-firing-value');
 
-  panel.append(topRow, rpmGroup, scrubGroup, optionsRow, viewsGroup, readoutGrid);
+  // Milestone 5 Dyno section (below Views, present in both quality tiers; Spec §5)
+  const dynoHandle: DynoSectionHandle | null = options?.dyno
+    ? createDynoSection(options.dyno)
+    : null;
+
+  panel.append(topRow, rpmGroup, scrubGroup, optionsRow, viewsGroup);
+  if (dynoHandle) {
+    panel.appendChild(dynoHandle.element);
+  }
+  panel.appendChild(readoutGrid);
   document.body.appendChild(panel);
 
   // On-screen illustrative caption (unchanged per Spec §7)
@@ -940,10 +1051,19 @@ export function mountEngineUi(
     applyLabelsCheckedInternal(checked);
   };
 
+  const setDynoInspectorRpm = (targetRpm: number): void => {
+    dynoHandle?.setSelectedRpm(targetRpm);
+  };
+
+  const getDynoSelectedPoint = (): DynoPointDetail | null => {
+    return dynoHandle ? dynoHandle.getSelectedDetail() : null;
+  };
+
   const dispose = (): void => {
     cancelAnimationFrame(rafId);
     window.removeEventListener('pointerup', endScrub);
     window.removeEventListener('pointercancel', endScrub);
+    dynoHandle?.dispose();
     for (const el of labelNodesById.values()) {
       el.remove();
     }
@@ -966,6 +1086,8 @@ export function mountEngineUi(
     setXrayChecked,
     setLabelsChecked,
     updateLabels,
+    setDynoInspectorRpm,
+    getDynoSelectedPoint,
     dispose,
   };
 }
