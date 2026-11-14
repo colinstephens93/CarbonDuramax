@@ -242,8 +242,8 @@ function createInstancedBatch(
 }
 
 /**
- * Builds the axisymmetric turned main crankshaft along the project X axis (M3 Spec §3):
- * main shaft radius = 32.4 mm (within 32 ± 2 mm, matching rot_crankthrow_c1_stock stub radius),
+ * Builds the axisymmetric turned main crankshaft along the project X axis (M3 Spec §3, M7 Spec §4.3):
+ * main shaft radius = 39.95 mm (published mainJournalDiameterMm / 2, matching rot_crankthrow_c1_stock stub radius by construction),
  * rear flywheel flange disc behind station 7&8, and front snout/damper pulley disc ahead of station 1&2.
  */
 function buildMainCrankShaftMesh(
@@ -255,11 +255,11 @@ function buildMainCrankShaftMesh(
   material: THREE.MeshStandardMaterial;
   triangles: number;
 } {
-  const r = mainRadiusM; // 0.0324 m (32.4 mm)
-  const rearFlangeOuterR = 1.62 * r; // 52.5 mm (< 62 mm web radius)
+  const r = mainRadiusM; // 0.03995 m (39.95 mm published main journal radius)
+  const rearFlangeOuterR = 0.0525; // 52.5 mm (< 62 mm web radius)
   const rearSealR = 1.08 * r;
   const frontSnoutR = 0.78 * r;
-  const frontPulleyOuterR = 1.76 * r; // 57.0 mm (< 62 mm web radius)
+  const frontPulleyOuterR = 0.057; // 57.0 mm (< 62 mm web radius)
   const frontPulleyHubR = 1.15 * r;
   const rearFlangeXM = MAIN_SHAFT_REAR_FLANGE_X_MM / 1000; // -0.018 m
   const frontSnoutEndXM = blockLengthM + MAIN_SHAFT_FRONT_SNOUT_OFFSET_MM / 1000; // +0.478 m
@@ -492,7 +492,8 @@ export function createEngineScene(
   const valveRowOffsetM = vt.valveRowOffsetMm / 1000;
   const springInstalledLenM = vt.springFreeLengthMm / 1000;
   const rockerCupXM = vt.rockerCupXOffsetMm / 1000;
-  const rockerCupWM = vt.rockerCupValleyOffsetMm / 1000;
+  const rockerCupIntakeWM = vt.rockerCupIntakeValleyOffsetMm / 1000;
+  const rockerCupExhaustWM = vt.rockerCupExhaustValleyOffsetMm / 1000;
   const pushrodNominalLenM = vt.pushrodNominalLengthMm / 1000;
   const lifterRestBM = vt.intakeLifterTopMm.bMm / 1000;
   const intakeLifterXM = vt.intakeLifterTopMm.xMm / 1000;
@@ -787,7 +788,7 @@ export function createEngineScene(
       }
 
       // 2f. Lifters (+lifterLiftM) & leaning two-point pushrods (bottom +lifterLiftM -> cup +headLiftM)
-      const intakeRiseM = rockerCupWM * Math.sin(thetaIntake);
+      const intakeRiseM = rockerCupIntakeWM * Math.sin(thetaIntake);
       setBankWorldPos(
         lifterTopVec,
         ct,
@@ -803,7 +804,7 @@ export function createEngineScene(
         cupLiveVec,
         ct,
         +rockerCupXM,
-        -rockerCupWM * Math.cos(thetaIntake),
+        -rockerCupIntakeWM * Math.cos(thetaIntake),
         explodedRockerShaftBM + intakeRiseM,
         spreadXM,
       );
@@ -817,7 +818,7 @@ export function createEngineScene(
       );
       batches.pushrod.setMatrixAt(cIdx * 2, instanceMat);
 
-      const exhaustRiseM = rockerCupWM * Math.sin(thetaExhaust);
+      const exhaustRiseM = rockerCupExhaustWM * Math.sin(thetaExhaust);
       setBankWorldPos(
         lifterTopVec,
         ct,
@@ -833,7 +834,7 @@ export function createEngineScene(
         cupLiveVec,
         ct,
         -rockerCupXM,
-        +rockerCupWM * Math.cos(thetaExhaust),
+        +rockerCupExhaustWM * Math.cos(thetaExhaust),
         explodedRockerShaftBM + exhaustRiseM,
         spreadXM,
       );

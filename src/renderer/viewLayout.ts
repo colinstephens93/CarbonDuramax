@@ -279,8 +279,8 @@ export function computeExplodedPushrodGeometryMm(
     Math.min(1, Math.max(-1, exhaustLiftMm / vt.valveRowOffsetMm)),
   );
 
-  const intakeRiseMm = vt.rockerCupValleyOffsetMm * Math.sin(thetaIntake);
-  const exhaustRiseMm = vt.rockerCupValleyOffsetMm * Math.sin(thetaExhaust);
+  const intakeRiseMm = vt.rockerCupIntakeValleyOffsetMm * Math.sin(thetaIntake);
+  const exhaustRiseMm = vt.rockerCupExhaustValleyOffsetMm * Math.sin(thetaExhaust);
 
   const dist3d = (a: LocalXwbMm, b: LocalXwbMm): number =>
     Math.hypot(b.xMm - a.xMm, b.wMm - a.wMm, b.bMm - a.bMm);
@@ -292,7 +292,7 @@ export function computeExplodedPushrodGeometryMm(
   };
   const intakeTopZero: LocalXwbMm = {
     xMm: +vt.rockerCupXOffsetMm,
-    wMm: -vt.rockerCupValleyOffsetMm * Math.cos(thetaIntake),
+    wMm: -vt.rockerCupIntakeValleyOffsetMm * Math.cos(thetaIntake),
     bMm: vt.rockerShaftBMm + intakeRiseMm,
   };
   const intakeBottomExploded: LocalXwbMm = {
@@ -314,7 +314,7 @@ export function computeExplodedPushrodGeometryMm(
   };
   const exhaustTopZero: LocalXwbMm = {
     xMm: -vt.rockerCupXOffsetMm,
-    wMm: +vt.rockerCupValleyOffsetMm * Math.cos(thetaExhaust),
+    wMm: +vt.rockerCupExhaustValleyOffsetMm * Math.cos(thetaExhaust),
     bMm: vt.rockerShaftBMm + exhaustRiseMm,
   };
   const exhaustBottomExploded: LocalXwbMm = {
@@ -468,7 +468,7 @@ export function evaluateLabelAnchors(
   const thetaIntake1 = Math.asin(
     Math.min(1, Math.max(-1, intakeLift1Mm / vt.valveRowOffsetMm)),
   );
-  const intakeRise1Mm = vt.rockerCupValleyOffsetMm * Math.sin(thetaIntake1);
+  const intakeRise1Mm = vt.rockerCupIntakeValleyOffsetMm * Math.sin(thetaIntake1);
 
   const compHeightMm = detailCfg.pistonCompressionHeightMm.value;
   const springSeatHeightMm = detailCfg.springSeatHeightMm.value;
@@ -538,7 +538,7 @@ export function evaluateLabelAnchors(
   });
   const intakeCupLiveWorldMm = bankLocalToWorldMm(explodedCyl1StationXMm, 'RH', {
     xMm: +vt.rockerCupXOffsetMm,
-    wMm: -vt.rockerCupValleyOffsetMm * Math.cos(thetaIntake1),
+    wMm: -vt.rockerCupIntakeValleyOffsetMm * Math.cos(thetaIntake1),
     bMm: vt.rockerShaftBMm + intakeRise1Mm + headLiftMm,
   });
   const intakePushrodMidMm: Vec3Tuple = [

@@ -282,3 +282,9 @@ Two findings from the orchestrator's pre-flight, both verified by Buckley agains
 **2. Survey file published.** The survey this spec cites is now in the repo at `docs/research/L7-verified-data-survey.md` (committed to main with this amendment). The A/B/C grades recorded there govern §7.1/§9.4's M7-DATA.md requirements.
 
 **3. index.html static subtitle.** `index.html` has a static `<p>` carrying the Milestone 6 subtitle (overwritten at runtime by engineControls.ts). `index.html` is ADDED to the changed-files list for that one line only: update the static text to the §5.4 Milestone 7 subtitle, matching the runtime text exactly.
+
+---
+
+## Amendment 2 — 2026-11-14 (orchestrator build finding, Buckley-approved)
+
+§5.2.2's "no other script logic changes" is amended for one assertion-consistency fix in `build_cylinder1.py` `build_head`: `win2_w0_mm`/`win2_w1_mm` gain the symmetric M3 §4 window clamps already used for `win1` (`min 26.0` / `max 2.20 × pr_valley_mm`). `win2_w1_mm` feeds only the recess-window assertion and its log line — the deck polygon does not reference it — so no mesh vertices change; the M7 exhaust geometry made the unclamped proxy value (39.987) fail the ≥ 41.0 term while physical coverage of [+26.0, +41.0] improved. All other §5.2.2 terms stand.

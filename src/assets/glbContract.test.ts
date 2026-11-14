@@ -371,7 +371,8 @@ describe('Milestone 2 GLB asset contract (src/assets/glbContract.test.ts)', () =
       crankThrowMm: engineConfig.crankThrowMm.value,
       rodLengthMm: engineConfig.rodLengthMm.value,
       borePitch: valveConfig.borePitch.value,
-      maxLift: valveConfig.maxLift.value,
+      intakeMaxLift: valveConfig.intakeMaxLift.value,
+      exhaustMaxLift: valveConfig.exhaustMaxLift.value,
       deckGap: valveConfig.deckGap.value,
     };
 
