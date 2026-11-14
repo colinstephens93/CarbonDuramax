@@ -2,6 +2,10 @@
 
 Purpose: an INDEPENDENT second survey of published 2004.5–2005 Duramax LLY specifications, to be reconciled against Buckley's survey (`docs/research/L7-verified-data-survey.md` on main — do NOT read it before writing your report; independence is the point).
 
+## Model and token economy
+
+Run both steps on a standard/mid-tier model — this is search-and-check work and does not need a top-tier model on high effort. Escalate only if a value's sources genuinely conflict and adjudicating them needs deeper reasoning. Keep the sweep scoped to the 11 items; do not re-research beyond them.
+
 ## Step 1 — Research agent: write REPORT.md in this folder
 
 Rules:
