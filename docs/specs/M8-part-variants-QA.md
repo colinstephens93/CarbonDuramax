@@ -1,6 +1,6 @@
 # M8 Part Variants — Independent QA Report
 
-**QA status: COMPLETE (passes 1–2). Pass 2 complete (§6): 0 blockers remain; 5 should-fix and 8 nits are recorded for the final revisal; the package is not yet ready for Buckley's audit until those are closed.** Independent QA against `docs/specs/M8-part-variants.md`, reviewer a separate context from the drafting agent. Pass 1 (HEAD `2787f92`) raised 4 blockers / 13 should-fix / 9 nits; the drafting agent accepted every finding (dispositions in §3) and revised the spec at `5176a05`. Pass 2 re-checked every blocker and should-fix against the revised spec and the updated prototype artifacts; its closure table, new findings, and recomputation record are in §6, which is the final word on whether the blockers are closed. The pass-1 §4 evidence appendix is historical (pre-rebake V5 figures) and is superseded by §6's rev-3 artifacts.
+**QA status: COMPLETE — passes 1–3 plus final dispositions (§8). Package ready for Buckley's audit.** Independent QA against `docs/specs/M8-part-variants.md`, reviewer a separate context from the drafting agent. Pass 1 (HEAD `2787f92`) raised 4 blockers / 13 should-fix / 9 nits, all dispositioned in §3; the spec was revised at `5176a05` and pass 2 (§6) re-checked it, raising 5 should-fix / 8 nits. Those were fixed at HEAD `2ff8ce2`; pass 3 (§7) verified the fixes and the cross-revision regression scan, raising 2 should-fix (Q1/Q2) with no blockers; Q1/Q2 were then fixed in the spec and their dispositions recorded in §8. The pass-1 §4 appendix is historical (pre-rebake V5 figures), superseded by §6's rev-3 artifacts; §7 is the pass-3 state and §8 the final state of the package.
 
 - Date: 2026-11-14. Reviewer: independent QA agent (D-030/D-037 pre-review step 4).
 - Inputs: spec §1–§12, `docs/PLANNING.md`, `docs/research/M8-variant-references.md`, `docs/PLAN.md`, `docs/DECISIONS.md`, `docs/OPEN_ITEMS.md`, M6/M7 specs, M2/M3/M7 measurements, `docs/ASSET_CONTRACT.md`, `docs/THREE_API_NOTES.md`, `docs/REFERENCE_FRAMES.md`, and the shipped tree (`src/**`, `catalog/**`, `public/**`, `assets-src/**`).
@@ -270,3 +270,53 @@ All five pass-2 should-fixes were accepted and fixed, and all eight pass-2 nits 
 | P13 | nit | **accepted (fixed)** — the "48 circumferential segments implied by the triangle budget" clause is removed from §9.5; the segment count remains a recorded authoring choice in §3.2/M8-VARIANTS. |
 
 **Status after pass-2 fixes:** no blockers remain; the five should-fixes and all nits are addressed in the spec revision. The focused pass-3 verification (§7) is the final check on these edits before the package is handed to Buckley.
+
+## 7. Pass-3 verification (focused)
+
+**Scope and method.** Reviewed the pass-3 revision `5176a05 → 2ff8ce2`: 9 hunks / +17 −16 lines in `docs/specs/M8-part-variants.md` (plus the §6.5 dispositions appended to this report). Re-read every changed section and §6.5; grepped for the removed claims/keys/stale numbers; re-ran the arithmetic, the V5 profile volume recomputation and the pass-2 shell/GLB checks (prototype artifacts and the shell are unchanged since rev. 3); checked the changed/frozen lists, test inventory, D-038/§7.11 and the §3.2 marker table. Repo tree clean at `2ff8ce2`; no code changed, so the pass-1/2 gates stand.
+
+### 7.1 Per-item closure (pass-2 findings)
+
+| Item | Status | Evidence (HEAD `2ff8ce2`) |
+|---|---|---|
+| P1 | **Partially closed — Q1** | Upper side now consistent: max half-extent 51.475 → OD 102.95 = the OD cap. The lower half-extent tolerance still contradicts the OD minimum (Q1). |
+| P2 | **Closed** | `centroid` remains only in the legitimate “cross-section-centroid march” route derivation; §3.2 V2/V4 and §12.1 present both datums as documented service points (17.83 / 31.39 mm) fixed at prototype stage, explicitly “no cluster-derivation claimed”; §7.1 records their status alongside the five contact vertices. |
+| P3 | **Closed** | No `pistonDishRimRadiusMm` remains; `pistonDishMouthRadiusMm` 29.8265 and `pistonCrownOuterRadiusMm` 51.425 in §3.3/§7.1; §3.3 read-back names the mouth radius and the crown outer rim explicitly. |
+| P4 | **Closed** | §9.7 now asserts `EXTERIOR_PRESERVED_TRIANGLES[id]` equals each parsed subtree count in addition to 2,056 / 560 / 5,740; §4.2’s “verified against the parsed shell in test §9.7” is now true; §9.4/§9.9 state the file → variant-id resolution via the catalog’s `modelPath` mapping. |
+| P5 | **Closed** | No `0.737` remains; V2’s first tangent is (0.7382, −0.6722, −0.0571), identical to V1’s compressor-inlet normal and to the normalized first tangent of the pinned path. |
+| P6 | **Closed** | §12.1 now cites the independent re-measure 1.84 mm (old 1.80 mm scan explicitly superseded) and quotes 0.028 / 0.037 / 0.038 / 0.051 / 0.052 mm — all reproduced from the shell. |
+| P7 | **Closed** | §10.5 now requires the post-split expectations of §6.3/§10.6 (M7 values plus documented deltas). |
+| P8 | **Closed** | §1 items 3 and 4 are separate list items. |
+| P9 | **Closed** | §7.1 requires the vertex-level residual-risk paragraph in `docs/M8-VARIANTS.md` (with the full key table). |
+| P10 | **Closed** | §9.12 drops the non-existent `quality` state and notes the frame module is DOM/three-free with type-only imports. |
+| P11 | **Closed** | §3.3 now delegates the key-set table to `docs/M8-VARIANTS.md` (“every pinned value”) with a literal asset-test pin; §7.1 requires the table. |
+| P12 | **Partially closed — Q2** | V3 tail and V4 adapter/couplers/outlet added, but the new universal claim “covers the whole model by construction” is false for several primitives (Q2). |
+| P13 | **Closed** | “48 circumferential segments implied by the triangle budget” removed from §9.5; the segment count remains a recorded authoring choice in §3.2/M8-VARIANTS. |
+
+### 7.2 New findings (pass 3)
+
+**Q1 — should-fix — lower `glTF X/Z half-extent` tolerance contradicts the OD minimum and the “must not exceed” lead-in (§3.2 V5 line 142, §9.5 line 453).** Half-extents **51.425 (−0.25/+0.05)** permit 51.175 → **OD 102.35 mm**, while the same clause pins **OD 102.85 (−0.00/+0.10)** (min 102.85) and says “never above the 103 mm bore”; only the upper bound is consistent (51.475 → OD 102.95). The sentence “Outer envelope must not exceed the stock part’s” is also immediately contradicted by the allowed +0.10 mm over the stock 102.85 (the parenthetical explains the intent, but the requirement text still conflicts).
+Fix: use half-extents 51.425 **(−0.00/+0.05)**, or state that the test pins only the *maximum* half-extent and widen/remove the OD minimum explicitly; reword the lead-in to “must stay within the bore-fit envelope (OD ≤ 102.95)”. (The §6.5 P1 disposition’s “consistent with the OD −0.00/+0.10 clause” is true only for the upper bound.)
+
+**Q2 — should-fix — the envelopes are not “the whole model by construction” (§3.3 line 164).** The declared analytic envelopes omit primitives the builder must create from §3.2: **V1** — the compressor inlet bell/flange (r48 disc reaches X ≈ 45.6, outside the compressor-housing envelope X ≤ +16), the compressor outlet elbow/flange (model X max 47.1; housing stops at +16), up-pipe flange discs r44 around contacts at radial 55.7/103.9 mm (up to ≈148 mm, outside the turbine shell r117), and the actuator bracket/rod/fasteners; **V2** — Ø116/r58 couplers, Ø120/r60 clamps and the Ø160 filter cone (only the r50.8 tube is enveloped); **V3** — the r52 inlet flange and flared r56 tip exceed the r50.8 tube envelope; **V4** — the 18 raised fins on the −Y core face (outside the core box Y 555–645) and the 3 mounting brackets above the tank tops (outside Z ≤ 320). The zero-non-excepted-vertices assertion therefore under-covers the model while the text claims full coverage; the residual-risk note covers vertex sparsity, not omitted primitives.
+Fix: extend the analytic envelope list to every primitive named in §3.2, or soften to “the model’s principal solids; the remaining detail primitives are covered by the §3.2 bounds, the export read-back and the RF renders”. (The §6.5 P12 disposition repeats the overclaim; it should not be read as verified coverage.)
+
+### 7.3 Regression scan
+
+All pass-2 numbers still reproduce: cap-based scene 308,008; submitted 582,112; measured 294,758; V5 total 12,942 tris / 251,508 bytes; draw-call headroom 145/51 (calls 106/66 stock); phone scene headroom 3.7475 %; V5 pinned-profile volumes 32.8165 / 3.2300 cm³, Vd 824,896.6 mm³, ΔVc 3.2254 cm³, CR 16.4987 unchanged. No stale `13,422` / `261,296` / `298,598` / `2,214`; `4,224` appears only in the two explicitly superseded contexts. Changed/frozen lists, the 10-new-tests / four-new-files count, D-038 vs §7.11, the §3.2 contract-root/marker table (9 marker entries / 7 unique names) and the reference-frame/UI wiring are unchanged and internally consistent. Removed-claim greps (`0.737`, `pistonDishRimRadiusMm`, datum `centroid` claims, §9.12 `quality`, “48 segments implied by the triangle budget”) all return clean; §1 numbering, §10.5 wording, §12.1 contact values and the §7.1 key-table/residual-risk requirements are as intended.
+
+### 7.4 Verdict
+
+**PASS 3: 0 blockers / 2 should-fix / 0 nits — revision still required (two one-line wording/tolerance fixes; no blockers).** All four pass-1 blockers are closed; all pass-2 should-fix are closed except the residual lower-tolerance part of P1 and the over-broad envelope claim of P12, now tracked as Q1/Q2. The design, budgets, assets, tests and documents are sound. Close Q1 (align the half-extent/OD lower tolerances and reword the “must not exceed stock” lead-in) and Q2 (extend the analytic envelopes or de-scope the “whole model by construction” claim) in the spec, then the package is ready for Buckley’s audit; no further QA pass is needed beyond confirming those two edits.
+
+## 8. Q1/Q2 dispositions (drafting agent, final)
+
+Both pass-3 should-fixes are accepted and fixed in the spec; per §7.4's own instruction ("no further QA pass is needed beyond confirming those two edits"), the drafting agent's confirmation of the exact edits is recorded here. The QA record is complete: **passes 1–3 + this disposition = the package is ready for Buckley's audit.**
+
+| ID | Severity | Disposition |
+| --- | --- | --- |
+| Q1 | should-fix | **accepted (fixed)** — §3.2 V5 is re-titled "Envelope contract (bore-fit)": OD **102.85 (−0.00/+0.10)** (never below stock OD; at most 0.10 above it, still 0.05 mm under the 103 mm bore) and glTF X/Z half-extents **51.425 (−0.00/+0.05)** (OD 102.85…102.95), so both bounds and the lead-in now agree; §9.5 pins the same half-extent tolerance. The contradictory "must not exceed the stock part's" lead-in is gone. |
+| Q2 | should-fix | **accepted (fixed)** — §3.3's envelope definition now lists **every analytic solid named in §3.2** (V1 housings, CHRA, inlet bell/flange, outlet elbow/flange, turbine-outlet neck/flange, up-pipe nozzles + r44 flange discs, actuator canister/bracket/rod; V2 tube, couplers, clamps, filter cone + end cap; V3 tube, inlet flange, canister, tail tube + flared tip; V4 tanks, core, adapter + couplers, outlet neck + coupler, fins, brackets). The over-broad "whole model by construction" sentence is replaced by the explicit primitive list, so the check's coverage claim is now exact rather than implied. |
+
+**Final package status (drafting agent):** spec revision committed on `plan/m8-part-variants`; all 4 pass-1 blockers, all 18 should-fixes (pass 1: 13; pass 2: 5) and all 9 nits are closed; the only changes since pass 3 touched those two clauses (verified by grep: no "51.425 (−0.25", no "whole model by construction"). QA record complete.
+
