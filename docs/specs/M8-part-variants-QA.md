@@ -1,6 +1,6 @@
 # M8 Part Variants — Independent QA Report
 
-**QA status: COMPLETE (pass 1). Dispositions filled; revision applied; second QA pass appended in §6.** Independent QA pass against `docs/specs/M8-part-variants.md`, reviewer a separate context from the drafting agent. The drafting agent filled the `Disposition` column during revisal (all 4 blockers and 13 should-fixes accepted/edited; 9 nits accepted); the revised spec and this record are the package delivered for Buckley's audit. The second-pass re-check in §6 is the final word on whether the blockers are closed.
+**QA status: COMPLETE (passes 1–2). Pass 2 complete (§6): 0 blockers remain; 5 should-fix and 8 nits are recorded for the final revisal; the package is not yet ready for Buckley's audit until those are closed.** Independent QA against `docs/specs/M8-part-variants.md`, reviewer a separate context from the drafting agent. Pass 1 (HEAD `2787f92`) raised 4 blockers / 13 should-fix / 9 nits; the drafting agent accepted every finding (dispositions in §3) and revised the spec at `5176a05`. Pass 2 re-checked every blocker and should-fix against the revised spec and the updated prototype artifacts; its closure table, new findings, and recomputation record are in §6, which is the final word on whether the blockers are closed. The pass-1 §4 evidence appendix is historical (pre-rebake V5 figures) and is superseded by §6's rev-3 artifacts.
 
 - Date: 2026-11-14. Reviewer: independent QA agent (D-030/D-037 pre-review step 4).
 - Inputs: spec §1–§12, `docs/PLANNING.md`, `docs/research/M8-variant-references.md`, `docs/PLAN.md`, `docs/DECISIONS.md`, `docs/OPEN_ITEMS.md`, M6/M7 specs, M2/M3/M7 measurements, `docs/ASSET_CONTRACT.md`, `docs/THREE_API_NOTES.md`, `docs/REFERENCE_FRAMES.md`, and the shipped tree (`src/**`, `catalog/**`, `public/**`, `assets-src/**`).
@@ -172,3 +172,101 @@ Marker node translations in the GLBs equal the §3.2 datum values exactly (turbo
 **Blocker count: 4. Should-fix count: 13. Nit count: 9.**
 
 The package is **not ready for the owner/Buckley audit** but **is ready for revision**: the design direction, the shell-split accounting, the budget arithmetic (apart from F3/S1), the prototype triangle/bounds/clearance evidence, and almost all shipped-code assumptions check out independently. The V5 piston section (F1/F2) must be re-derived and defused first — it currently quotes a prototype that contains forbidden features and two numbers that do not reproduce. F3 and F4 are direct corrections to §12. The should-fixes are mostly precision/test-strength/document-completeness issues and one contract/decision-record gap; the nits can be recorded without blocking.
+
+## 6. Second-pass QA (post-revision)
+
+**Scope and method.** Re-read the revised spec in full at HEAD `5176a05` (534 lines), the filled dispositions in §3, and the updated prototype evidence: `m8-prototype/PROTOTYPE-REPORT.md` rev. 3, `out/results.json`, `out/blender_verify.json`, rebaked `glb/rot_piston_c1_lowcomp.glb`. Re-ran the touched independent checks in the pass-1 scratch harness (`m8-QA-scratch/glb.js`, shell/datum/merge scripts, Python solid-of-revolution recomputation, budget arithmetic, stale-number greps); inspected the revision diff (`git diff 2787f92 5176a05`). The repo tree is clean at `5176a05`; no build code exists yet, so the pass-1 baseline (58/58 tests, typecheck green) is unchanged. Limitation unchanged: no WebGL/Blender run; visual claims remain checked by code + acceptance design.
+**Historical note.** §4C/§4D above quote the pass-1 *with-relief* V5 measurements (4,224 tris / 2,214 verts / 13,422 total / 261,300 bytes). They are pass-1 evidence and are **superseded** by the rev-3 artifacts now recorded in the spec: V5 **3,744 tris / 1,926 verts**, total **12,942 / 251,508 bytes**.
+
+### 6.1 Closure table
+
+| Item | Status | Evidence (revised spec `5176a05`, updated artifacts) |
+|---|---|---|
+| F1 | **Closed** | Prototype rebaked no-relief: `results.json` V5 tris 3,744 / verts 1,926 / mats 3, `meta.valve_reliefs_modelled = 0`, profile p0–p5, byte sum 251,508; report rev. 3 §2.5. Spec §3.2 V5, §3.6, §12.2 and §12.5 item 3 state the no-relief design and mark the 4,224-tri with-relief measurement superseded; grep finds no stale 13,422 / 261,296 / 298,598 anywhere in the spec. |
+| F2 | **Closed** | §3.2 V5 line 139: Vd 824,896.6, ΔVc 3.2254 cm³, assertion `|Δ − 3.2254| ≤ 0.05`; pinned profile p0–p5 (line 135) with derived z values (floor 33.5043, lip 48.4963, shoulder 36.4375) all self-consistent; independent recompute from the pinned 4-dp profile = **32.81660 cm³ / Δ 3.23012** (unrounded profile 32.8164965 / 3.2300000 — 0.0001 pin rounding, immaterial); CR 16.4987 and band 16.4855–16.5146 = 16.50 ± 0.015 confirmed. |
+| F3 | **Closed** | §12.4 line 523: 145 desktop / 51 phone; 69 phone from the 59 max-unculled baseline (65 from 55). Recomputed: 250−105 = 145; 120−69 = 51; 59+10 = 69; 55+10 = 65. |
+| F4 | **Closed on substance; new derivation claim P2** | §12.1 separates five stock contact vertices (0.0284 / 0.0372 / 0.0378 / 0.0513 / 0.0517 mm re-parsed) from two service points (airbox 17.828 mm, charge-pipe flange 31.394 mm); §3.2 V2/V4 state service-point status. The newly claimed centroid derivations do not reproduce (P2). |
+| S1 | **Closed (residual P7)** | §6.3 frame-time row now +2,944 shadow-pass tris; stock post-split expectations (calls 106/66, geometries 67, meshes 33) in §6.3/§10.6; all budget sums unchanged (308,008 / 582,112 / 294,758). §10.5 still says “M7 numbers” (P7). |
+| S2 | **Partially closed (P1)** | OD −0.00/+0.10, crown ±0.10, X/Z half-extents, pivot, skirt-bottom checks added to §3.2 V5/§9.5; but half-extents ±0.25 permit OD 103.35 > the 103 mm bore, contradicting the OD cap (P1). |
+| S3 | **Closed (residual P11)** | `src/ui/referenceFrames.ts` + `src/ui/referenceFrames.test.ts` added to §5.2/§8/§9.12; §9.6 requires spec-literal expected values + build-script GLB read-back (§3.3); §9.9 derives from `VARIANT_TRIANGLE_CAPS`/`EXTERIOR_PRESERVED_TRIANGLES`; test 12 imports the real module. Key-set enumeration residual (P11). |
+| S4 | **Closed** | §4.1 “two public functions and one exported type”. |
+| S5 | **Closed** | §7.3: intro to ten frames / `?rf=RF-1`…`RF-10`, `Variants` summary column, per-frame “Build selection”. |
+| S6 | **Closed** | §7.11 + D-038 now record the D-011 scene-placed class extension (uncompressed/no-texture deferral, root-naming exception, `if_*` markers) consistently. |
+| S7 | **Closed** | §8 adds `docs/M7-MEASUREMENTS.md` to the frozen list and notes `docs/research/**` is not edited. |
+| S8 | **Closed** | §4.3 defines `PistonBatchSet { standard, firing, firingMaterials }`, mutates `DetailedV8Batches` refs, detach/add meshes (not `visible=false`), one immediate kinematic pass, clone tracking and dispose-once. |
+| S9 | **Closed** | §4.3: `variantsLoaded` = all loads settled, `failedVariantIds` stat, “active” = selected **and** loaded for attachment and shell hiding; benchmark cannot hang on a failed asset. |
+| S10 | **Closed (residuals P9/P12)** | Renamed “vertex-level non-penetration against analytic envelopes”; §3.3 defines V1–V4 envelopes and 30 mm excepted connection zones and records the vertex-sparsity residual risk in §12.5/its M8-VARIANTS claim. §7.1 does not require that paragraph (P9); envelopes omit some model parts (P12). |
+| S11 | **Closed** | §3.6 V5 attributes −41.8 cc / pin 1.358 in / CH-not-published to 930029875 and CH 1.951 in to 930036055; not-adopted CH bullet matches. |
+| S12 | **Closed** | New §3.2 contract-root/marker table (file → root object → markers; 9 marker entries, 7 unique names) and §9.4 compares against that table; consistent with §3.2 prose. |
+| S13 | **Closed** | §5.2 pins the order descriptors → scene → mount → initial all-stock state → `?rf` → `?benchmark` (last-writer-wins); consistent with `main.ts`'s current mount-before-`?rf` structure. |
+
+**Nit closure:** N1 closed (251,508/12,942); N2 closed (§3.2 V1 stock-envelope ≈126–132 wording); N3 **partially closed** — see P5; N4 closed (byte-identical + shell SHA-256 to be recorded in M8-MEASUREMENTS); N5 closed (construction/dimensions vs crown shape/tessellation wording); N6 closed (§1 reworded); N7 closed (§12.3 names `check_intake_interference.py`, 21+39+45 = 105); N8 closed (10 new tests / four new files, §9.12 file named); N9 closed (M6 quote now full).
+
+### 6.2 New findings from the revision
+
+**P1 — should-fix — Piston asset-test tolerances contradict each other and the bore-fit claim (§3.2 V5 line 141, §9.5 line 452).** “glTF X/Z half-extents 51.425 ± 0.25 mm” permits a half-extent of 51.675 → OD 103.35 mm, larger than the 103 mm bore, while the same sentence pins OD −0.00/+0.10 mm (max 102.95) and says “never above the bore-fit stock envelope” (stock OD 102.85; the design line also says “must not exceed the stock part’s” yet allows +0.10). The test therefore cannot enforce the regression it names.
+Fix: pin half-extents to 51.425 (−0.25/+0.05, i.e. max 51.475 = OD 102.95) and state the OD/bore clearance rationale, or tighten to stock OD max 102.85; align both clauses.
+
+**P2 — should-fix — The two newly claimed “centroid” derivations for the service datums are not reproducible from the shell/prototype record (§3.2 V2 line 95, §3.2 V4 line 126, §12.1 line 494).** The prototype hardcodes both points (`m8-prototype/scripts/shell.py:146` and `models.py:28`) and no script derives them; the report calls them “documented interface markers”. My independent cluster checks: for the airbox datum (587.4, −510.5, 371.9), sphere-cluster centroids for R = 22–80 mm, annulus 17–35 mm, and nearest-N 6–48 vertices all land 9.6–15.6 mm from the datum (no cluster reproduces it); for the hot-side datum, only a loose 69-vertex R = 40 mm sphere gives a centroid within 0.67 mm, and no cluster radius/definition is pinned. The distance values themselves (17.83 / 31.39) are correct.
+Fix: either present both as documented legacy service points (stock-intake end / charge-pipe end) without a centroid claim, or pin the exact cluster definition/algorithm and reproduce the datum from it.
+
+**P3 — should-fix — `pistonDishRimRadiusMm` is mislabelled in `variant_dimensions.json` and conflicts with the pinned profile (§3.3 line 159 vs §3.2 V5 lines 135/137, §3.3 read-back line 165).** §3.2 labels 29.8265 the “mouth/land start” and 51.425 the “rim”; §3.3 pins key `pistonDishRimRadiusMm` = 29.8265, and the export read-back says “dish lip/rim radii”. A builder/test following the key name would compare the mouth radius against the mesh’s rim (51.425) and fail or mis-pin.
+Fix: rename the key to `pistonDishMouthRadiusMm` (or `pistonDishCrownLandStartRadiusMm`), keep the outer rim as `pistonCrownOuterRadiusMm` 51.425, and make the §3.3 read-back name both explicitly.
+
+**P4 — should-fix — §4.2 claims `EXTERIOR_PRESERVED_TRIANGLES` is “verified against the parsed shell in test §9.7”, but §9.7’s text asserts literal counts only (§4.2 line 270, §9.7 line 454, §9.9 line 456).** If a constant were wrong (e.g. 2,560 instead of 2,056), §9.7’s literals would pass, and §9.9’s budget guard would use the wrong hides; the claim and the guard are not tied together. (The caps side has the same mapping gap: `VARIANT_TRIANGLE_CAPS` is keyed by variant id, §6.1 by file.)
+Fix: §9.7 must assert `EXTERIOR_PRESERVED_TRIANGLES[id] === parsedCount` (keeping the literals), and §9.4/§9.9 should state the file→variant-id mapping used for the caps.
+
+**P5 — should-fix — §3.2 V2 still pins the stale compressor-inlet normal (§3.2 line 94 vs lines 73/81).** Line 94 says “first tangent fixed to the turbo-bell mating normal (0.737, −0.671, −0.057)”; §3.2 V1 pins the normalized unit vector `(0.7382, −0.6722, −0.0571)`, which is also the actual normalized first tangent of the pinned 9-point path (`0.5·(p1 − p0)` = (0.7382, −0.6722, −0.0571)). N3 is therefore only partially closed.
+Fix: change line 94 to `(0.7382, −0.6722, −0.0571)` (or state it as ≈).
+
+**P6 — nit — §12.1’s stock-gap evidence does not fully reproduce (line 494).** “1.80 mm (compressor inlet)” — independent shell recomputation gives turbo-unit ↔ intake minimum **1.839 mm** (nearest intake vertex to the datum 1.834 mm), and no artifact/script records 1.80. The contact list “0.028 / 0.037 / 0.037 / 0.051 / 0.052” under-rounds the RH up-pipe: measured 0.0372 / 0.0378 / 0.0513 / 0.0517 → 0.037 / 0.038 / 0.051 / 0.052. Fix: cite/update 1.84 and correct the rounding or quote 4 dp.
+
+**P7 — nit — §10.5 still says “the stock state reproduces the M7 numbers within tolerance” (line 469)** while §6.3/§10.6 now document the split’s expected deltas (calls 106/66, geometries 67, meshes 33 vs M7 95/55, 56, 22). Reword as “reproduces the post-split expectations of §6.3/§10.6 (M7 values plus the documented deltas)”.
+
+**P8 — nit — §1 numbered-item formatting (line 13):** the item-4 text is appended to item 3 (`…`docs/OPEN_ITEMS.md`.4. **Measured budget record…`) so item 3 swallows item 4. Insert a line break between items 3 and 4.
+
+**P9 — nit — §3.3 says the vertex-level residual risk is “recorded in §12.5 and docs/M8-VARIANTS.md” (line 163), but §7.1’s M8-VARIANTS content list (line 419) does not require that paragraph.** Add the residual-risk/vertex-sparsity limitation to §7.1 so the build doc must carry it.
+
+**P10 — nit — §9.12 says “every frame entry has valid camera/target/quality/section states” (line 459), but the moved entry type has no `quality` field** (the current `ReferenceFrameDef` has θ/pose/exterior/explode/section/xray/labels; `applyReferenceFrame` hardcodes quality `full`). Either add `quality` to the type or drop it from the test description; also state that `src/ui/referenceFrames.ts` must use type-only imports (e.g. `UiSectionMode`) to stay DOM-three-free.
+
+**P11 — nit — §3.3 still says “the exact key set is recorded in the asset test” (line 159)**, i.e. the spec does not enumerate the `variant_dimensions.json` key set/values. The §9.6 expected-literal test remains a builder transcription, and the new export read-back covers only markers, bounds, V2 tube OD and the V5 crown profile. Consider listing the key set in §3.3 (or a committed fixture) or extending the read-back to the remaining per-model pinned dimensions.
+
+**P12 — nit — §3.3’s analytic envelopes do not cover the whole models (line 163).** V3’s tail pipe X −950…≈−1,035 is outside the “swept tube + canister” envelope; V4’s Ø76.2 hot-side adapter (≈230 mm run), cold-side outlet, couplers, fins and brackets are outside the “tanks + core” boxes. The zero-non-excepted-vertices check is therefore partial; state its coverage explicitly or extend the envelope definitions (the 30 mm marker zones remain excepted).
+
+**P13 — nit — §9.5 says “48 circumferential segments implied by the triangle budget” (line 452);** a triangle cap cannot verify a circumferential segment count. Add a geometry assertion (e.g. 48 vertices around the crown ring) or drop the clause.
+
+### 6.3 Independent recomputation note (pass 2)
+
+- **Shell (unchanged, re-parsed):** 31,396 tris / 33,187 accessor verts; registered bounds X [−282.14, 892.75], Y [−573.40, 521.82], Z [−223.60, 583.88]; `turbo` children 384 / 384 / 560 / 2,056; `intake` 5,740 tris / 14 primitives; material-signature merge 22 → split 33 (+11; 6/1/5 preserved, 21/23,040 remaining) — all match §6.2/§12.1.
+- **Datums:** five contact nearest-vertex distances 0.0284 / 0.0372 / 0.0378 / 0.0513 / 0.0517 mm (matches §12.1 to 2 dp except the RH-up-pipe rounding, P6); airbox 17.828 mm, hot side 31.394 mm (matches); stock turbo-unit↔intake 1.839 mm (P6), ↔RH/LH up-pipes 2.503 / 3.172 mm, ↔downpipe 16.198 mm; stock intake↔acComp 1.409 mm.
+- **V5 piston (rev-3):** parsed GLB 70,756 bytes, 3,744 tris, 3 materials, 0 images, 0 markers, part-local bounds ±51.425 / −22.9425…49.8 mm. Pinned-profile solid-of-revolution recompute: variant 32.81660 cm³, stock 29.58648 cm³, Δ 3.23012 (unrounded 32.8164965 / 29.5864965 / 3.2300000); ΔVc 3.2254 cm³; CR 16.4987; ±0.05 band → CR 16.4855–16.5146. z floor 33.5043, lip z 48.496344, shoulder z 36.437526, floor r 16.456, shoulder r 23.14125, lip r 28.798, mouth r 29.8265 — all self-consistent with the pinned table.
+- **Prototype artifacts (updated):** `results.json` tris 3,166 / 2,400 / 2,272 / 1,360 / 3,744, total **12,942**, GLB bytes sum **251,508**, V5 `meta` carries the p0–p5 profile and `valve_reliefs_modelled = 0`; `blender_verify.json` round-trip V5 3,744 tris / 71,456 bytes / 0 markers, others unchanged, `all_roundtrips_ok: true`; report rev. 3 §2.5 matches the spec's pinned profile.
+- **Budget:** all sums unchanged and re-verified: 308,008 (cap); 582,112; 298,598 → replaced by 294,758 measured (7,862 below stock; 25,242 phone headroom); 145/51 call headroom; 3.7475 % phone scene headroom; 67 geometries / 33 exterior meshes stock; 81 worst-case geometries. `memory.geometries` and `exteriorMergedMeshes` deltas are now recorded (§6.3/§10.6).
+- **Stale-number scan:** no `13,422` / `261,296` / `298,598` / `2,214` in the revised spec; `4,224` appears only in the two explicitly-superseded contexts (§12.2, §12.5 item 3). The pass-1 QA appendix §4C/§4D is historical (see historical note above).
+- **Not reproduced:** the §12.1 “1.80 mm” stock gap (recomputed 1.839 mm) and the 3-dp rounding of the RH up-pipe (0.037 vs 0.0378). Every other revised §12/§6 number reproduced.
+
+### 6.4 Verdict
+
+**PASS 2: 0 blockers / 5 should-fix / 8 nits — revision still required (should-fix only; no blockers).** All four pass-1 blockers are closed: the V5 piston is now the no-relief design with a rebaked prototype, corrected CR arithmetic, a pinned/auditable crown profile and consistent totals (12,942 / 251,508); F3’s headroom and F4’s contact-vs-service-point distinction are correct. The remaining items are one tolerance contradiction (P1), one unverified provenance story (P2), two contract/test precision issues (P3/P4), one stale pinned vector (P5), and eight wording/completeness nits — all one-file edits with no design impact. Once §6.2 P1–P5 are closed and the nits recorded, the package is ready for Buckley’s audit.
+
+### 6.5 Pass-2 dispositions (drafting agent)
+
+All five pass-2 should-fixes were accepted and fixed, and all eight pass-2 nits were accepted/recorded (fixed where wording-only). The fixes are in the revised spec (committed after this pass-1+2 record); a focused pass-3 verification is appended as §7.
+
+| ID | Severity | Disposition |
+| --- | --- | --- |
+| P1 | should-fix | **accepted (fixed)** — §3.2 V5 and §9.5 now pin glTF X/Z half-extents 51.425 (−0.25/+0.05) (max OD 102.95, never above the 103 mm bore), consistent with the OD −0.00/+0.10 clause; the "never above the stock envelope" wording is corrected to state the allowed 0.10 mm over the stock part with the bore rationale. |
+| P2 | should-fix | **accepted (fixed)** — the two datums are now presented as **documented service points** (stock intake airbox end; stock charge-pipe far end) with their nearest-shell-vertex distances (17.83 / 31.39 mm); the unreproducible "centroid of vertex cluster" derivation claims are removed from §3.2 V2/V4, §12.1, and the §7.1 register requirement still records their status. |
+| P3 | should-fix | **accepted (fixed)** — the JSON key is renamed `pistonDishMouthRadiusMm`; the crown outer rim keeps `pistonCrownOuterRadiusMm` 51.425; the §3.3 export read-back names the flat-floor/shoulder/lip/mouth radii and the crown outer rim explicitly. |
+| P4 | should-fix | **accepted (fixed)** — §9.7 now asserts `EXTERIOR_PRESERVED_TRIANGLES[id] === parsedCount` in addition to the literals; §9.4/§9.9 state that caps are keyed by variant id and resolved through the catalog's `modelPath` mapping. |
+| P5 | should-fix | **accepted (fixed)** — §3.2 V2's first tangent is now the normalized unit vector (0.7382, −0.6722, −0.0571), matching V1's compressor-inlet normal and the pinned path. |
+| P6 | nit | **accepted (fixed)** — §12.1 now cites the independent re-measure 1.84 mm for the stock compressor-inlet gap and quotes the contact distances at 0.028 / 0.037 / 0.038 / 0.051 / 0.052 mm. |
+| P7 | nit | **accepted (fixed)** — §10.5 now requires reproducing the post-split expectations of §6.3/§10.6 (M7 values plus documented deltas). |
+| P8 | nit | **accepted (fixed)** — §1 items 3 and 4 are on separate lines. |
+| P9 | nit | **accepted (fixed)** — §7.1 now requires the vertex-level residual-risk paragraph in `docs/M8-VARIANTS.md`. |
+| P10 | nit | **accepted (fixed)** — §9.12's frame-state list drops the non-existent `quality` field and states the module is DOM/three-free with type-only imports. |
+| P11 | nit | **accepted (fixed)** — §3.3/§7.1 now require the full `variant_dimensions.json` key table (every pinned value) in `docs/M8-VARIANTS.md`, pinned as literals by the asset test. |
+| P12 | nit | **accepted (fixed)** — the analytic envelopes are now defined as the **union of each model's own analytic primitives** (V3 includes the tail tube; V4 includes the adapter, couplers and outlet neck), so the non-penetration check covers the whole model by construction. |
+| P13 | nit | **accepted (fixed)** — the "48 circumferential segments implied by the triangle budget" clause is removed from §9.5; the segment count remains a recorded authoring choice in §3.2/M8-VARIANTS. |
+
+**Status after pass-2 fixes:** no blockers remain; the five should-fixes and all nits are addressed in the spec revision. The focused pass-3 verification (§7) is the final check on these edits before the package is handed to Buckley.
