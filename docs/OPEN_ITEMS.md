@@ -13,8 +13,13 @@ Unresolved questions and data still to source. An item leaves this list only whe
 
 - [ ] **Outside reviewer of record** for milestone-exit reviews (Claude, Grok, or Gemini; may rotate — record the choice per milestone in the PR).
 
+## Deferred candidates
+
+- [ ] **Internal-part visual variants not in M8** — rods (material-only), injectors/CP3 (flow-internal, no truthful visible change), camshaft (not modeled; timing unpublished), heads (porting unpublished/unmodeled). Deferred until a milestone adds the underlying geometry or published data.
+
 ## Watch items
 
 - [ ] **Legacy viewer preservation** — verify at Milestone 0 that the current live site (GLB + legacy viewer route) still works after the CI/Pages migration.
 - [ ] **Stock-curve sanity** — when the torque curve is sourced, re-check the transmission-keyed rating in DECISIONS.md D-016 against it.
 - [ ] **Exterior shell scale vs published approximate dimensions (≈762 × 762 × 813 mm, DieselHub)** — registered shell spans 1,174.9 × 1,095.2 × ≈807.5 mm; height agrees, X/Y exceed because registration is containment-driven (M3) and the published conventions exclude the fan and sump variation. Not rescaled at M7 (D-035); revisit only with a dimensioned source.
+- [ ] **Stock vehicle-side hardware** (intercooler core, airbox, exhaust beyond the turbo downpipe) is not modeled in the exterior shell; the M8 modified variants for those slots are shown at documented service points, so stock-vs-modified 3D comparison is modified-only there — revisit if the shell or a stock hardware model is added.

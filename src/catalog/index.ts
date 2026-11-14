@@ -30,6 +30,77 @@ export function variantsForSlot(slotId: PartSlotId): PartVariant[] {
   return fullCatalog.filter((entry) => entry.slotId === slotId);
 }
 
+export interface VisualVariantSelection {
+  readonly slotId: PartSlotId;
+  readonly variantId: string;
+  readonly modelPath: string;
+  readonly explodeVectorMm: readonly [number, number, number];
+}
+
+export function visualVariantsForBuild(
+  build: Build,
+  catalog: readonly PartVariant[] = fullCatalog,
+): VisualVariantSelection[] {
+  const entriesById = new Map<string, PartVariant>();
+  if (Array.isArray(catalog)) {
+    for (const entry of catalog) {
+      if (entry && typeof entry.id === 'string') {
+        entriesById.set(entry.id, entry);
+      }
+    }
+  }
+
+  const selections =
+    build && typeof build === 'object' && build.selections && typeof build.selections === 'object'
+      ? build.selections
+      : ({} as Partial<Record<PartSlotId, unknown>>);
+
+  const result: VisualVariantSelection[] = [];
+  for (const slotId of CATALOG_SLOTS) {
+    const selectedId = selections[slotId];
+    if (typeof selectedId !== 'string' || selectedId.length === 0) {
+      continue;
+    }
+    const entry = entriesById.get(selectedId);
+    if (
+      !entry ||
+      entry.slotId !== slotId ||
+      typeof entry.modelPath !== 'string' ||
+      entry.modelPath.length === 0
+    ) {
+      continue;
+    }
+    result.push({
+      slotId,
+      variantId: entry.id,
+      modelPath: entry.modelPath,
+      explodeVectorMm: [
+        entry.explodeVectorMm[0],
+        entry.explodeVectorMm[1],
+        entry.explodeVectorMm[2],
+      ],
+    });
+  }
+
+  return result;
+}
+
+export function slotForVariantId(
+  variantId: string,
+  catalog: readonly PartVariant[] = fullCatalog,
+): PartSlotId | null {
+  if (typeof variantId !== 'string' || variantId.length === 0 || !Array.isArray(catalog)) {
+    return null;
+  }
+  for (const entry of catalog) {
+    if (entry && entry.id === variantId) {
+      return entry.slotId;
+    }
+  }
+  return null;
+}
+
+
 export function checkCompatibility(
   build: Build,
   catalog: readonly PartVariant[] = fullCatalog,

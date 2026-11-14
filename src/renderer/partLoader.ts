@@ -190,9 +190,51 @@ export function extractPartPrimitives(
     });
   });
 
+    if (primitives.length === 0) {
+      throw new Error(`No mesh primitives extracted from contract node "${nodeName}".`);
+    }
+
+    return primitives;
+  }
+
+/**
+ * Extracts all mesh primitives in a loaded GLTF scene baked once into the part-local coordinate frame
+ * (+X crank, +Y valley W, +Z bore) for InstancedMesh batching (M8 §4.2, used by piston visual variants).
+ */
+export function extractAllPartPrimitives(gltf: GLTF): ExtractedPartPrimitive[] {
+  const cloned = gltf.scene.clone(true);
+  cloned.position.set(0, 0, 0);
+  cloned.quaternion.identity();
+  cloned.scale.set(1, 1, 1);
+
+  const partLocalGroup = wrapInPartLocalFrame(cloned);
+  partLocalGroup.updateMatrixWorld(true);
+
+  const primitives: ExtractedPartPrimitive[] = [];
+  partLocalGroup.traverse((child) => {
+    if (!(child instanceof THREE.Mesh)) return;
+    const rawGeo = child.geometry as THREE.BufferGeometry;
+    const geo = rawGeo.clone();
+    geo.applyMatrix4(child.matrixWorld);
+    geo.computeBoundingBox();
+    geo.computeBoundingSphere();
+
+    const mat = Array.isArray(child.material) ? child.material[0] : child.material;
+    if (!(mat instanceof THREE.MeshStandardMaterial)) {
+      throw new Error('Expected MeshStandardMaterial in part variant GLTF scene.');
+    }
+
+    primitives.push({
+      geometry: geo,
+      material: mat,
+      triangles: countBufferGeometryTriangles(geo),
+    });
+  });
+
   if (primitives.length === 0) {
-    throw new Error(`No mesh primitives extracted from contract node "${nodeName}".`);
+    throw new Error('No mesh primitives extracted from part variant GLTF scene.');
   }
 
   return primitives;
 }
+

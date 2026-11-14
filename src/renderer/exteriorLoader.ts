@@ -1,15 +1,20 @@
-// Registered exterior GLB loader, material deduplicator, and geometry merger (Spec §5).
+// Registered exterior GLB loader, material deduplicator, and geometry merger (M3 §5, M8 §3.4).
 // Loads public/Duramax_LLY_2005_66L_V8.glb unmodified, deduplicates its 99 material slots to the
-// 22 unique material definitions, merges scene geometries per unique material into <= 24 meshes
-// (castShadow = false, receiveShadow = false), and registers it onto the project crank axis.
+// 22 unique material definitions, merges global scene geometries per unique material into <= 24 meshes
+// plus optional preserved visibility groups (castShadow = false, receiveShadow = false), and registers
+// the shell onto the project crank axis.
 
 import * as THREE from 'three';
 import type { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { ExteriorRegistrationSpec } from './layout';
+import type { ExteriorPreservedSubtreeSpec } from './partVariants';
+
+export type { ExteriorPreservedSubtreeSpec } from './partVariants';
 
 export interface LoadedExteriorShell {
   readonly group: THREE.Group;
+  readonly partGroups: ReadonlyMap<string, THREE.Group>;
   readonly mergedMeshCount: number;
   readonly totalTriangles: number;
   readonly uniqueTextureBytes: number;
@@ -109,6 +114,7 @@ export async function loadRegisteredExteriorShell(
   loader: GLTFLoader,
   url: string,
   registration: ExteriorRegistrationSpec,
+  preserved: readonly ExteriorPreservedSubtreeSpec[] = [],
 ): Promise<LoadedExteriorShell> {
   const gltf = await loader.loadAsync(url);
   gltf.scene.updateMatrixWorld(true);
@@ -118,7 +124,47 @@ export async function loadRegisteredExteriorShell(
     geometries: THREE.BufferGeometry[];
   }
 
-  const buckets = new Map<string, MaterialBucket>();
+  const partGroups = new Map<string, THREE.Group>();
+  const partBucketsById = new Map<string, Map<string, MaterialBucket>>();
+  const meshToPartId = new Map<THREE.Mesh, string>();
+
+  for (const spec of preserved) {
+    if (partGroups.has(spec.id)) {
+      throw new Error(`Duplicate exterior preserved subtree id "${spec.id}".`);
+    }
+    const groupNode = gltf.scene.getObjectByName(spec.group);
+    if (!groupNode) {
+      throw new Error(
+        `Exterior shell group "${spec.group}" not found for preserved subtree "${spec.id}".`,
+      );
+    }
+    const targetRoot =
+      spec.childIndex !== undefined ? groupNode.children[spec.childIndex] : groupNode;
+    if (!targetRoot) {
+      throw new Error(
+        `Child index ${spec.childIndex} out of range on exterior shell group "${spec.group}" for "${spec.id}".`,
+      );
+    }
+
+    const partGroup = new THREE.Group();
+    partGroup.name = `exterior_part_${spec.id}`;
+    partGroup.visible = true;
+    partGroups.set(spec.id, partGroup);
+    partBucketsById.set(spec.id, new Map<string, MaterialBucket>());
+
+    targetRoot.traverse((obj) => {
+      if (!(obj instanceof THREE.Mesh)) return;
+      if (meshToPartId.has(obj)) {
+        throw new Error(
+          `Exterior shell mesh belongs to multiple preserved subtrees ("${meshToPartId.get(obj)}" and "${spec.id}").`,
+        );
+      }
+      meshToPartId.set(obj, spec.id);
+    });
+  }
+
+  const canonicalMaterialBySignature = new Map<string, THREE.Material>();
+  const globalBuckets = new Map<string, MaterialBucket>();
   const duplicateMaterialsToDispose = new Set<THREE.Material>();
   const sourceGeometriesToDispose = new Set<THREE.BufferGeometry>();
   const allEncounteredTextures = new Set<THREE.Texture>();
@@ -128,16 +174,29 @@ export async function loadRegisteredExteriorShell(
     const srcGeo = obj.geometry as THREE.BufferGeometry;
     sourceGeometriesToDispose.add(srcGeo);
 
-    const mat = Array.isArray(obj.material) ? obj.material[0]! : obj.material;
-    collectMaterialTextures(mat, allEncounteredTextures);
+    const rawMat: THREE.Material = Array.isArray(obj.material)
+      ? (obj.material[0] as THREE.Material)
+      : (obj.material as THREE.Material);
+    collectMaterialTextures(rawMat, allEncounteredTextures);
 
-    const sig = computeMaterialSignature(mat, srcGeo);
-    let bucket = buckets.get(sig);
+    const sig = computeMaterialSignature(rawMat, srcGeo);
+    let canonicalMat = canonicalMaterialBySignature.get(sig);
+    if (!canonicalMat) {
+      canonicalMat = rawMat;
+      canonicalMaterialBySignature.set(sig, canonicalMat);
+    } else if (canonicalMat !== rawMat) {
+      duplicateMaterialsToDispose.add(rawMat);
+    }
+
+    const partId = meshToPartId.get(obj);
+    const targetBuckets =
+      partId !== undefined ? partBucketsById.get(partId)! : globalBuckets;
+
+    let bucket = targetBuckets.get(sig);
     if (!bucket) {
-      bucket = { material: mat, geometries: [] };
-      buckets.set(sig, bucket);
-    } else if (bucket.material !== mat) {
-      duplicateMaterialsToDispose.add(mat);
+      const created: MaterialBucket = { material: canonicalMat, geometries: [] };
+      targetBuckets.set(sig, created);
+      bucket = created;
     }
 
     const transformedGeo = srcGeo.clone();
@@ -148,7 +207,7 @@ export async function loadRegisteredExteriorShell(
   // Build registered container: p_proj = T + s * R * p_file
   const outerGroup = new THREE.Group();
   outerGroup.name = 'duramax_exterior_shell_group';
-  outerGroup.visible = false; // Default unchecked per Spec §5
+  outerGroup.visible = false; // Default unchecked per M3 Spec §5
 
   const transformGroup = new THREE.Group();
   transformGroup.name = 'exterior_registration_transform';
@@ -168,59 +227,79 @@ export async function loadRegisteredExteriorShell(
   outerGroup.add(transformGroup);
 
   const mergedGeometries: THREE.BufferGeometry[] = [];
-  const retainedMaterials: THREE.Material[] = [];
+  const retainedMaterialsSet = new Set<THREE.Material>();
   const retainedTextures = new Set<THREE.Texture>();
   let totalTriangles = 0;
 
-  let index = 0;
-  for (const [, bucket] of buckets) {
-    const mergedGeo =
-      bucket.geometries.length === 1
-        ? bucket.geometries[0]!
-        : mergeGeometries(bucket.geometries, false);
+  const emitMergedBuckets = (
+    buckets: Map<string, MaterialBucket>,
+    parentGroup: THREE.Group,
+    meshNamePrefix: string,
+  ): number => {
+    let emitted = 0;
+    for (const [, bucket] of buckets) {
+      const mergedGeo =
+        bucket.geometries.length === 1
+          ? bucket.geometries[0]!
+          : mergeGeometries(bucket.geometries, false);
 
-    if (!mergedGeo) {
-      throw new Error('Failed to merge exterior GLB geometries for material bucket.');
-    }
-
-    if (bucket.geometries.length > 1) {
-      for (const tempGeo of bucket.geometries) {
-        tempGeo.dispose();
+      if (!mergedGeo) {
+        throw new Error('Failed to merge exterior GLB geometries for material bucket.');
       }
+
+      if (bucket.geometries.length > 1) {
+        for (const tempGeo of bucket.geometries) {
+          tempGeo.dispose();
+        }
+      }
+
+      mergedGeo.computeBoundingBox();
+      mergedGeo.computeBoundingSphere();
+
+      const idxAttr = mergedGeo.getIndex();
+      const posAttr = mergedGeo.getAttribute('position');
+      const tris = idxAttr ? idxAttr.count / 3 : posAttr ? posAttr.count / 3 : 0;
+      totalTriangles += tris;
+
+      const mesh = new THREE.Mesh(mergedGeo, bucket.material);
+      mesh.name = `${meshNamePrefix}_${emitted}`;
+      mesh.castShadow = false;
+      mesh.receiveShadow = false;
+      parentGroup.add(mesh);
+
+      mergedGeometries.push(mergedGeo);
+      retainedMaterialsSet.add(bucket.material);
+      collectMaterialTextures(bucket.material, retainedTextures);
+      emitted += 1;
     }
+    return emitted;
+  };
 
-    mergedGeo.computeBoundingBox();
-    mergedGeo.computeBoundingSphere();
-
-    const idxAttr = mergedGeo.getIndex();
-    const posAttr = mergedGeo.getAttribute('position');
-    const tris = idxAttr ? idxAttr.count / 3 : posAttr ? posAttr.count / 3 : 0;
-    totalTriangles += tris;
-
-    const mesh = new THREE.Mesh(mergedGeo, bucket.material);
-    mesh.name = `exterior_merged_mat_${index}`;
-    mesh.castShadow = false;
-    mesh.receiveShadow = false;
-    transformGroup.add(mesh);
-
-    mergedGeometries.push(mergedGeo);
-    retainedMaterials.push(bucket.material);
-    collectMaterialTextures(bucket.material, retainedTextures);
-    index += 1;
-  }
-
-  if (mergedGeometries.length > 24) {
+  const globalMergedCount = emitMergedBuckets(
+    globalBuckets,
+    transformGroup,
+    'exterior_merged_mat',
+  );
+  if (globalMergedCount > 24) {
     throw new Error(
-      `Merged exterior mesh count (${mergedGeometries.length}) exceeded Spec §5 limit of 24.`,
+      `Merged exterior mesh count (${globalMergedCount}) exceeded Spec §5 limit of 24.`,
     );
   }
+
+  for (const [partId, partGroup] of partGroups) {
+    const partBuckets = partBucketsById.get(partId)!;
+    emitMergedBuckets(partBuckets, partGroup, `exterior_${partId}_mat`);
+    transformGroup.add(partGroup);
+  }
+
+  const retainedMaterials = [...retainedMaterialsSet];
 
   // Clean up unmerged source BufferGeometries and deduplicated Material clones
   for (const srcGeo of sourceGeometriesToDispose) {
     srcGeo.dispose();
   }
   for (const dupMat of duplicateMaterialsToDispose) {
-    if (!retainedMaterials.includes(dupMat)) {
+    if (!retainedMaterialsSet.has(dupMat)) {
       dupMat.dispose();
     }
   }
@@ -232,6 +311,7 @@ export async function loadRegisteredExteriorShell(
 
   return {
     group: outerGroup,
+    partGroups,
     mergedMeshCount: mergedGeometries.length,
     totalTriangles,
     uniqueTextureBytes: estimateTextureGpuBytes(retainedTextures),

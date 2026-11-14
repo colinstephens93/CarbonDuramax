@@ -82,10 +82,41 @@ describe('Milestone 6 parts catalog, compatibility, and build comparison', () =>
     const uniqueIds = new Set(fullCatalog.map((entry) => entry.id));
     expect(uniqueIds.size).toBe(24);
 
+    const expectedVisualByEntryId: Readonly<
+      Record<string, { modelPath: string; explodeVectorMm: [number, number, number] }>
+    > = {
+      turbo_large: {
+        modelPath: 'models/variants/turbo_unit_engine_large.glb',
+        explodeVectorMm: [0, 0, 260],
+      },
+      intake_highflow: {
+        modelPath: 'models/variants/intake_tract_engine_highflow.glb',
+        explodeVectorMm: [0, -260, 150],
+      },
+      exhaust_4in: {
+        modelPath: 'models/variants/exhaust_system_engine_4inch.glb',
+        explodeVectorMm: [-320, 0, 0],
+      },
+      intercooler_upgraded: {
+        modelPath: 'models/variants/intercooler_core_engine_upgraded.glb',
+        explodeVectorMm: [0, 260, 0],
+      },
+      pistons_lowcomp: {
+        modelPath: 'models/variants/rot_piston_c1_lowcomp.glb',
+        explodeVectorMm: [0, 0, 0],
+      },
+    };
+
     for (const entry of modified) {
       expect(entry.provenance).toBe('illustrative');
-      expect(entry.modelPath).toBeNull();
-      expect(entry.explodeVectorMm).toEqual([0, 0, 0]);
+      const expectedVisual = expectedVisualByEntryId[entry.id];
+      if (expectedVisual) {
+        expect(entry.modelPath).toBe(expectedVisual.modelPath);
+        expect(entry.explodeVectorMm).toEqual(expectedVisual.explodeVectorMm);
+      } else {
+        expect(entry.modelPath).toBeNull();
+        expect(entry.explodeVectorMm).toEqual([0, 0, 0]);
+      }
       expect(typeof entry.notes).toBe('string');
       expect(entry.notes!.trim().length).toBeGreaterThan(0);
     }

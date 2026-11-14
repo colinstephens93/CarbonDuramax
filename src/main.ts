@@ -1,25 +1,39 @@
-// Application entry point for Duramax LLY Engine Lab (Milestone 6: Parts Catalog & Build Comparison).
+// Application entry point for Duramax LLY Engine Lab (Milestone 8: 3D Visual Part Variants).
 
-import { fullCatalog } from './catalog';
+import { fullCatalog, slotForVariantId, visualVariantsForBuild } from './catalog';
 import { detailConfig } from './config/detailConfig';
 import { engineConfig, stockRatings } from './config/engineConfig';
 import { valveConfig } from './config/valveConfig';
 import type { Build } from './core/interfaces';
 import { computeCurve, computeDetails, stockBuild } from './perf';
-import { createEngineScene } from './renderer/engineScene';
+import { createEngineScene, type VisualVariantDescriptor } from './renderer';
 import {
   mountEngineUi,
   type EngineUiHandle,
   type UiQualityMode,
   type UiSectionMode,
 } from './ui/engineControls';
+import { REFERENCE_FRAME_DEFS } from './ui/referenceFrames';
 
 const container = document.getElementById('app');
 if (!container) {
   throw new Error('Missing #app container element.');
 }
 
-const scene = createEngineScene(container, engineConfig, valveConfig, detailConfig);
+// Build the visual descriptor list once from the merged catalog (M8 §5.2).
+const visualVariants: VisualVariantDescriptor[] = fullCatalog
+  .filter((v): v is typeof v & { modelPath: string } => v.modelPath !== null)
+  .map((v) => ({
+    slotId: v.slotId,
+    variantId: v.id,
+    modelPath: v.modelPath,
+    explodeVectorMm: v.explodeVectorMm,
+  }));
+
+// Pinned step (1): create the scene with the preloaded variant descriptors.
+const scene = createEngineScene(container, engineConfig, valveConfig, detailConfig, {
+  visualVariants,
+});
 
 // Compute steady-state stock dyno curve and point details once on load (M5 §5, M6 §4.1).
 const stockDynoCurve = computeCurve(stockBuild);
@@ -46,6 +60,7 @@ const refreshLabelsIfEnabled = (): void => {
   }
 };
 
+// Pinned step (2): mount the UI and wire onBuildChange -> visualVariantsForBuild -> scene.
 const ui = mountEngineUi(
   engineConfig,
   valveConfig,
@@ -84,6 +99,9 @@ const ui = mountEngineUi(
       labelsEnabled = enabled;
       refreshLabelsIfEnabled();
     },
+    onBuildChange: (build) => {
+      scene.setVisualVariantSelections(visualVariantsForBuild(build, fullCatalog));
+    },
     dyno: {
       stock: {
         curve: stockDynoCurve,
@@ -99,6 +117,9 @@ const ui = mountEngineUi(
 );
 uiRef = ui;
 
+// Pinned step (3): apply the initial all-stock visual state.
+scene.setVisualVariantSelections(visualVariantsForBuild(initialModifiedBuild, fullCatalog));
+
 (
   window as unknown as {
     __engineScene?: typeof scene;
@@ -112,73 +133,17 @@ uiRef = ui;
   }
 ).__engineUi = ui;
 
-interface ReferenceFrameDef {
-  thetaDeg: number;
-  position: [number, number, number];
-  target: [number, number, number];
-  exterior: boolean;
-  explodePercent?: number;
-  sectionMode?: UiSectionMode;
-  sectionPositionMm?: number;
-  xray?: boolean;
-  labels?: boolean;
-}
-
-const REFERENCE_FRAME_DEFS: Record<string, ReferenceFrameDef> = {
-  'RF-1': {
-    thetaDeg: 0,
-    position: [1.01, -0.78, 0.56],
-    target: [0.25, -0.01, 0.12],
-    exterior: false,
-  },
-  'RF-2': {
-    thetaDeg: 470,
-    position: [0.66, -0.38, 0.56],
-    target: [0.4025, -0.2, 0.255],
-    exterior: false,
-  },
-  'RF-3': {
-    thetaDeg: 180,
-    position: [1.38, -1.18, 0.72],
-    target: [0.3, -0.02, 0.17],
-    exterior: true,
-  },
-  'RF-4': {
-    thetaDeg: 705,
-    position: [0.23, -0.002, 1.18],
-    target: [0.23, 0.0, 0.14],
-    exterior: false,
-  },
-  'RF-5': {
-    thetaDeg: 90,
-    position: [1.28, -1.08, 0.74],
-    target: [0.31, -0.05, 0.18],
-    exterior: false,
-    explodePercent: 100,
-    labels: true,
-  },
-  'RF-6': {
-    thetaDeg: 0,
-    position: [1.06, -0.54, 0.48],
-    target: [0.29, -0.02, 0.14],
-    exterior: false,
-    explodePercent: 0,
-    sectionMode: 'x',
-    sectionPositionMm: 402.5,
-  },
-  'RF-7': {
-    thetaDeg: 180,
-    position: [1.38, -1.18, 0.72],
-    target: [0.3, -0.02, 0.17],
-    exterior: true,
-    explodePercent: 0,
-    xray: true,
-  },
-};
-
 const applyReferenceFrame = (frameId: string): boolean => {
   const def = REFERENCE_FRAME_DEFS[frameId];
   if (!def) return false;
+  if (def.variants) {
+    for (const variantId of def.variants) {
+      const slot = slotForVariantId(variantId, fullCatalog);
+      if (slot) {
+        ui.setBuildSelection(slot, variantId);
+      }
+    }
+  }
   ui.setQualityMode('full');
   ui.setExteriorChecked(def.exterior);
   ui.setExplodePercent(def.explodePercent ?? 0);
@@ -193,15 +158,27 @@ const applyReferenceFrame = (frameId: string): boolean => {
   return true;
 };
 
+// Pinned step (4): handle ?rf=...
 const requestedRf = params.get('rf')?.toUpperCase() ?? null;
 if (requestedRf) {
   applyReferenceFrame(requestedRf);
 }
 
-// Opt-in 10-second @ 900 RPM telemetry probe (`?benchmark=1`, plus optional
-// `&quality=full|phone&exterior=0|1&explode=0..100&section=off|x|y&sectionPos=<mm>&xray=0|1&labels=0|1`)
-// used to record docs/M2-MEASUREMENTS.md, docs/M3-MEASUREMENTS.md, and docs/M4-MEASUREMENTS.md.
+// Pinned step (5): opt-in 10-second @ 900 RPM telemetry probe (`?benchmark=1`, plus optional
+// `&quality=full|phone&exterior=0|1&explode=0..100&section=off|x|y&sectionPos=<mm>&xray=0|1&labels=0|1&variants=<ids>`)
+// used to record docs/M2-MEASUREMENTS.md .. docs/M8-MEASUREMENTS.md.
 if (isBenchmark) {
+  const requestedVariants = params.get('variants');
+  if (requestedVariants !== null && requestedVariants !== '') {
+    for (const rawId of requestedVariants.split(',')) {
+      const variantId = rawId.trim();
+      if (!variantId) continue;
+      const slot = slotForVariantId(variantId, fullCatalog);
+      if (slot) {
+        ui.setBuildSelection(slot, variantId);
+      }
+    }
+  }
   const requestedQuality = params.get('quality');
   if (requestedQuality === 'auto' || requestedQuality === 'full' || requestedQuality === 'phone') {
     ui.setQualityMode(requestedQuality as UiQualityMode);
@@ -253,7 +230,12 @@ if (isBenchmark) {
 
   const sampleFrame = (nowMs: number): void => {
     const stats = scene.getRenderStats();
-    if (!stats.detailedLoaded || !stats.hdriLoaded || !stats.exteriorLoaded) {
+    if (
+      !stats.detailedLoaded ||
+      !stats.hdriLoaded ||
+      !stats.exteriorLoaded ||
+      !stats.variantsLoaded
+    ) {
       requestAnimationFrame(sampleFrame);
       return;
     }
