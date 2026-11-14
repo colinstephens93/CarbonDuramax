@@ -161,15 +161,18 @@ describe('Milestone 4 view layout, cutaway planes & label anchors (src/renderer/
 
   it('3. pushrod stretch bound: at e = 1, intake and exhaust pushrod length growth from M3 lifter/cup points is > 0% and <= 25%', () => {
     const layout = computeEngineLayout(engineConfig, valveConfig, detailConfig);
-    const maxLiftMm = valveConfig.maxLift.value;
+    const intakeMaxLiftMm = valveConfig.intakeMaxLift.value;
+    const exhaustMaxLiftMm = valveConfig.exhaustMaxLift.value;
 
-    // Verify at rest (lift = 0) and across the full cam lift envelope [0, maxLift]
-    for (const liftMm of [0, 0.5 * maxLiftMm, maxLiftMm]) {
-      const reportZero = computeExplodedPushrodGeometryMm(layout, 0, liftMm, liftMm);
+    // Verify at rest (lift = 0) and across each channel's own cam lift envelope [0, intakeMaxLift / exhaustMaxLift]
+    for (const frac of [0, 0.5, 1]) {
+      const intakeLiftMm = frac * intakeMaxLiftMm;
+      const exhaustLiftMm = frac * exhaustMaxLiftMm;
+      const reportZero = computeExplodedPushrodGeometryMm(layout, 0, intakeLiftMm, exhaustLiftMm);
       expect(reportZero.intake.growthPercent).toBe(0);
       expect(reportZero.exhaust.growthPercent).toBe(0);
 
-      const reportFull = computeExplodedPushrodGeometryMm(layout, 1, liftMm, liftMm);
+      const reportFull = computeExplodedPushrodGeometryMm(layout, 1, intakeLiftMm, exhaustLiftMm);
       expect(reportFull.intake.growthPercent).toBeGreaterThan(0);
       expect(reportFull.intake.growthPercent).toBeLessThanOrEqual(25);
       expect(reportFull.exhaust.growthPercent).toBeGreaterThan(0);

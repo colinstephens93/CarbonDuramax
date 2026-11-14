@@ -622,7 +622,7 @@ export function mountEngineUi(
 
   const bannerSubtitle = document.querySelector('#title-banner p');
   if (bannerSubtitle) {
-    bannerSubtitle.textContent = 'Milestone 6 — Parts Catalog & Build Comparison';
+    bannerSubtitle.textContent = 'Milestone 7 — Verified LLY Data';
   }
 
   let isPlaying = true;
@@ -1019,11 +1019,11 @@ export function mountEngineUi(
   panel.appendChild(readoutGrid);
   document.body.appendChild(panel);
 
-  // On-screen illustrative caption (unchanged per Spec §7)
+  // On-screen illustrative caption (M7 Spec §4.4)
   const caption = document.createElement('div');
   caption.id = 'm1-illustrative-caption';
   caption.textContent =
-    'Illustrative geometry, part shapes & timing: Detailed part shapes, valve timing/lift profiles, placeholder dimensions, shared-pin crank layout, lifter gallery placement, and the registered exterior shell are illustrative placeholders, not verified LLY measurements.';
+    'Illustrative geometry, part shapes & timing: Bore spacing, deck height and piston protrusion, valve timing events, duration, and lift profile shape, lifter gallery placement, detailed part shapes, and the registered exterior shell remain illustrative placeholders, not verified LLY measurements.';
   document.body.appendChild(caption);
 
   const updatePlayButtonLabel = (): void => {

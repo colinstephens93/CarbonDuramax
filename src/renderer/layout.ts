@@ -57,7 +57,8 @@ export interface ValvetrainLayoutMm {
   readonly valveRowOffsetMm: number;
   readonly springFreeLengthMm: number;
   readonly rockerCupXOffsetMm: number;
-  readonly rockerCupValleyOffsetMm: number;
+  readonly rockerCupIntakeValleyOffsetMm: number;
+  readonly rockerCupExhaustValleyOffsetMm: number;
   readonly pushrodNominalLengthMm: number;
   readonly pushrodRadiusMm: number;
   readonly lifterBodyRadiusMm: number;
@@ -144,10 +145,6 @@ const STATION_PAIR_DEFS: ReadonlyArray<{
 
 // Piston skirt allowance below wrist-pin centerline per M2 GLB contract (height <= compHeight + 25 mm).
 const PISTON_SKIRT_BELOW_WRIST_ALLOWANCE_MM = 25;
-// Lifter cylindrical body radius ratio from build_cylinder1.py (lifter_r = 2.65 * pr_r).
-const LIFTER_RADIUS_TO_PUSHROD_RADIUS = 2.65;
-// Crank throw main-journal stub radius ratio from build_cylinder1.py (main_r = 1.08 * pin_r).
-const MAIN_JOURNAL_TO_PIN_RADIUS = 1.08;
 
 /**
  * Computes bank-local unit vectors in project space:
@@ -254,10 +251,11 @@ export function computeEngineLayout(
   const rockerShaftBMm = deckBMm + detailCfg.rockerShaftHeightMm.value;
 
   const rockerCupXOffsetMm = detailCfg.rockerTailXOffsetMm.value;
-  const rockerCupValleyOffsetMm = detailCfg.rockerTailValleyOffsetMm.value;
+  const rockerCupIntakeValleyOffsetMm = detailCfg.rockerCupIntakeValleyOffsetMm.value;
+  const rockerCupExhaustValleyOffsetMm = detailCfg.rockerCupExhaustValleyOffsetMm.value;
   const lifterTopBMm = detailCfg.lifterTopBoreOffsetMm.value;
   const pushrodRadiusMm = 0.5 * detailCfg.pushrodDiameterMm.value;
-  const lifterBodyRadiusMm = LIFTER_RADIUS_TO_PUSHROD_RADIUS * pushrodRadiusMm;
+  const lifterBodyRadiusMm = 0.5 * detailCfg.lifterBodyDiameterMm.value;
 
   const valvetrainMm: ValvetrainLayoutMm = {
     tdcWristBMm,
@@ -270,7 +268,8 @@ export function computeEngineLayout(
     valveRowOffsetMm: detailCfg.valveRowOffsetMm.value,
     springFreeLengthMm: detailCfg.springFreeLengthMm.value,
     rockerCupXOffsetMm,
-    rockerCupValleyOffsetMm,
+    rockerCupIntakeValleyOffsetMm,
+    rockerCupExhaustValleyOffsetMm,
     pushrodNominalLengthMm: detailCfg.pushrodLengthMm.value,
     pushrodRadiusMm,
     lifterBodyRadiusMm,
@@ -286,12 +285,12 @@ export function computeEngineLayout(
     },
     intakeCupRestMm: {
       xMm: +rockerCupXOffsetMm,
-      wMm: -rockerCupValleyOffsetMm,
+      wMm: -rockerCupIntakeValleyOffsetMm,
       bMm: rockerShaftBMm,
     },
     exhaustCupRestMm: {
       xMm: -rockerCupXOffsetMm,
-      wMm: +rockerCupValleyOffsetMm,
+      wMm: +rockerCupExhaustValleyOffsetMm,
       bMm: rockerShaftBMm,
     },
   };
@@ -354,7 +353,7 @@ export function computeEngineLayout(
     rearOverhangMm: -projMinMm[0],
   };
 
-  const mainShaftRadiusMm = 0.5 * detailCfg.pinJournalDiameterMm.value * MAIN_JOURNAL_TO_PIN_RADIUS;
+  const mainShaftRadiusMm = 0.5 * detailCfg.mainJournalDiameterMm.value;
 
   return {
     blockLengthMm,

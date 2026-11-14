@@ -58,8 +58,11 @@ Each milestone ends only when its exit criteria pass in CI or are signed off by 
 6. **Parts catalog and build comparison**
    - Slot swapping, compatibility rules, stock vs. modified side by side.
    - Exit: every catalog entry passes schema validation; an intake-only change with a stock tune shows near-zero gain.
+7. **Verified LLY data**
+   - Replace illustrative placeholder dimensions with published values where credible sources exist (L7 data survey), upgrading provenance labels; per-valve lift from published lobe lift and rocker ratios; geometry regenerated from the upgraded config; disclaimer banner reduced to what remains illustrative.
+   - Exit: upgraded values pinned by config tests with sources in `docs/M7-DATA.md`; piston-to-valve clearance recomputed, non-negative across 720° for both valves; budgets still pass.
 
-After 6: capped cutaway sections, shareable builds, and engine sound are candidates.
+After 7: capped cutaway sections, shareable builds, and engine sound are candidates.
 
 ## Asset contract and placeholder geometry
 

@@ -18,14 +18,15 @@ export const engineConfig: EngineConfig = {
   crankThrowMm: {
     value: 49.5,
     unit: 'mm',
-    confidence: 'placeholder',
-    source: 'derived: stroke / 2',
+    confidence: 'published',
+    source: 'derived: half of published 99.0 mm stroke (DieselHub; GM Authority; XDP)',
   },
   rodLengthMm: {
     value: 163.0,
     unit: 'mm',
-    confidence: 'placeholder',
-    source: 'published Duramax rod-length listings (~6.42 in); to be verified during M1 sourcing',
+    confidence: 'published',
+    source:
+      'Manley 6.417 in, BoostLine 6.418 in, Callies 6.418 in, UEM 163.000 mm — four independent sources converge (L7 survey §1)',
   },
   compressionRatio: {
     value: 17.5,

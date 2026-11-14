@@ -1,5 +1,5 @@
-// Illustrative placeholder interface dimensions for detailed internal & valvetrain parts (D-011, D-012).
-// Every field carries confidence 'placeholder' and cites the Rev C concept set unknowns / D-011–D-012 policy.
+// Published and illustrative placeholder interface dimensions for detailed internal & valvetrain parts (D-011, D-012, D-035).
+// Published fields cite L7-verified-data-survey.md; remaining unknowns stay 'placeholder' under D-011/D-012.
 
 import type { ProvenancedValue } from '../core/interfaces';
 
@@ -8,6 +8,7 @@ export interface DetailConfig {
   pistonSkirtClearanceMm: ProvenancedValue;
   wristPinDiameterMm: ProvenancedValue;
   pinJournalDiameterMm: ProvenancedValue;
+  mainJournalDiameterMm: ProvenancedValue;
   pinJournalLengthMm: ProvenancedValue;
   rodSeatOffsetMm: ProvenancedValue;
   crankWebThicknessMm: ProvenancedValue;
@@ -24,11 +25,13 @@ export interface DetailConfig {
   springSeatHeightMm: ProvenancedValue;
   bridgeThicknessMm: ProvenancedValue;
   rockerShaftHeightMm: ProvenancedValue;
-  rockerTailValleyOffsetMm: ProvenancedValue;
+  rockerCupIntakeValleyOffsetMm: ProvenancedValue;
+  rockerCupExhaustValleyOffsetMm: ProvenancedValue;
   rockerTailXOffsetMm: ProvenancedValue;
   pushrodValleyOffsetMm: ProvenancedValue;
   pushrodLengthMm: ProvenancedValue;
   pushrodDiameterMm: ProvenancedValue;
+  lifterBodyDiameterMm: ProvenancedValue;
   lifterTopBoreOffsetMm: ProvenancedValue;
   lifterIntakeXOffsetMm: ProvenancedValue;
   lifterExhaustXOffsetMm: ProvenancedValue;
@@ -40,10 +43,11 @@ export interface DetailConfig {
 
 export const detailConfig: DetailConfig = {
   pistonCompressionHeightMm: {
-    value: 52,
+    value: 49.8,
     unit: 'mm',
-    confidence: 'placeholder',
-    source: 'D-011/D-012 placeholder policy; Rev C concept set (D10) piston compression height unknown',
+    confidence: 'published',
+    source:
+      'MAHLE Original (OE supplier) 224-3451/224-3452 compression height 1.961 in (49.8 mm) for 2001–2005 LB7/LLY; UEM standard-height set agrees (L7 survey §8)',
   },
   pistonSkirtClearanceMm: {
     value: 0.15,
@@ -52,28 +56,39 @@ export const detailConfig: DetailConfig = {
     source: 'D-011/D-012 placeholder policy; Rev C concept set piston-to-wall clearance unknown',
   },
   wristPinDiameterMm: {
-    value: 33,
+    value: 34.5,
     unit: 'mm',
-    confidence: 'placeholder',
-    source: 'D-011/D-012 placeholder policy; Rev C concept set wrist-pin diameter unknown',
+    confidence: 'published',
+    source:
+      'MAHLE Original, UEM, and BoostLine: wrist pin diameter 1.358 in (34.5 mm) (L7 survey §8)',
   },
   pinJournalDiameterMm: {
-    value: 60,
+    value: 62.9,
     unit: 'mm',
-    confidence: 'placeholder',
-    source: 'D-011/D-012 placeholder policy; Rev C concept set crankpin journal diameter unknown',
+    confidence: 'published',
+    source:
+      'Callies 2.477 in, BoostLine 2.476 in, MotorTrend L5P teardown pre-L5P rod journal 2.4764 in (62.9 mm) (L7 survey §6)',
+  },
+  mainJournalDiameterMm: {
+    value: 79.9,
+    unit: 'mm',
+    confidence: 'published',
+    source:
+      'Callies Duramax crankshaft OEM main journal 3.146 in (79.9 mm); MotorTrend L5P teardown corroborates 3.1464 in carried over (L7 survey §6)',
   },
   pinJournalLengthMm: {
     value: 58,
     unit: 'mm',
     confidence: 'placeholder',
-    source: 'M3 spec §3 — derived from rod big-end width (26.4 mm) and shared-pin pair clearance',
+    source:
+      "M3 spec §3 — derived from rod big-end width (26.4 mm) and shared-pin pair clearance. Retained at M7: with pin journal 62.9 the modeled rod big-end width becomes 27.7 mm (build script's 0.22 × journal factor); inter-rod gap 0.72 mm and pin-end margin 0.96 mm, both positive (M7 spec §11).",
   },
   rodSeatOffsetMm: {
     value: 14.2,
     unit: 'mm',
     confidence: 'placeholder',
-    source: 'M3 spec §3 — derived from rod big-end width (26.4 mm) with 2.0 mm inter-rod gap',
+    source:
+      "M3 spec §3 — derived from rod big-end width (26.4 mm) with 2.0 mm inter-rod gap. Retained at M7: with pin journal 62.9 the modeled rod big-end width becomes 27.7 mm (build script's 0.22 × journal factor); inter-rod gap 0.72 mm and pin-end margin 0.96 mm, both positive (M7 spec §11).",
   },
   crankWebThicknessMm: {
     value: 18,
@@ -88,22 +103,24 @@ export const detailConfig: DetailConfig = {
     source: 'D-011/D-012 placeholder policy; Rev C concept set crank counterweight radius unknown',
   },
   valveIntakeHeadMm: {
-    value: 38,
+    value: 33.0,
     unit: 'mm',
-    confidence: 'placeholder',
-    source: 'D-011/D-012 placeholder policy; Rev C concept set (D10) intake valve head size unknown',
+    confidence: 'published',
+    source:
+      'ZZ Diesel OE part-number data 1.299 in (33.0 mm); Edelbrock stock-compatible Duramax head 33 mm (L7 survey §5)',
   },
   valveExhaustHeadMm: {
-    value: 35,
+    value: 31.0,
     unit: 'mm',
-    confidence: 'placeholder',
-    source: 'D-011/D-012 placeholder policy; Rev C concept set (D10) exhaust valve head size unknown',
+    confidence: 'published',
+    source:
+      'ZZ Diesel OE part-number data 1.220 in (31.0 mm); Edelbrock stock-compatible Duramax head 31 mm (L7 survey §5)',
   },
   valveStemMm: {
     value: 7,
     unit: 'mm',
-    confidence: 'placeholder',
-    source: 'D-011/D-012 placeholder policy; Rev C concept set (D10) valve stem diameter unknown',
+    confidence: 'published',
+    source: 'Edelbrock stock-valvetrain-compatible Duramax head data: valve stem 7.0 mm (L7 survey §5)',
   },
   valveStemLengthMm: {
     value: 105,
@@ -159,11 +176,19 @@ export const detailConfig: DetailConfig = {
     confidence: 'placeholder',
     source: 'D-011/D-012 placeholder policy; Rev C concept set (D10) rocker shaft height above deck unknown',
   },
-  rockerTailValleyOffsetMm: {
-    value: 19,
+  rockerCupIntakeValleyOffsetMm: {
+    value: 16.9,
     unit: 'mm',
-    confidence: 'placeholder',
-    source: 'D-011/D-012 placeholder policy; Rev C concept set (D10) rocker cup W-offset from shaft unknown',
+    confidence: 'published',
+    source:
+      'derived: valveRowOffset 23 mm ÷ published intake rocker ratio 1.36 = 16.91 mm — the cup arm that makes the modeled rocker ratio 1.36 (23/16.9 = 1.361)',
+  },
+  rockerCupExhaustValleyOffsetMm: {
+    value: 13.6,
+    unit: 'mm',
+    confidence: 'published',
+    source:
+      'derived: valveRowOffset 23 mm ÷ published exhaust rocker ratio 1.69 = 13.61 mm (23/13.6 = 1.691)',
   },
   rockerTailXOffsetMm: {
     value: 60,
@@ -178,16 +203,25 @@ export const detailConfig: DetailConfig = {
     source: 'D-011/D-012 placeholder policy; Rev C concept set (D10) lifter gallery valley W-offset unknown',
   },
   pushrodLengthMm: {
-    value: 246,
+    value: 244,
     unit: 'mm',
     confidence: 'placeholder',
-    source: 'D-011/D-012 placeholder policy; Rev C concept set (D10) pushrod nominal length unknown',
+    source:
+      'D-011/D-012 illustrative placeholder — recomputed modeled nominal ΔB (rocker shaft B 374.3 − lifter top B 130 = 244.3 mm, rounded to 244 per M2 convention); Manton published 239.5 mm overall length is not adopted because gallery/rocker endpoints are unpublished (D-035, L7 survey §9)',
   },
   pushrodDiameterMm: {
-    value: 9,
+    value: 11.1,
+    unit: 'mm',
+    confidence: 'published',
+    source:
+      'Manton Pushrods stock Duramax specification: 7/16 in (11.1 mm) outer diameter, single specialist vendor source (L7 survey §9)',
+  },
+  lifterBodyDiameterMm: {
+    value: 23.85,
     unit: 'mm',
     confidence: 'placeholder',
-    source: 'D-011/D-012 placeholder policy; Rev C concept set (D10) pushrod outer diameter unknown',
+    source:
+      'D-011/D-012 illustrative placeholder — lifter body diameter not published for the LLY (L7 survey §9); value is the M2/M3 modeled radius (2.65 × 4.5 mm pushrod radius) made explicit at M7 (D-035), geometry unchanged',
   },
   lifterTopBoreOffsetMm: {
     value: 130,

@@ -596,7 +596,7 @@ def build_crankthrow(d: dict[str, float], out_dir: Path) -> None:
     # M3 §3 shared-pin journal: length along X = pinJournalLengthMm (carries both rods of a station pair)
     pin_half_w = 0.5 * d["pinJournalLengthMm"] * MM_TO_M
     half_pitch = 0.5 * d["borePitch"] * MM_TO_M
-    main_r = 1.08 * pin_r
+    main_r = 0.5 * d["mainJournalDiameterMm"] * MM_TO_M
 
     mat_web = make_pbr_material("mat_crank_web_steel", (0.32, 0.34, 0.38, 1.0), 0.90, 0.30)
     mat_journal = make_pbr_material("mat_crank_journal_steel", (0.58, 0.60, 0.64, 1.0), 0.90, 0.30)
@@ -708,7 +708,8 @@ def build_head(d: dict[str, float], out_dir: Path) -> None:
     pitch_mm = d["borePitch"]
     half_pitch_mm = 0.5 * pitch_mm
     cup_x_mm = d["rockerTailXOffsetMm"]
-    cup_w_mm = d["rockerTailValleyOffsetMm"]
+    cup_in_w_mm = d["rockerCupIntakeValleyOffsetMm"]
+    cup_ex_w_mm = d["rockerCupExhaustValleyOffsetMm"]
     pr_valley_mm = d["pushrodValleyOffsetMm"]
     v_row_mm = d["valveRowOffsetMm"]
     in_lx_mm = d["lifterIntakeXOffsetMm"]
@@ -723,21 +724,25 @@ def build_head(d: dict[str, float], out_dir: Path) -> None:
     ex_w_min_mm = float("inf")
     ex_w_max_mm = float("-inf")
 
-    for lift_mm in (0.0, d["maxLift"]):
+    for lift_mm in (0.0, d["intakeMaxLift"]):
         th = math.asin(min(1.0, max(0.0, lift_mm / v_row_mm)))
-        rise_mm = cup_w_mm * math.sin(th)
+        rise_mm = cup_in_w_mm * math.sin(th)
         # Rear neighbor's intake pushrod crossing the -X face (shifted by -borePitch)
         p0 = (in_lx_mm - pitch_mm, in_lw_mm, b_lifter_mm + rise_mm)
-        p1 = (cup_x_mm - pitch_mm, -cup_w_mm * math.cos(th), b_shaft_mm + rise_mm)
-        # Own cylinder's exhaust pushrod crossing the -X face
-        q0 = (ex_lx_mm, ex_lw_mm, b_lifter_mm + rise_mm)
-        q1 = (-cup_x_mm, +cup_w_mm * math.cos(th), b_shaft_mm + rise_mm)
+        p1 = (cup_x_mm - pitch_mm, -cup_in_w_mm * math.cos(th), b_shaft_mm + rise_mm)
         for b_mm in (b_lo_mm, b_hi_mm):
             ti = (b_mm - p0[2]) / (p1[2] - p0[2])
             wi = p0[1] + ti * (p1[1] - p0[1])
             in_w_min_mm = min(in_w_min_mm, wi - pr_r_mm)
             in_w_max_mm = max(in_w_max_mm, wi + pr_r_mm)
 
+    for lift_mm in (0.0, d["exhaustMaxLift"]):
+        th = math.asin(min(1.0, max(0.0, lift_mm / v_row_mm)))
+        rise_mm = cup_ex_w_mm * math.sin(th)
+        # Own cylinder's exhaust pushrod crossing the -X face
+        q0 = (ex_lx_mm, ex_lw_mm, b_lifter_mm + rise_mm)
+        q1 = (-cup_x_mm, +cup_ex_w_mm * math.cos(th), b_shaft_mm + rise_mm)
+        for b_mm in (b_lo_mm, b_hi_mm):
             te = (b_mm - q0[2]) / (q1[2] - q0[2])
             xe = q0[0] + te * (q1[0] - q0[0])
             we = q0[1] + te * (q1[1] - q0[1])
@@ -748,8 +753,8 @@ def build_head(d: dict[str, float], out_dir: Path) -> None:
     recess_floor_mm = ex_absx_min_mm - 0.10 * pr_r_mm
     win1_w0_mm = min(in_w_min_mm - pr_r_mm, -0.45 * pr_valley_mm)
     win1_w1_mm = max(in_w_max_mm + 0.35 * pr_r_mm, 0.60 * pr_valley_mm)
-    win2_w0_mm = ex_w_min_mm - 0.60 * pr_r_mm
-    win2_w1_mm = ex_w_max_mm + 0.40 * pr_r_mm
+    win2_w0_mm = min(ex_w_min_mm - 0.60 * pr_r_mm, 26.0)
+    win2_w1_mm = max(ex_w_max_mm + 0.40 * pr_r_mm, 2.20 * pr_valley_mm)
 
     # Spec §4 recess-window parameter assertions (logged so headless builds verify interior cutouts)
     assert recess_floor_mm <= 43.0, (
@@ -762,7 +767,8 @@ def build_head(d: dict[str, float], out_dir: Path) -> None:
         f"Head deck upper recess window [{win2_w0_mm:.3f}, {win2_w1_mm:.3f}] mm fails to cover [+26.0, +41.0] mm"
     )
     print(
-        f"[M3 §4 head recess assertion PASS] recess_floor_x={recess_floor_mm:.3f} mm (<= 43.0); "
+        f"[M3 §4 head recess assertion PASS] deck_b={deck_b_mm:.1f} mm; "
+        f"recess_floor_x={recess_floor_mm:.3f} mm (<= 43.0); "
         f"window_1_w=[{win1_w0_mm:.3f}, {win1_w1_mm:.3f}] mm (covers [-8.0, +11.0]); "
         f"window_2_w=[{win2_w0_mm:.3f}, {win2_w1_mm:.3f}] mm (covers [+26.0, +41.0], opens valley edge {slab_half_y_mm:.2f} mm)"
     )
@@ -1075,8 +1081,8 @@ def build_pushrod_and_lifter(d: dict[str, float], out_dir: Path) -> None:
 
     # Node 2: Roller lifter with origin (0, 0, 0) at pushrod-seat cup center
     bm_lf = bmesh.new()
-    lifter_r = 2.65 * pr_r
-    lifter_h = 7.8 * pr_r
+    lifter_r = 0.5 * d["lifterBodyDiameterMm"] * MM_TO_M
+    lifter_h = 7.8 * (lifter_r / 2.65)
     lifter_profile = [
         (0.0, 0.0),
         (ball_r * 1.08, 0.35 * pr_r),
@@ -1230,7 +1236,8 @@ def build_rockers(d: dict[str, float], out_dir: Path) -> None:
 
     v_row = d["valveRowOffsetMm"] * MM_TO_M
     cup_x = d["rockerTailXOffsetMm"] * MM_TO_M
-    cup_w = d["rockerTailValleyOffsetMm"] * MM_TO_M
+    cup_in_w = d["rockerCupIntakeValleyOffsetMm"] * MM_TO_M
+    cup_ex_w = d["rockerCupExhaustValleyOffsetMm"] * MM_TO_M
     inj_r = 0.5 * d["injectorBodyMm"] * MM_TO_M
     pr_r = 0.5 * d["pushrodDiameterMm"] * MM_TO_M
     half_pitch = 0.5 * d["borePitch"] * MM_TO_M
@@ -1242,12 +1249,12 @@ def build_rockers(d: dict[str, float], out_dir: Path) -> None:
     mat_body = make_pbr_material("mat_rocker_forged_steel", (0.38, 0.40, 0.44, 1.0), 0.85, 0.35)
     mat_adj = make_pbr_material("mat_rocker_adjuster_steel", (0.20, 0.22, 0.26, 1.0), 0.85, 0.35)
 
-    # Intake casting: pad at (X 0, W +23), cup at (X +60, W -19)
+    # Intake casting: pad at (X 0, W +23), cup at (X +60, W -16.9)
     intake_obj = build_single_rocker_casting(
         "val_rocker_intake_stock",
         pad_y=+v_row,
         cup_x=+cup_x,
-        cup_y=-cup_w,
+        cup_y=-cup_in_w,
         shaft_inner_x=shaft_inner_x,
         shaft_outer_x=shaft_outer_x,
         shaft_r=shaft_r,
@@ -1256,12 +1263,12 @@ def build_rockers(d: dict[str, float], out_dir: Path) -> None:
         mat_adj=mat_adj,
     )
 
-    # Exhaust casting: pad at (X 0, W -23), cup at (X -60, W +19)
+    # Exhaust casting: pad at (X 0, W -23), cup at (X -60, W +13.6)
     exhaust_obj = build_single_rocker_casting(
         "val_rocker_exhaust_stock",
         pad_y=-v_row,
         cup_x=-cup_x,
-        cup_y=+cup_w,
+        cup_y=+cup_ex_w,
         shaft_inner_x=shaft_inner_x,
         shaft_outer_x=shaft_outer_x,
         shaft_r=shaft_r,

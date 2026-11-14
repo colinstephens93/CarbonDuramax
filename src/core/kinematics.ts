@@ -86,7 +86,8 @@ export function computeState(
   valves: ValveConfig = defaultValveConfig,
 ): CrankState {
   const normalizedCrankDeg = normalizeMod(crankAngleDeg, 720);
-  const maxLiftM = valves.maxLift.value / 1000;
+  const intakeMaxLiftM = valves.intakeMaxLift.value / 1000;
+  const exhaustMaxLiftM = valves.exhaustMaxLift.value / 1000;
   const intakeOpen = valves.intakeOpenDeg.value;
   const intakeClose = valves.intakeCloseDeg.value;
   const exhaustOpen = valves.exhaustOpenDeg.value;
@@ -101,8 +102,8 @@ export function computeState(
 
     pistonPositionM[cylinder] = pistonDisplacementBelowTdcM(config, alpha);
     valveLiftM[cylinder] = {
-      intake: valveWindowLiftM(alpha, intakeOpen, intakeClose, maxLiftM),
-      exhaust: valveWindowLiftM(alpha, exhaustOpen, exhaustClose, maxLiftM),
+      intake: valveWindowLiftM(alpha, intakeOpen, intakeClose, intakeMaxLiftM),
+      exhaust: valveWindowLiftM(alpha, exhaustOpen, exhaustClose, exhaustMaxLiftM),
     };
   }
 
@@ -152,19 +153,20 @@ export function pistonValveClearanceM(
 
   const pM = pistonDisplacementBelowTdcM(config, alpha);
   const deckGapM = valveConfig.deckGap.value / 1000;
-  const maxLiftM = valveConfig.maxLift.value / 1000;
+  const intakeMaxLiftM = valveConfig.intakeMaxLift.value / 1000;
+  const exhaustMaxLiftM = valveConfig.exhaustMaxLift.value / 1000;
 
   const intakeLiftM = valveWindowLiftM(
     alpha,
     valveConfig.intakeOpenDeg.value,
     valveConfig.intakeCloseDeg.value,
-    maxLiftM,
+    intakeMaxLiftM,
   );
   const exhaustLiftM = valveWindowLiftM(
     alpha,
     valveConfig.exhaustOpenDeg.value,
     valveConfig.exhaustCloseDeg.value,
-    maxLiftM,
+    exhaustMaxLiftM,
   );
 
   return {

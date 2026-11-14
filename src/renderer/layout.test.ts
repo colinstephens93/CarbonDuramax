@@ -113,13 +113,13 @@ describe('Milestone 3 engine layout & valvetrain clearances (src/renderer/layout
     });
     expect(vt.intakeCupRestMm).toEqual({
       xMm: 60,
-      wMm: -19,
-      bMm: 376.5,
+      wMm: -16.9,
+      bMm: 374.3,
     });
     expect(vt.exhaustCupRestMm).toEqual({
       xMm: -60,
-      wMm: 19,
-      bMm: 376.5,
+      wMm: 13.6,
+      bMm: 374.3,
     });
 
     // Verify bilateral mirror symmetry across Y = 0 between RH and LH banks at the same station
@@ -134,8 +134,8 @@ describe('Milestone 3 engine layout & valvetrain clearances (src/renderer/layout
     const c = computeLayoutClearancesMm(engineConfig, valveConfig, detailConfig);
 
     expect(c.pistonSweptBandBMm[0]).toBeCloseTo(88.5, 6);
-    expect(c.pistonSweptBandBMm[1]).toBeCloseTo(264.5, 6);
-    expect(c.pistonPushrodThresholdMm).toBeCloseTo(55.925, 3);
+    expect(c.pistonSweptBandBMm[1]).toBeCloseTo(262.3, 6);
+    expect(c.pistonPushrodThresholdMm).toBeCloseTo(56.975, 3);
 
     // Spec §12.2: > 55.9 mm (and strictly greater than exact pistonRadius + pushrodRadius = 55.925 mm)
     expect(c.ownBorePushrodMinRadialMm.intake).toBeGreaterThan(55.9);
@@ -181,8 +181,8 @@ describe('Milestone 3 engine layout & valvetrain clearances (src/renderer/layout
       detailConfig,
     );
 
-    // Main shaft radius 32 ± 2 mm per Spec §3
-    expect(Math.abs(mainShaftRadiusMm - 32)).toBeLessThanOrEqual(2.0);
+    // Main shaft radius 39.95 ± 0.5 mm from published mainJournalDiameterMm (M7 Spec §4.3)
+    expect(Math.abs(mainShaftRadiusMm - 39.95)).toBeLessThanOrEqual(0.5);
 
     // Proper orthogonal rotation (det = +1)
     const [c0, c1, c2] = exterior.basisColumnsProjectFromFile;
