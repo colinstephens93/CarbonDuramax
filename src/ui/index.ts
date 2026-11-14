@@ -1,3 +1,4 @@
-// Web UI module exports (Milestone 1).
+// Web UI module exports (Milestones 1–5).
 
-export { mountEngineUi, type EngineUiHandle } from './engineControls';
+export { createDynoSection, type DynoSectionHandle, type DynoUiData } from './dynoChart';
+export { mountEngineUi, type EngineUiHandle, type EngineUiOptions } from './engineControls';

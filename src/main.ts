@@ -1,8 +1,9 @@
-// Application entry point for Duramax LLY Engine Lab (Milestone 4: Views — Explode, Cutaway, X-Ray, Labels).
+// Application entry point for Duramax LLY Engine Lab (Milestone 5: Performance Model & Dyno).
 
 import { detailConfig } from './config/detailConfig';
-import { engineConfig } from './config/engineConfig';
+import { engineConfig, stockRatings } from './config/engineConfig';
 import { valveConfig } from './config/valveConfig';
+import { computeCurve, computeDetails, stockBuild } from './perf';
 import { createEngineScene } from './renderer/engineScene';
 import {
   mountEngineUi,
@@ -17,6 +18,10 @@ if (!container) {
 }
 
 const scene = createEngineScene(container, engineConfig, valveConfig, detailConfig);
+
+// Compute steady-state stock dyno curve and point details once on load (Spec §5).
+const stockDynoCurve = computeCurve(stockBuild);
+const stockDynoDetails = computeDetails(stockBuild);
 
 const params = new URLSearchParams(window.location.search);
 const isBenchmark = params.get('benchmark') === '1';
@@ -68,6 +73,11 @@ const ui = mountEngineUi(
     onLabelsChange: (enabled) => {
       labelsEnabled = enabled;
       refreshLabelsIfEnabled();
+    },
+    dyno: {
+      curve: stockDynoCurve,
+      details: stockDynoDetails,
+      ratings: stockRatings,
     },
   },
 );

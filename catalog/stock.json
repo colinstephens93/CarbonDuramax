@@ -6,8 +6,166 @@
     "provenance": "illustrative",
     "modelPath": null,
     "explodeVectorMm": [0, 0, 0],
-    "performanceParams": {},
+    "performanceParams": {
+      "boostMaxPr": 2.5,
+      "spoolStartRpm": 700,
+      "spoolFullRpm": 1800,
+      "maxAirKgS": 0.42,
+      "compressorEff": 0.72
+    },
     "compatibility": {},
     "notes": "Milestone 0 illustrative placeholder entry for the stock turbocharger."
+  },
+  {
+    "id": "tune_stock",
+    "slotId": "tune",
+    "name": "Stock ECM Calibration (Allison Automatic)",
+    "provenance": "illustrative",
+    "modelPath": null,
+    "explodeVectorMm": [0, 0, 0],
+    "performanceParams": {
+      "boostReqPr": 2.42,
+      "afrMin": 19,
+      "egtLimitF": 1450,
+      "fuelReq1000": 78,
+      "fuelReq1400": 95,
+      "fuelReq1600": 100,
+      "fuelReq2000": 98,
+      "fuelReq2400": 95,
+      "fuelReq2800": 92,
+      "fuelReq3000": 90,
+      "fuelReq3200": 82,
+      "fuelReq3400": 76
+    },
+    "compatibility": {},
+    "notes": "Stock Allison-automatic full-load fuel request curve, boost target, minimum AFR smoke limit, and EGT ceiling."
+  },
+  {
+    "id": "injectors_stock",
+    "slotId": "injectors",
+    "name": "Stock Solenoid Fuel Injectors",
+    "provenance": "illustrative",
+    "modelPath": null,
+    "explodeVectorMm": [0, 0, 0],
+    "performanceParams": {
+      "maxFuelMm3": 120
+    },
+    "compatibility": {},
+    "notes": "Stock LLY injector per-stroke flow ceiling in mm^3/stroke/cylinder."
+  },
+  {
+    "id": "cp3_stock",
+    "slotId": "cp3",
+    "name": "Stock High-Pressure Fuel Pump (CP3)",
+    "provenance": "illustrative",
+    "modelPath": null,
+    "explodeVectorMm": [0, 0, 0],
+    "performanceParams": {
+      "maxRailPsi": 23000,
+      "flowBaseKgH": 30,
+      "flowSlopeKgHPerRpm": 0.022
+    },
+    "compatibility": {},
+    "notes": "Stock high-pressure pump; 23,000 psi published maximum rail pressure (DieselHub LLY spec table) with placeholder steady-state mass-flow curve."
+  },
+  {
+    "id": "intercooler_stock",
+    "slotId": "intercooler",
+    "name": "Stock Charge-Air Intercooler",
+    "provenance": "illustrative",
+    "modelPath": null,
+    "explodeVectorMm": [0, 0, 0],
+    "performanceParams": {
+      "effectiveness": 0.78
+    },
+    "compatibility": {},
+    "notes": "Stock air-to-air charge cooler thermal effectiveness placeholder."
+  },
+  {
+    "id": "intake_stock",
+    "slotId": "intake",
+    "name": "Stock Airbox and Intake Tract",
+    "provenance": "illustrative",
+    "modelPath": null,
+    "explodeVectorMm": [0, 0, 0],
+    "performanceParams": {
+      "flowFactor": 1.0
+    },
+    "compatibility": {},
+    "notes": "Stock intake airflow multiplier (1.0 baseline)."
+  },
+  {
+    "id": "exhaust_stock",
+    "slotId": "exhaust",
+    "name": "Stock Downpipe and Exhaust System",
+    "provenance": "illustrative",
+    "modelPath": null,
+    "explodeVectorMm": [0, 0, 0],
+    "performanceParams": {
+      "flowFactor": 1.0
+    },
+    "compatibility": {},
+    "notes": "Stock exhaust breathing multiplier (1.0 baseline)."
+  },
+  {
+    "id": "heads_stock",
+    "slotId": "heads",
+    "name": "Stock 32-Valve Aluminum Cylinder Heads",
+    "provenance": "illustrative",
+    "modelPath": null,
+    "explodeVectorMm": [0, 0, 0],
+    "performanceParams": {
+      "flowFactor": 1.0
+    },
+    "compatibility": {},
+    "notes": "Stock 4-valve-per-cylinder port flow multiplier (1.0 baseline)."
+  },
+  {
+    "id": "camshaft_stock",
+    "slotId": "camshaft",
+    "name": "Stock Gear-Driven Camshaft",
+    "provenance": "illustrative",
+    "modelPath": null,
+    "explodeVectorMm": [0, 0, 0],
+    "performanceParams": {
+      "veFactor": 1.0
+    },
+    "compatibility": {},
+    "notes": "Stock camshaft volumetric-efficiency multiplier (1.0 baseline)."
+  },
+  {
+    "id": "pistons_stock",
+    "slotId": "pistons",
+    "name": "Stock Cast Aluminum Pistons (17.5:1)",
+    "provenance": "illustrative",
+    "modelPath": null,
+    "explodeVectorMm": [0, 0, 0],
+    "performanceParams": {
+      "compressionRatio": 17.5
+    },
+    "compatibility": {},
+    "notes": "Published 2004-2005 Duramax LLY 17.5:1 static compression ratio."
+  },
+  {
+    "id": "rods_stock",
+    "slotId": "rods",
+    "name": "Stock Forged Steel Connecting Rods",
+    "provenance": "illustrative",
+    "modelPath": null,
+    "explodeVectorMm": [0, 0, 0],
+    "performanceParams": {},
+    "compatibility": {},
+    "notes": "No steady-state output effect; mechanical durability is outside the frozen limit taxonomy."
+  },
+  {
+    "id": "fuelRail_stock",
+    "slotId": "fuelRail",
+    "name": "Stock Common-Rail Fuel Manifolds",
+    "provenance": "illustrative",
+    "modelPath": null,
+    "explodeVectorMm": [0, 0, 0],
+    "performanceParams": {},
+    "compatibility": {},
+    "notes": "No steady-state output effect; rail volume and pressure droop are transient properties, not steady-state."
   }
 ]
