@@ -4,6 +4,7 @@
 // docs/specs/M5-performance.md §5, docs/specs/M6-parts-catalog.md §4).
 // Never imports Three.js; drives the renderer strictly through callbacks.
 
+import type { EnginePlaybackState } from '../audio/engineSound';
 import { checkCompatibility, fullCatalog, variantsForSlot } from '../catalog';
 import type { ValveConfig } from '../config/valveConfig';
 import type {
@@ -29,6 +30,14 @@ import {
 
 export type UiQualityMode = 'auto' | 'full' | 'phone';
 export type UiSectionMode = 'off' | 'x' | 'y';
+export type UiSoundState = 'off' | 'on' | 'blocked' | 'unsupported';
+
+const SOUND_NOTE_DEFAULT =
+  'Synthesized live from engine speed, throttle/load and boost — illustrative, not an LLY recording. Plays at 1× speed; silent in slow motion, while paused, or hidden.';
+const SOUND_NOTE_BLOCKED =
+  "Sound could not start — check this browser's audio settings, then tap Sound again.";
+const SOUND_NOTE_UNSUPPORTED =
+  'This browser does not support Web Audio; the rest of the lab works without sound.';
 
 export interface UiProjectedLabel {
   readonly id: string;
@@ -185,6 +194,9 @@ function injectStyles(): void {
       background: rgba(59, 130, 246, 0.35);
       color: #f8fafc;
     }
+    .m9-sound-btn { white-space: nowrap; }
+    .m9-sound-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .m9-sound-note { margin: -4px 0 10px; font-size: 10.5px; line-height: 1.35; color: #94a3b8; }
     .m1-control-group {
       margin-bottom: 10px;
     }
@@ -570,6 +582,10 @@ function injectStyles(): void {
       line-height: 1.4;
       pointer-events: none;
     }
+    @media (max-width: 640px), (pointer: coarse) {
+      .m1-row { flex-wrap: wrap; row-gap: 8px; }
+      .m9-sound-btn { min-height: 44px; padding: 10px 14px; }
+    }
     @media (max-width: 640px) {
       #m1-control-panel {
         top: auto;
@@ -599,6 +615,7 @@ export interface EngineUiOptions {
   onXrayChange?: (enabled: boolean) => void;
   onLabelsChange?: (enabled: boolean) => void;
   onBuildChange?: (build: Build) => void;
+  onSoundToggle?: (nextEnabled: boolean) => void;
   dyno?: DynoComparisonData;
 }
 
@@ -616,20 +633,21 @@ export interface EngineUiHandle {
   setDynoInspectorRpm(rpm: number): void;
   getDynoSelectedPoint(): DynoPointDetail | null;
   setBuildSelection(slotId: PartSlotId, variantId: string): void;
+  setSoundState(state: UiSoundState): void;
   dispose(): void;
 }
 
 export function mountEngineUi(
   config: EngineConfig,
   valves: ValveConfig,
-  onState: (state: CrankState) => void,
+  onState: (state: CrankState, playback: EnginePlaybackState) => void,
   options?: EngineUiOptions,
 ): EngineUiHandle {
   injectStyles();
 
   const bannerSubtitle = document.querySelector('#title-banner p');
   if (bannerSubtitle) {
-    bannerSubtitle.textContent = 'Milestone 8 — 3D Part Variants';
+    bannerSubtitle.textContent = 'Milestone 9 — Engine Sound';
   }
 
   let isPlaying = true;
@@ -695,7 +713,21 @@ export function mountEngineUi(
     speedGroup.appendChild(btn);
   }
 
-  topRow.append(playPauseBtn, speedGroup);
+  const soundBtn = document.createElement('button');
+  soundBtn.type = 'button';
+  soundBtn.id = 'm9-sound-btn';
+  soundBtn.className = 'm1-play-btn m9-sound-btn';
+  soundBtn.setAttribute('aria-pressed', 'false');
+  soundBtn.setAttribute('aria-label', 'Engine sound');
+  soundBtn.textContent = 'Sound: Off';
+
+  topRow.append(playPauseBtn, speedGroup, soundBtn);
+
+  const soundNote = document.createElement('p');
+  soundNote.id = 'm9-sound-note';
+  soundNote.className = 'm9-sound-note';
+  soundNote.setAttribute('aria-live', 'polite');
+  soundNote.textContent = SOUND_NOTE_DEFAULT;
 
   // Throttle / RPM slider (650-3200, default 900)
   const rpmGroup = document.createElement('div');
@@ -1026,7 +1058,7 @@ export function mountEngineUi(
     slotSelect.addEventListener('change', evaluateAndPushModifiedBuild);
   }
 
-  panel.append(topRow, rpmGroup, scrubGroup, optionsRow, viewsGroup, buildGroup);
+  panel.append(topRow, soundNote, rpmGroup, scrubGroup, optionsRow, viewsGroup, buildGroup);
   if (dynoHandle) {
     panel.appendChild(dynoHandle.element);
   }
@@ -1224,6 +1256,49 @@ export function mountEngineUi(
 
   renderReadouts(crankAngleDeg, rpm);
 
+  let currentSoundEnabled = false;
+  let currentSoundState: UiSoundState = 'off';
+
+  const setSoundState = (state: UiSoundState): void => {
+    currentSoundState = state;
+    currentSoundEnabled = state === 'on';
+    const unsup = state === 'unsupported';
+    soundBtn.textContent = unsup
+      ? 'Sound: unavailable'
+      : currentSoundEnabled
+        ? 'Sound: On'
+        : 'Sound: Off';
+    soundBtn.setAttribute('aria-pressed', String(currentSoundEnabled));
+    soundBtn.disabled = unsup;
+    soundNote.textContent = unsup
+      ? SOUND_NOTE_UNSUPPORTED
+      : state === 'blocked'
+        ? SOUND_NOTE_BLOCKED
+        : SOUND_NOTE_DEFAULT;
+  };
+
+  soundBtn.addEventListener('click', () => {
+    if (soundBtn.disabled || currentSoundState === 'unsupported') {
+      return;
+    }
+    const nextEnabled = !currentSoundEnabled;
+    if (options?.onSoundToggle) {
+      soundBtn.disabled = true;
+      options.onSoundToggle(nextEnabled);
+    }
+  });
+
+  const reusablePlayback: { playing: boolean; speedMultiplier: number } = {
+    playing: isPlaying,
+    speedMultiplier,
+  };
+
+  const emitState = (state: CrankState): void => {
+    reusablePlayback.playing = isPlaying;
+    reusablePlayback.speedMultiplier = speedMultiplier;
+    onState(state, reusablePlayback);
+  };
+
   // Animation loop in UI layer: advances theta by rpm * 6 * dt * speedMultiplier degrees.
   let rafId = 0;
   let prevNowMs: number | null = null;
@@ -1240,7 +1315,7 @@ export function mountEngineUi(
     }
 
     const state = computeState(config, crankAngleDeg, rpm, valves);
-    onState(state);
+    emitState(state);
     renderReadouts(state.crankAngleDeg, state.rpm);
   };
 
@@ -1253,7 +1328,7 @@ export function mountEngineUi(
     scrubSlider.value = String(crankAngleDeg);
     renderReadouts(crankAngleDeg, rpm);
     const state = computeState(config, crankAngleDeg, rpm, valves);
-    onState(state);
+    emitState(state);
   };
 
   const setPlaying = (playing: boolean): void => {
@@ -1337,6 +1412,7 @@ export function mountEngineUi(
     setDynoInspectorRpm,
     getDynoSelectedPoint,
     setBuildSelection,
+    setSoundState,
     dispose,
   };
 }

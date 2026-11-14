@@ -16,6 +16,7 @@ Unresolved questions and data still to source. An item leaves this list only whe
 ## Deferred candidates
 
 - [ ] **Internal-part visual variants not in M8** — rods (material-only), injectors/CP3 (flow-internal, no truthful visible change), camshaft (not modeled; timing unpublished), heads (porting unpublished/unmodeled). Deferred until a milestone adds the underlying geometry or published data.
+- [ ] **User volume control / loudness calibration** — M9 ships a fixed master and limiter with no dB claim. A volume slider and a calibrated loudness target are deferred.
 
 ## Watch items
 
@@ -23,3 +24,6 @@ Unresolved questions and data still to source. An item leaves this list only whe
 - [ ] **Stock-curve sanity** — when the torque curve is sourced, re-check the transmission-keyed rating in DECISIONS.md D-016 against it.
 - [ ] **Exterior shell scale vs published approximate dimensions (≈762 × 762 × 813 mm, DieselHub)** — registered shell spans 1,174.9 × 1,095.2 × ≈807.5 mm; height agrees, X/Y exceed because registration is containment-driven (M3) and the published conventions exclude the fan and sump variation. Not rescaled at M7 (D-035); revisit only with a dimensioned source.
 - [ ] **Stock vehicle-side hardware** (intercooler core, airbox, exhaust beyond the turbo downpipe) is not modeled in the exterior shell; the M8 modified variants for those slots are shown at documented service points, so stock-vs-modified 3D comparison is modified-only there — revisit if the shell or a stock hardware model is added.
+- [ ] **LLY turbo shaft-speed vs boost map and measured turbo noise levels** — no published map or measured LLY spectrum was found (M9 survey §3); M9 uses an illustrative 20,000–115,000 rpm proxy and a 3rd-order whistle. Revisit if a sourced map or a licensed recording appears.
+- [ ] **iOS silent-switch behavior for Web Audio** — `navigator.audioSession.type = 'playback'` is an experimental API (W3C editor's draft/MDN); M9 records the real-device result and the fallback. Revisit if Safari changes the category behavior.
+- [ ] **Per-cylinder combustion variation / LLY acoustic reference** — M9 uses half-order modulation rather than per-cylinder voices; no per-cylinder LLY acoustic data exists. Revisit only with a sourced recording/licensed reference.
