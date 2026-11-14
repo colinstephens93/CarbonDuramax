@@ -122,3 +122,17 @@ Severity: **B** blocker, **S** should-fix, **N** nit, **P** process.
 3. **The EGR module is one node group for a reason.** If the position is wrong, the repair is a re-position of `egrSystem`, not a rebuild — verify that the group really is self-contained in the asset test.
 4. **The `build_variants.py` edit is the one place the milestone touches an M8 proof.** Byte-identical variant outputs are the guard; if any SHA changes, stop.
 5. **Two documentation errata stay in a frozen doc.** They are recorded, not edited; an auditor should confirm the live values in `partVariants.ts` are the M10 ones and the M8 doc is untouched.
+
+---
+
+## 7. Post-QA corrections (owner audit, same branch)
+
+Three residuals survived the QA-driven revision because they sat in prose the revision pass did not re-read. The owner's audit caught them; they are numbers-only edits with no design change, and they are recorded here so the trail is visible rather than a silent amend.
+
+| # | Location | Was | Now | Why it survived |
+| ---: | --- | --- | --- | --- |
+| 1 | Spec §7.3 | "measured-variant worst case **305,532** (95.5 %, headroom 14,468)" | "**304,632** (95.20 %, headroom 15,368)" | The budget moved 37,700 → 37,100 in the QA revision; §15.3 and this QA record were updated, but §7.3's prose repeats the number and was missed. Now identical to §15.3. |
+| 2 | Spec §12.1 (the verbatim `PLAN.md` text the build pastes) | "inside a **38,000**-triangle cap" | "inside a **37,100**-triangle cap" | Worst of the three: §12.1 is *build-deliverable text*, so the stale figure would have been committed into `docs/PLAN.md`. |
+| 3 | Spec §4 budget column | rows 5/6/13/14 at 2,000 / 2,200 / 2,200 / 1,800, plus a separate 1,500 fastener pool and a `0 (inside part 5's budget)` residual row | rows aligned to §5.2: **2,100 / 2,300 / 2,300 / 1,900**, fasteners **carried inside their owning groups** (no pool), residual `electronics` **400** | §5.2 was rewritten during the QA revision (F-11) and §4's column was not re-derived from it. With corrections 3 applied, the §4 budgets sum to exactly **37,100**, matching §5.2 and §15.5. |
+
+Verified after the edit: `305,532`, `38,000`, `14,468` and `95.5 %` no longer occur anywhere in the spec; the five §4 rows carry the §5.2 values; and the §4 column sums to **37,100** (3,500 + 1,100 + 1,600 + 3,400 + 2,100 + 2,300 + 1,100 + 3,400 + 800 + 2,200 + 2,300 + 600 + 2,300 + 1,900 + 5,300 + 1,400 + 600 + 250 + 250 + 300 + 0 + 0 + 400).
