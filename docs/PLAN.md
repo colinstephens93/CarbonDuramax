@@ -64,8 +64,11 @@ Each milestone ends only when its exit criteria pass in CI or are signed off by 
 8. **3D visual part variants**
    - The catalog's `modelPath` becomes real for the parts whose modification has an honest visible signature: large turbo, high-flow intake, 4-inch exhaust, upgraded intercooler (replacing the shipped stock representation where one exists, or appearing at a documented service point where the shipped scene has none), and the low-compression pistons (internal assembly, exploded/cutaway views). Stock selections keep the shipped scene; the remaining internal variants are recorded out of scope with reasons.
    - Exit: selecting each modified visual variant swaps/shows its 3D model and restoring stock restores the shipped scene; the variant GLBs pass the asset contract (caps, envelopes, interface datums); D-033 budgets pass in the worst-case build with measured numbers; RF-1…RF-7 unchanged for stock builds.
+9. **Engine sound**
+   - Procedural, zero-download Web Audio synthesis driven by the existing simulation: firing-frequency fundamental (four power strokes per revolution), diesel idle lope, combustion/injector clatter, and a turbo whistle tied to the performance model's boost state, with a user-gesture mute/unmute control and explicit hidden-tab/mobile behavior.
+   - Exit: sound starts only from the Sound control, tracks RPM/load/boost across 650–3200 RPM and stock/modified builds, is silent in hidden tabs, respects the §7.1 page-weight guard and the D-033 frame-cost budget with measured numbers, and leaves the frozen performance-model interfaces untouched.
 
-After 8: capped cutaway sections, shareable builds, engine sound, stock vehicle-side hardware models, and the remaining internal-part visual variants (rods, injectors, CP3, camshaft, heads) are candidates.
+After 9: capped cutaway sections, shareable builds, stock vehicle-side hardware models, and the remaining internal-part visual variants (rods, injectors, CP3, camshaft, heads) are candidates.
 
 ## Asset contract and placeholder geometry
 

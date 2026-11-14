@@ -1,10 +1,15 @@
-// Application entry point for Duramax LLY Engine Lab (Milestone 8: 3D Visual Part Variants).
+// Application entry point for Duramax LLY Engine Lab (Milestone 9: Engine Sound).
 
+import {
+  createEngineAudio,
+  type EngineAudioStatus,
+  type EnginePlaybackState,
+} from './audio';
 import { fullCatalog, slotForVariantId, visualVariantsForBuild } from './catalog';
 import { detailConfig } from './config/detailConfig';
 import { engineConfig, stockRatings } from './config/engineConfig';
 import { valveConfig } from './config/valveConfig';
-import type { Build } from './core/interfaces';
+import type { Build, CrankState } from './core/interfaces';
 import { computeCurve, computeDetails, stockBuild } from './perf';
 import { createEngineScene, type VisualVariantDescriptor } from './renderer';
 import {
@@ -12,8 +17,15 @@ import {
   type EngineUiHandle,
   type UiQualityMode,
   type UiSectionMode,
+  type UiSoundState,
 } from './ui/engineControls';
 import { REFERENCE_FRAME_DEFS } from './ui/referenceFrames';
+
+const toUiSoundState = (status: EngineAudioStatus): UiSoundState => {
+  if (!status.supported) return 'unsupported';
+  if (status.reason === 'blocked') return 'blocked';
+  return status.enabled ? 'on' : 'off';
+};
 
 const container = document.getElementById('app');
 if (!container) {
@@ -30,7 +42,7 @@ const visualVariants: VisualVariantDescriptor[] = fullCatalog
     explodeVectorMm: v.explodeVectorMm,
   }));
 
-// Pinned step (1): create the scene with the preloaded variant descriptors.
+// Create the scene with the preloaded variant descriptors.
 const scene = createEngineScene(container, engineConfig, valveConfig, detailConfig, {
   visualVariants,
 });
@@ -53,6 +65,8 @@ const cpuRenderSamplesMs: number[] = [];
 
 let labelsEnabled = false;
 let uiRef: EngineUiHandle | null = null;
+let lastSteadyState: CrankState | null = null;
+const lastSteadyPlayback = { playing: true, speedMultiplier: 1 };
 
 const refreshLabelsIfEnabled = (): void => {
   if (labelsEnabled && uiRef) {
@@ -60,19 +74,46 @@ const refreshLabelsIfEnabled = (): void => {
   }
 };
 
-// Pinned step (2): mount the UI and wire onBuildChange -> visualVariantsForBuild -> scene.
+// Pinned M9 §5.2 ordering: create audio controller and load initial points before mountEngineUi.
+const audio = createEngineAudio();
+audio.setLoadPoints(initialModifiedDetails);
+
+let soundTogglePending = 0;
+let currentUiSoundState: UiSoundState = toUiSoundState(audio.getStatus());
+
+const runSoundToggle = (next: boolean, onDone?: () => void): void => {
+  soundTogglePending += 1;
+  void audio.setEnabled(next).then((status) => {
+    soundTogglePending = Math.max(0, soundTogglePending - 1);
+    currentUiSoundState = toUiSoundState(status);
+    uiRef?.setSoundState(currentUiSoundState);
+    onDone?.();
+  });
+};
+
 const ui = mountEngineUi(
   engineConfig,
   valveConfig,
-  (state) => {
+  (state, playback: EnginePlaybackState) => {
+    const t0 = isBenchmark ? performance.now() : 0;
+    scene.update(state);
+    refreshLabelsIfEnabled();
     if (isBenchmark) {
-      const t0 = performance.now();
-      scene.update(state);
-      refreshLabelsIfEnabled();
       cpuRenderSamplesMs.push(performance.now() - t0);
-    } else {
-      scene.update(state);
-      refreshLabelsIfEnabled();
+      lastSteadyState = state;
+      lastSteadyPlayback.playing = playback.playing;
+      lastSteadyPlayback.speedMultiplier = playback.speedMultiplier;
+    }
+
+    // Audio update runs outside the D-033 CPU-render timing block (M9 §5.2).
+    audio.update(state, playback);
+
+    if (soundTogglePending === 0 && uiRef) {
+      const nextUiState = toUiSoundState(audio.getStatus());
+      if (nextUiState !== currentUiSoundState) {
+        currentUiSoundState = nextUiState;
+        uiRef.setSoundState(nextUiState);
+      }
     }
   },
   {
@@ -101,6 +142,14 @@ const ui = mountEngineUi(
     },
     onBuildChange: (build) => {
       scene.setVisualVariantSelections(visualVariantsForBuild(build, fullCatalog));
+      try {
+        audio.setLoadPoints(computeDetails(build, fullCatalog));
+      } catch (error) {
+        console.error('Engine sound load-curve update failed:', error);
+      }
+    },
+    onSoundToggle: (next) => {
+      runSoundToggle(next);
     },
     dyno: {
       stock: {
@@ -117,21 +166,19 @@ const ui = mountEngineUi(
 );
 uiRef = ui;
 
-// Pinned step (3): apply the initial all-stock visual state.
+// Apply initial all-stock visual state and initial sound UI state.
 scene.setVisualVariantSelections(visualVariantsForBuild(initialModifiedBuild, fullCatalog));
+currentUiSoundState = toUiSoundState(audio.getStatus());
+ui.setSoundState(currentUiSoundState);
 
-(
-  window as unknown as {
-    __engineScene?: typeof scene;
-    __engineUi?: typeof ui;
-  }
-).__engineScene = scene;
-(
-  window as unknown as {
-    __engineScene?: typeof scene;
-    __engineUi?: typeof ui;
-  }
-).__engineUi = ui;
+const debugWindow = window as unknown as {
+  __engineScene?: typeof scene;
+  __engineUi?: typeof ui;
+  __engineAudio?: typeof audio;
+};
+debugWindow.__engineScene = scene;
+debugWindow.__engineUi = ui;
+debugWindow.__engineAudio = audio;
 
 const applyReferenceFrame = (frameId: string): boolean => {
   const def = REFERENCE_FRAME_DEFS[frameId];
@@ -158,15 +205,15 @@ const applyReferenceFrame = (frameId: string): boolean => {
   return true;
 };
 
-// Pinned step (4): handle ?rf=...
+// Handle ?rf=...
 const requestedRf = params.get('rf')?.toUpperCase() ?? null;
 if (requestedRf) {
   applyReferenceFrame(requestedRf);
 }
 
-// Pinned step (5): opt-in 10-second @ 900 RPM telemetry probe (`?benchmark=1`, plus optional
-// `&quality=full|phone&exterior=0|1&explode=0..100&section=off|x|y&sectionPos=<mm>&xray=0|1&labels=0|1&variants=<ids>`)
-// used to record docs/M2-MEASUREMENTS.md .. docs/M8-MEASUREMENTS.md.
+// Opt-in 10-second @ 900 RPM telemetry probe (`?benchmark=1`, plus optional
+// `&quality=full|phone&exterior=0|1&explode=0..100&section=off|x|y&sectionPos=<mm>&xray=0|1&labels=0|1&variants=<ids>&sound=0|1`)
+// used to record docs/M2-MEASUREMENTS.md .. docs/M9-MEASUREMENTS.md.
 if (isBenchmark) {
   const requestedVariants = params.get('variants');
   if (requestedVariants !== null && requestedVariants !== '') {
@@ -214,6 +261,14 @@ if (isBenchmark) {
     ui.setLabelsChecked(requestedLabels === '1');
   }
 
+  const requestedSound = params.get('sound') === '1';
+  let benchmarkAudioSettled = !requestedSound;
+  if (requestedSound) {
+    runSoundToggle(true, () => {
+      benchmarkAudioSettled = true;
+    });
+  }
+
   const readout = document.createElement('pre');
   readout.id = 'm2-benchmark-result';
   readout.style.cssText =
@@ -227,6 +282,9 @@ if (isBenchmark) {
   let startTimeMs: number | null = null;
   let prevFrameMs: number | null = null;
   const frameDeltasMs: number[] = [];
+  let audioUpdateResult:
+    | { iterations: number; totalMs: number; usPerCall: number }
+    | undefined;
 
   const sampleFrame = (nowMs: number): void => {
     const stats = scene.getRenderStats();
@@ -234,7 +292,8 @@ if (isBenchmark) {
       !stats.detailedLoaded ||
       !stats.hdriLoaded ||
       !stats.exteriorLoaded ||
-      !stats.variantsLoaded
+      !stats.variantsLoaded ||
+      !benchmarkAudioSettled
     ) {
       requestAnimationFrame(sampleFrame);
       return;
@@ -249,8 +308,31 @@ if (isBenchmark) {
     }
 
     if (startTimeMs === null) {
-      startTimeMs = nowMs;
-      prevFrameMs = nowMs;
+      if (requestedSound) {
+        const preStatus = audio.getStatus();
+        if (
+          preStatus.contextState === 'running' &&
+          preStatus.audible &&
+          lastSteadyState !== null
+        ) {
+          const iterations = 100;
+          const batchT0 = performance.now();
+          for (let i = 0; i < iterations; i += 1) {
+            audio.update(lastSteadyState, lastSteadyPlayback);
+          }
+          const totalMs = performance.now() - batchT0;
+          audioUpdateResult = {
+            iterations,
+            totalMs: +totalMs.toFixed(4),
+            usPerCall: +((totalMs * 1000) / iterations).toFixed(3),
+          };
+        } else {
+          audioUpdateResult = { iterations: 0, totalMs: 0, usPerCall: 0 };
+        }
+      }
+      const resetMs = performance.now();
+      startTimeMs = resetMs;
+      prevFrameMs = resetMs;
       cpuRenderSamplesMs.length = 0;
       requestAnimationFrame(sampleFrame);
       return;
@@ -275,6 +357,8 @@ if (isBenchmark) {
     const p95Ms = count > 0 ? sorted[Math.min(count - 1, Math.floor(count * 0.95))]! : 0;
     const minMs = count > 0 ? sorted[0]! : 0;
     const maxMs = count > 0 ? sorted[count - 1]! : 0;
+    const droppedFrames =
+      count > 0 ? frameDeltasMs.filter((delta) => delta > 1.5 * p50Ms).length : 0;
 
     const sortedCpu = [...cpuRenderSamplesMs].sort((a, b) => a - b);
     const cpuCount = sortedCpu.length;
@@ -282,6 +366,22 @@ if (isBenchmark) {
       cpuCount > 0 ? cpuRenderSamplesMs.reduce((acc, v) => acc + v, 0) / cpuCount : 0;
     const p95CpuMs =
       cpuCount > 0 ? sortedCpu[Math.min(cpuCount - 1, Math.floor(cpuCount * 0.95))]! : 0;
+
+    const soundParams = audio.getParameters();
+    const soundSummary = {
+      ...audio.getStatus(),
+      nodeCount: audio.getStats().nodeCount,
+      ...(requestedSound
+        ? {
+            firingHz: +soundParams.firingHz.toFixed(3),
+            boost01: +soundParams.boost01.toFixed(6),
+            load01: +soundParams.load01.toFixed(6),
+            whistleHz: +soundParams.whistleHz.toFixed(3),
+            whistleGain: +soundParams.whistleGain.toFixed(6),
+            masterGain: +soundParams.masterGain.toFixed(3),
+          }
+        : {}),
+    };
 
     readout.textContent = JSON.stringify(
       {
@@ -293,9 +393,12 @@ if (isBenchmark) {
         p95FrameTimeMs: +p95Ms.toFixed(3),
         minFrameTimeMs: +minMs.toFixed(3),
         maxFrameTimeMs: +maxMs.toFixed(3),
+        droppedFrames,
         avgFps: +(1000 / avgMs).toFixed(2),
         avgCpuRenderMs: +avgCpuMs.toFixed(3),
         p95CpuRenderMs: +p95CpuMs.toFixed(3),
+        sound: soundSummary,
+        ...(requestedSound ? { audioUpdate: audioUpdateResult } : {}),
         renderInfo: stats,
         viewport: `${window.innerWidth}x${window.innerHeight}`,
         devicePixelRatio: window.devicePixelRatio,

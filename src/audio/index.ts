@@ -1,0 +1,32 @@
+export {
+  ENGINE_SOUND_CONSTANTS,
+  clamp,
+  computeAudioStatus,
+  computeSoundParameters,
+  createSoundParameters,
+  fillNoise,
+  firingFrequencyHz,
+  firingWaveReal,
+  idle01,
+  isAudible,
+  loopSeamCrossfade,
+  pulseWaveReal,
+  resolveAudioReason,
+  smoothstep,
+  throttle01,
+  validateLoadPoints,
+  type AudibleStateInput,
+  type EngineAudioContextState,
+  type EngineAudioReason,
+  type EngineAudioStats,
+  type EngineAudioStatus,
+  type EngineLoadPoint,
+  type EnginePlaybackState,
+  type EngineSoundParameters,
+} from './engineSound';
+
+export {
+  createEngineAudio,
+  type EngineAudioController,
+  type EngineAudioEnvironment,
+} from './engineAudio';
