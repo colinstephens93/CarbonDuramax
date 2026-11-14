@@ -1,8 +1,10 @@
-// Application entry point for Duramax LLY Engine Lab (Milestone 5: Performance Model & Dyno).
+// Application entry point for Duramax LLY Engine Lab (Milestone 6: Parts Catalog & Build Comparison).
 
+import { fullCatalog } from './catalog';
 import { detailConfig } from './config/detailConfig';
 import { engineConfig, stockRatings } from './config/engineConfig';
 import { valveConfig } from './config/valveConfig';
+import type { Build } from './core/interfaces';
 import { computeCurve, computeDetails, stockBuild } from './perf';
 import { createEngineScene } from './renderer/engineScene';
 import {
@@ -19,9 +21,17 @@ if (!container) {
 
 const scene = createEngineScene(container, engineConfig, valveConfig, detailConfig);
 
-// Compute steady-state stock dyno curve and point details once on load (Spec §5).
+// Compute steady-state stock dyno curve and point details once on load (M5 §5, M6 §4.1).
 const stockDynoCurve = computeCurve(stockBuild);
 const stockDynoDetails = computeDetails(stockBuild);
+
+const initialModifiedBuild: Build = {
+  buildId: 'modified',
+  name: 'Modified build',
+  selections: { ...stockBuild.selections },
+};
+const initialModifiedCurve = computeCurve(initialModifiedBuild, fullCatalog);
+const initialModifiedDetails = computeDetails(initialModifiedBuild, fullCatalog);
 
 const params = new URLSearchParams(window.location.search);
 const isBenchmark = params.get('benchmark') === '1';
@@ -75,8 +85,14 @@ const ui = mountEngineUi(
       refreshLabelsIfEnabled();
     },
     dyno: {
-      curve: stockDynoCurve,
-      details: stockDynoDetails,
+      stock: {
+        curve: stockDynoCurve,
+        details: stockDynoDetails,
+      },
+      modified: {
+        curve: initialModifiedCurve,
+        details: initialModifiedDetails,
+      },
       ratings: stockRatings,
     },
   },

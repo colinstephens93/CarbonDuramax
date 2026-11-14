@@ -1,13 +1,31 @@
 // Plain-DOM UI controls, readouts, Exterior & Quality controls, Milestone 4 Views group,
-// Milestone 5 Dyno section, illustrative caption, and rAF loop
-// (D-007, D-012, D-013, D-015, D-034; docs/specs/M4-views.md §§3–8, docs/specs/M5-performance.md §5).
+// Milestone 6 Build configurator, two-build Dyno comparison section, illustrative caption, and rAF loop
+// (D-007, D-012, D-013, D-015, D-032, D-034; docs/specs/M4-views.md §§3–8,
+// docs/specs/M5-performance.md §5, docs/specs/M6-parts-catalog.md §4).
 // Never imports Three.js; drives the renderer strictly through callbacks.
 
+import { checkCompatibility, fullCatalog, variantsForSlot } from '../catalog';
 import type { ValveConfig } from '../config/valveConfig';
-import type { CrankState, CylinderId, EngineConfig } from '../core/interfaces';
+import type {
+  Build,
+  CrankState,
+  CylinderId,
+  EngineConfig,
+  PartSlotId,
+} from '../core/interfaces';
 import { computeState, phaseOffsetDeg } from '../core/kinematics';
-import type { DynoPointDetail } from '../perf/model';
-import { createDynoSection, type DynoSectionHandle, type DynoUiData } from './dynoChart';
+import {
+  ALL_PART_SLOTS,
+  computeCurve,
+  computeDetails,
+  stockBuild,
+  type DynoPointDetail,
+} from '../perf';
+import {
+  createDynoSection,
+  type DynoComparisonData,
+  type DynoSectionHandle,
+} from './dynoChart';
 
 export type UiQualityMode = 'auto' | 'full' | 'phone';
 export type UiSectionMode = 'off' | 'x' | 'y';
@@ -44,6 +62,21 @@ const UI_SECTION_RANGES_MM: Readonly<
 > = {
   x: { minMm: -150, maxMm: 900, defaultMm: 900, stepMm: 0.5 },
   y: { minMm: -580, maxMm: 580, defaultMm: 580, stepMm: 0.5 },
+};
+
+const SLOT_LABELS: Readonly<Record<PartSlotId, string>> = {
+  turbo: 'Turbo',
+  injectors: 'Injectors',
+  cp3: 'CP3',
+  intake: 'Intake',
+  exhaust: 'Exhaust',
+  intercooler: 'Intercooler',
+  tune: 'Tune',
+  pistons: 'Pistons',
+  rods: 'Rods',
+  camshaft: 'Camshaft',
+  heads: 'Heads',
+  fuelRail: 'Fuel Rail',
 };
 
 type SpeedMultiplier = (typeof SPEED_OPTIONS)[number]['multiplier'];
@@ -257,18 +290,76 @@ function injectStyles(): void {
       line-height: 1.35;
       color: #94a3b8;
     }
-    .m5-dyno-group {
+    .m5-dyno-group,
+    .m6-build-group {
       padding: 9px 10px;
       margin-bottom: 10px;
       border-radius: 8px;
       background: rgba(30, 41, 59, 0.55);
       border: 1px solid rgba(148, 163, 184, 0.18);
     }
+    .m6-build-slots {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .m6-slot-row {
+      display: grid;
+      grid-template-columns: 76px minmax(0, 1fr);
+      align-items: center;
+      gap: 8px;
+    }
+    .m6-slot-label {
+      font-size: 11.5px;
+      color: #cbd5e1;
+      white-space: nowrap;
+    }
+    .m6-slot-select {
+      width: 100%;
+      min-width: 0;
+      padding: 3.5px 6px;
+      border-radius: 5px;
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      background: rgba(15, 23, 42, 0.9);
+      color: #f8fafc;
+      font-size: 11.5px;
+      cursor: pointer;
+    }
+    .m6-build-violations {
+      margin-top: 8px;
+      padding: 6px 8px;
+      border-radius: 6px;
+      background: rgba(127, 29, 29, 0.36);
+      border: 1px solid rgba(248, 113, 113, 0.42);
+      color: #fecaca;
+      font-size: 11px;
+      line-height: 1.4;
+    }
+    .m6-build-violation-item + .m6-build-violation-item {
+      margin-top: 4px;
+    }
     .m5-dyno-header {
       font-size: 11.5px;
       font-weight: 600;
       color: #e2e8f0;
-      margin-bottom: 6px;
+      margin-bottom: 5px;
+    }
+    .m6-dyno-legend {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 5px;
+      font-size: 10.5px;
+      color: #cbd5e1;
+    }
+    .m6-legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .m6-legend-swatch {
+      display: block;
+      flex-shrink: 0;
     }
     .m5-dyno-svg {
       display: block;
@@ -296,6 +387,9 @@ function injectStyles(): void {
       line-height: 1.45;
       color: #e2e8f0;
       font-variant-numeric: tabular-nums;
+    }
+    .m5-dyno-peak-line + .m5-dyno-peak-line {
+      margin-top: 4px;
     }
     .m5-dyno-inspector {
       padding-top: 7px;
@@ -347,6 +441,41 @@ function injectStyles(): void {
       font-weight: 600;
       color: #f8fafc;
       font-variant-numeric: tabular-nums;
+    }
+    .m6-inspector-delta {
+      font-size: 9.5px;
+      color: #94a3b8;
+      font-variant-numeric: tabular-nums;
+      margin-top: 1px;
+    }
+    .m6-inspector-stock-line {
+      margin-top: 6px;
+      font-size: 10.75px;
+      line-height: 1.35;
+      color: #cbd5e1;
+      font-variant-numeric: tabular-nums;
+    }
+    .m6-dyno-violation {
+      margin-top: 4px;
+      margin-bottom: 8px;
+      padding: 8px 9px;
+      border-radius: 6px;
+      background: rgba(127, 29, 29, 0.36);
+      border: 1px solid rgba(248, 113, 113, 0.42);
+      color: #fecaca;
+    }
+    .m6-dyno-violation-heading {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: #fca5a5;
+      margin-bottom: 5px;
+    }
+    .m6-dyno-violation-list {
+      font-size: 11px;
+      line-height: 1.4;
+    }
+    .m6-dyno-violation-item + .m6-dyno-violation-item {
+      margin-top: 4px;
     }
     .m5-dyno-footnote {
       margin: 0;
@@ -463,7 +592,7 @@ export interface EngineUiOptions {
   onSectionChange?: (mode: UiSectionMode, positionMm: number) => void;
   onXrayChange?: (enabled: boolean) => void;
   onLabelsChange?: (enabled: boolean) => void;
-  dyno?: DynoUiData;
+  dyno?: DynoComparisonData;
 }
 
 export interface EngineUiHandle {
@@ -479,6 +608,7 @@ export interface EngineUiHandle {
   updateLabels(labels: readonly UiProjectedLabel[]): void;
   setDynoInspectorRpm(rpm: number): void;
   getDynoSelectedPoint(): DynoPointDetail | null;
+  setBuildSelection(slotId: PartSlotId, variantId: string): void;
   dispose(): void;
 }
 
@@ -492,7 +622,7 @@ export function mountEngineUi(
 
   const bannerSubtitle = document.querySelector('#title-banner p');
   if (bannerSubtitle) {
-    bannerSubtitle.textContent = 'Milestone 5 — Performance Model & Dyno';
+    bannerSubtitle.textContent = 'Milestone 6 — Parts Catalog & Build Comparison';
   }
 
   let isPlaying = true;
@@ -780,12 +910,109 @@ export function mountEngineUi(
   const effectiveSpeedReadout = createReadoutCard('Effective Speed');
   const firingCylReadout = createReadoutCard('Firing Cylinder', 'm1-firing-value');
 
-  // Milestone 5 Dyno section (below Views, present in both quality tiers; Spec §5)
+  // Milestone 6 Build section (directly above Dyno, present in both quality tiers; Spec §4.1)
+  const buildGroup = document.createElement('div');
+  buildGroup.className = 'm6-build-group';
+  buildGroup.setAttribute('role', 'group');
+  buildGroup.setAttribute('aria-label', 'Build');
+
+  const buildTitle = document.createElement('div');
+  buildTitle.className = 'm4-views-title';
+  buildTitle.textContent = 'Build';
+
+  const buildSlotsContainer = document.createElement('div');
+  buildSlotsContainer.className = 'm6-build-slots';
+
+  const slotSelects = new Map<PartSlotId, HTMLSelectElement>();
+
+  for (const slotId of ALL_PART_SLOTS) {
+    const slotRow = document.createElement('div');
+    slotRow.className = 'm6-slot-row';
+
+    const selectId = `m6-slot-${slotId}`;
+    const slotLabel = document.createElement('label');
+    slotLabel.className = 'm6-slot-label';
+    slotLabel.htmlFor = selectId;
+    slotLabel.textContent = SLOT_LABELS[slotId];
+
+    const slotSelect = document.createElement('select');
+    slotSelect.id = selectId;
+    slotSelect.className = 'm6-slot-select';
+    slotSelect.dataset.slot = slotId;
+
+    const variants = variantsForSlot(slotId);
+    for (const variant of variants) {
+      const optEl = document.createElement('option');
+      optEl.value = variant.id;
+      optEl.textContent = variant.name;
+      slotSelect.appendChild(optEl);
+    }
+
+    const defaultId = stockBuild.selections[slotId];
+    slotSelect.value = defaultId;
+    const defaultVariant = variants.find((v) => v.id === defaultId);
+    slotSelect.title = defaultVariant?.notes ?? defaultVariant?.name ?? '';
+
+    slotSelects.set(slotId, slotSelect);
+    slotRow.append(slotLabel, slotSelect);
+    buildSlotsContainer.appendChild(slotRow);
+  }
+
+  const buildViolationsEl = document.createElement('div');
+  buildViolationsEl.className = 'm6-build-violations';
+  buildViolationsEl.setAttribute('role', 'status');
+  buildViolationsEl.setAttribute('aria-live', 'polite');
+  buildViolationsEl.style.display = 'none';
+
+  buildGroup.append(buildTitle, buildSlotsContainer, buildViolationsEl);
+
+  // Milestone 5–6 Dyno section (directly below Build, present in both quality tiers; Spec §4.2)
   const dynoHandle: DynoSectionHandle | null = options?.dyno
     ? createDynoSection(options.dyno)
     : null;
 
-  panel.append(topRow, rpmGroup, scrubGroup, optionsRow, viewsGroup);
+  const evaluateAndPushModifiedBuild = (): void => {
+    const selections = {} as Record<PartSlotId, string>;
+    for (const slotId of ALL_PART_SLOTS) {
+      const sel = slotSelects.get(slotId)!;
+      selections[slotId] = sel.value;
+      const chosenVariant = fullCatalog.find((v) => v.id === sel.value);
+      sel.title = chosenVariant?.notes ?? chosenVariant?.name ?? '';
+    }
+
+    const modifiedBuild: Build = {
+      buildId: 'modified',
+      name: 'Modified build',
+      selections,
+    };
+
+    const violations = checkCompatibility(modifiedBuild, fullCatalog);
+    if (violations.length > 0) {
+      buildViolationsEl.replaceChildren();
+      for (const msg of violations) {
+        const item = document.createElement('div');
+        item.className = 'm6-build-violation-item';
+        item.textContent = msg;
+        buildViolationsEl.appendChild(item);
+      }
+      buildViolationsEl.style.display = 'block';
+      dynoHandle?.setModifiedBuild(null, violations);
+      return;
+    }
+
+    buildViolationsEl.replaceChildren();
+    buildViolationsEl.style.display = 'none';
+
+    const curve = computeCurve(modifiedBuild, fullCatalog);
+    const details = computeDetails(modifiedBuild, fullCatalog);
+    dynoHandle?.setModifiedBuild({ curve, details }, []);
+  };
+
+  for (const slotSelect of slotSelects.values()) {
+    slotSelect.addEventListener('change', evaluateAndPushModifiedBuild);
+  }
+
+  panel.append(topRow, rpmGroup, scrubGroup, optionsRow, viewsGroup, buildGroup);
   if (dynoHandle) {
     panel.appendChild(dynoHandle.element);
   }
@@ -1059,6 +1286,13 @@ export function mountEngineUi(
     return dynoHandle ? dynoHandle.getSelectedDetail() : null;
   };
 
+  const setBuildSelection = (slotId: PartSlotId, variantId: string): void => {
+    const sel = slotSelects.get(slotId);
+    if (!sel) return;
+    sel.value = variantId;
+    evaluateAndPushModifiedBuild();
+  };
+
   const dispose = (): void => {
     cancelAnimationFrame(rafId);
     window.removeEventListener('pointerup', endScrub);
@@ -1088,6 +1322,7 @@ export function mountEngineUi(
     updateLabels,
     setDynoInspectorRpm,
     getDynoSelectedPoint,
+    setBuildSelection,
     dispose,
   };
 }

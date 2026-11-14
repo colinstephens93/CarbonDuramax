@@ -1,0 +1,188 @@
+[
+  {
+    "id": "turbo_large",
+    "slotId": "turbo",
+    "name": "Large Variable-Geometry Turbo",
+    "provenance": "illustrative",
+    "modelPath": null,
+    "explodeVectorMm": [0, 0, 0],
+    "performanceParams": {
+      "boostMaxPr": 3.05,
+      "spoolStartRpm": 800,
+      "spoolFullRpm": 2300,
+      "maxAirKgS": 0.56,
+      "compressorEff": 0.7
+    },
+    "compatibility": {},
+    "notes": "Larger VGT compressor and turbine stage raising boost ceiling to 3.05 PR and mass-flow choke to 0.56 kg/s for high-fuel top-end headroom, at the cost of later spool (full boost at 2300 vs. 1800 RPM) and softer low-RPM response."
+  },
+  {
+    "id": "injectors_plus30",
+    "slotId": "injectors",
+    "name": "High-Flow Injectors (+30%)",
+    "provenance": "illustrative",
+    "modelPath": null,
+    "explodeVectorMm": [0, 0, 0],
+    "performanceParams": {
+      "maxFuelMm3": 156
+    },
+    "compatibility": {
+      "requires": ["cp3_stroker"]
+    },
+    "notes": "Extrude-honed +30% solenoid injectors raising the per-stroke delivery ceiling from 120 to 156 mm³; adds no power unless a tune commands more than 120 mm³, and requires a stroker CP3 pump to sustain rail supply at high RPM."
+  },
+  {
+    "id": "cp3_stroker",
+    "slotId": "cp3",
+    "name": "Stroker CP3 High-Pressure Pump",
+    "provenance": "illustrative",
+    "modelPath": null,
+    "explodeVectorMm": [0, 0, 0],
+    "performanceParams": {
+      "maxRailPsi": 23000,
+      "flowBaseKgH": 42,
+      "flowSlopeKgHPerRpm": 0.03
+    },
+    "compatibility": {},
+    "notes": "Longer-stroke cam-ring CP3 pump increasing high-RPM fuel mass flow while retaining the published 23,000 psi LLY rail-pressure ceiling; supporting fuel-supply hardware that adds no output unless the stock pump cap was binding."
+  },
+  {
+    "id": "tune_tow",
+    "slotId": "tune",
+    "name": "Tow Tune",
+    "provenance": "illustrative",
+    "modelPath": null,
+    "explodeVectorMm": [0, 0, 0],
+    "performanceParams": {
+      "boostReqPr": 2.6,
+      "afrMin": 18.5,
+      "egtLimitF": 1450,
+      "fuelReq1000": 84,
+      "fuelReq1400": 102,
+      "fuelReq1600": 108,
+      "fuelReq2000": 105,
+      "fuelReq2400": 102,
+      "fuelReq2800": 98,
+      "fuelReq3000": 96,
+      "fuelReq3200": 88,
+      "fuelReq3400": 82
+    },
+    "compatibility": {},
+    "notes": "Mild ECM calibration adding mid-range pulling torque with a conservative 18.5:1 clean-burn AFR floor and 1450 °F EGT ceiling; on stock hardware the stock turbo caps boost at 2.50 PR and EGT trims peak-torque fuel slightly."
+  },
+  {
+    "id": "tune_performance",
+    "slotId": "tune",
+    "name": "Performance Tune",
+    "provenance": "illustrative",
+    "modelPath": null,
+    "explodeVectorMm": [0, 0, 0],
+    "performanceParams": {
+      "boostReqPr": 2.9,
+      "afrMin": 17.5,
+      "egtLimitF": 1450,
+      "fuelReq1000": 92,
+      "fuelReq1400": 112,
+      "fuelReq1600": 118,
+      "fuelReq2000": 115,
+      "fuelReq2400": 110,
+      "fuelReq2800": 110,
+      "fuelReq3000": 112,
+      "fuelReq3200": 100,
+      "fuelReq3400": 92
+    },
+    "compatibility": {},
+    "notes": "Aggressive street/strip ECM calibration requesting 2.90 PR boost and sustained high-RPM fueling (up to 118 mm³ mid-range, 112 mm³ at 3000 RPM); on stock hardware it saturates the stock turbo and hits the 1450 °F EGT wall across 1100–3000 RPM."
+  },
+  {
+    "id": "intake_highflow",
+    "slotId": "intake",
+    "name": "High-Flow Intake",
+    "provenance": "illustrative",
+    "modelPath": null,
+    "explodeVectorMm": [0, 0, 0],
+    "performanceParams": {
+      "flowFactor": 1.06
+    },
+    "compatibility": {},
+    "notes": "Open-element airbox and smoother compressor inlet tube adding +6% breathing capacity; does not move peak torque or peak power on the stock tune because stock peaks are fuel-request-limited, only loosening the low-RPM smoke cap slightly at 1000 RPM."
+  },
+  {
+    "id": "exhaust_4in",
+    "slotId": "exhaust",
+    "name": "4-Inch Exhaust System",
+    "provenance": "illustrative",
+    "modelPath": null,
+    "explodeVectorMm": [0, 0, 0],
+    "performanceParams": {
+      "flowFactor": 1.05
+    },
+    "compatibility": {},
+    "notes": "Mandrel-bent 4-inch turbo-back exhaust reducing turbine backpressure for a +5% breathing multiplier; lowers EGT and supports tuned builds, with near-zero peak gain on a stock fuel-limited calibration."
+  },
+  {
+    "id": "intercooler_upgraded",
+    "slotId": "intercooler",
+    "name": "Upgraded Intercooler",
+    "provenance": "illustrative",
+    "modelPath": null,
+    "explodeVectorMm": [0, 0, 0],
+    "performanceParams": {
+      "effectiveness": 0.85
+    },
+    "compatibility": {},
+    "notes": "Bar-and-plate charge-air cooler raising thermal effectiveness from 0.78 to 0.85 for denser intake air and greater EGT margin under high boost; adds no peak power until fueling is raised enough for air or EGT caps to bind."
+  },
+  {
+    "id": "heads_ported",
+    "slotId": "heads",
+    "name": "Ported Cylinder Heads",
+    "provenance": "illustrative",
+    "modelPath": null,
+    "explodeVectorMm": [0, 0, 0],
+    "performanceParams": {
+      "flowFactor": 1.08
+    },
+    "compatibility": {},
+    "notes": "CNC-ported 32-valve aluminum cylinder heads providing +8% port airflow to raise trapped air mass and push back the EGT ceiling on heavily fueled builds; produces no peak gain on an untuned stock fuel table."
+  },
+  {
+    "id": "cam_performance",
+    "slotId": "camshaft",
+    "name": "Performance Camshaft",
+    "provenance": "illustrative",
+    "modelPath": null,
+    "explodeVectorMm": [0, 0, 0],
+    "performanceParams": {
+      "veFactor": 1.04
+    },
+    "compatibility": {},
+    "notes": "Reprofiled gear-driven camshaft adding +4% volumetric efficiency across the rev range to increase trapped air and EGT headroom on tuned builds; does not change output where fuel request is already the binding limit."
+  },
+  {
+    "id": "pistons_lowcomp",
+    "slotId": "pistons",
+    "name": "Low-Compression Forged Pistons (16.5:1)",
+    "provenance": "illustrative",
+    "modelPath": null,
+    "explodeVectorMm": [0, 0, 0],
+    "performanceParams": {
+      "compressionRatio": 16.5
+    },
+    "compatibility": {
+      "requires": ["turbo_large"]
+    },
+    "notes": "De-lipped forged pistons dropping static compression from 17.5:1 to 16.5:1 to manage peak cylinder pressure under high boost; a supporting mod requiring the large turbo that costs ~1.2% brake thermal efficiency at equal fuel."
+  },
+  {
+    "id": "rods_forged",
+    "slotId": "rods",
+    "name": "Heavy-Duty Forged Connecting Rods",
+    "provenance": "illustrative",
+    "modelPath": null,
+    "explodeVectorMm": [0, 0, 0],
+    "performanceParams": {},
+    "compatibility": {},
+    "notes": "Billet/forged chromoly connecting rods built for high-cylinder-pressure bottom-end durability; changes no number computed by the steady-state performance model."
+  }
+]
