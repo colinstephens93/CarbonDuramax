@@ -74,7 +74,7 @@ Each milestone ends only when its exit criteria pass in CI or are signed off by 
     - Turn the Section view's hollow open shells into capped solid sections by extracting each clipped part's true cross-section at the plane on the CPU and rendering it as a flat, hatched, single-colour cap mesh with real depth — no stencil buffer, no render target, no extra render pass, no shader depth trick (all rejected on measured budget/visual grounds).
     - Exit: a cut piston, a cut cylinder head and the sectioned exterior shell read as solid material at RF-6 (re-baselined) and RF-14…RF-17; D-033 passes on both tiers with measured numbers including the per-frame cap-rebuild CPU cost; section-off reference frames are pixel-unchanged; the caption no longer promises the feature and states the section fill's diagrammatic scope.
 
-After 11: shareable builds, the LLY plastic upper intake manifold cover (the only lettered surface) as an optional cosmetic part, stock vehicle-side hardware models, the remaining internal-part visual variants (rods, injectors, CP3, camshaft, heads), real wall-thickness section geometry, and an analytic coil section for the valve springs (currently capped through a solid hull proxy) are candidates.
+After 11: the LLY plastic upper intake manifold cover (the only lettered surface) as an optional cosmetic part, stock vehicle-side hardware models, the remaining internal-part visual variants (rods, injectors, CP3, camshaft, heads), real wall-thickness section geometry, an analytic coil section for the valve springs (currently capped through a solid hull proxy), and shareable builds (deprioritised by the owner, 2026-11-15 — D-045) are candidates.
 
 ## Asset contract and placeholder geometry
 
