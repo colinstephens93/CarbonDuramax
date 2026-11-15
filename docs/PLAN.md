@@ -67,8 +67,11 @@ Each milestone ends only when its exit criteria pass in CI or are signed off by 
 9. **Engine sound**
    - Procedural, zero-download Web Audio synthesis driven by the existing simulation: firing-frequency fundamental (four power strokes per revolution), diesel idle lope, combustion/injector clatter, and a turbo whistle tied to the performance model's boost state, with a user-gesture mute/unmute control and explicit hidden-tab/mobile behavior.
    - Exit: sound starts only from the Sound control, tracks RPM/load/boost across 650–3200 RPM and stock/modified builds, is silent in hidden tabs, respects the §7.1 page-weight guard and the D-033 frame-cost budget with measured numbers, and leaves the frozen performance-model interfaces untouched.
+10. **Exterior accuracy**
+    - Rebuild the exterior shell as a project-frame-authored, untextured model of the real 2005 LLY's external hardware: valve covers with the injector rows and harness connectors, outboard exhaust manifolds and up-pipes, the GT3788VA in the rear valley, downpipe, both charge pipes, intake mouthpiece and duct, Y-bridge, EGR valve and cooler, the front accessory drive (with the correct crank-snout stack), CP3, fuel filter head, oil fill, dipstick and lifting bracket — inside a 37,100-triangle cap set by the phone tier.
+    - Exit: the rebuilt shell passes the feature, per-part budget and datum tests; every Milestone 8 `if_*` datum is preserved within 1.0 mm and the four external variants still mate without modification; D-033 passes on both tiers with measured numbers; RF-11…RF-13 exist and RF-3/RF-7/RF-8/RF-9 are re-baselined; the six exterior-off reference frames are unchanged; the disclaimer caption states the exterior's remaining illustrative scope.
 
-After 9: capped cutaway sections, shareable builds, stock vehicle-side hardware models, and the remaining internal-part visual variants (rods, injectors, CP3, camshaft, heads) are candidates.
+After 10: capped cutaway sections, shareable builds, the LLY plastic upper intake manifold cover (the only lettered surface) as an optional cosmetic part, stock vehicle-side hardware models, and the remaining internal-part visual variants (rods, injectors, CP3, camshaft, heads) are candidates.
 
 ## Asset contract and placeholder geometry
 

@@ -1,12 +1,12 @@
 # Visual Reference Frames
 
-Project: Duramax LLY Engine Lab · Governing plan: [`docs/PLAN.md`](./PLAN.md) · Milestone 3 Spec: [`docs/specs/M3-full-engine.md`](./specs/M3-full-engine.md) §9 · Milestone 4 Spec: [`docs/specs/M4-views.md`](./specs/M4-views.md) §9 · Milestone 8 Spec: [`docs/specs/M8-part-variants.md`](./specs/M8-part-variants.md) §5.2, §7.3 · Measurements: [`docs/M3-MEASUREMENTS.md`](./M3-MEASUREMENTS.md), [`docs/M4-MEASUREMENTS.md`](./M4-MEASUREMENTS.md), [`docs/M8-MEASUREMENTS.md`](./M8-MEASUREMENTS.md)
+Project: Duramax LLY Engine Lab · Governing plan: [`docs/PLAN.md`](./PLAN.md) · Milestone 3 Spec: [`docs/specs/M3-full-engine.md`](./specs/M3-full-engine.md) §9 · Milestone 4 Spec: [`docs/specs/M4-views.md`](./specs/M4-views.md) §9 · Milestone 8 Spec: [`docs/specs/M8-part-variants.md`](./specs/M8-part-variants.md) §5.2, §7.3 · Milestone 10 Spec: [`docs/specs/M10-exterior-accuracy.md`](./specs/M10-exterior-accuracy.md) §8 · Measurements: [`docs/M3-MEASUREMENTS.md`](./M3-MEASUREMENTS.md), [`docs/M4-MEASUREMENTS.md`](./M4-MEASUREMENTS.md), [`docs/M8-MEASUREMENTS.md`](./M8-MEASUREMENTS.md), [`docs/M10-MEASUREMENTS.md`](./M10-MEASUREMENTS.md) · Exterior model record: [`docs/M10-EXTERIOR.md`](./M10-EXTERIOR.md)
 
-These ten fixed reference frames establish canonical camera poses, crank angles, display/view configurations, and catalog build selections for visual regression checks across milestones (`RF-1`…`RF-4` established at M3; `RF-5`…`RF-7` added at M4; `RF-8`…`RF-10` added at M8).
+These thirteen fixed reference frames establish canonical camera poses, crank angles, display/view configurations, and catalog build selections for visual regression checks across milestones (`RF-1`…`RF-4` established at M3; `RF-5`…`RF-7` added at M4; `RF-8`…`RF-10` added at M8; `RF-11`…`RF-13` added and exterior-on frames `RF-3`, `RF-7`, `RF-8`, `RF-9` re-baselined at M10).
 
 ## Common Capture Convention
 
-- **Build:** Production bundle (`npm run build && npm run preview`), reproducible directly via `?rf=RF-1` through `?rf=RF-10`
+- **Build:** Production bundle (`npm run build && npm run preview`), reproducible directly via `?rf=RF-1` through `?rf=RF-13`
 - **Viewport:** `1440 × 900` CSS px (`devicePixelRatio = 1`; Antigravity's built-in Chromium webview `page.screenshot()` serializes `1440×900` `16:10` viewports as `1024×640` `16:10` PNGs including the HUD readouts — standing `1024×640` convention for all frames)
 - **Camera Lens & Up Axis:** `PerspectiveCamera` with `fov = 42°`, `near = 0.02 m`, `far = 20 m`, `camera.up = [0, 0, 1]` (`+Z` vertical; `+X` front of engine along crank axis; `-Y` RH bank `[1,3,5,7]`; `+Y` LH bank `[2,4,6,8]`)
 - **Block Midpoint Reference:** `centerXM = 0.2300 m` (`230.0 mm` ahead of the `X = 0` rear block plane)
@@ -28,6 +28,9 @@ These ten fixed reference frames establish canonical camera poses, crank angles,
 | **RF-8** | `180°` | `[1.3800, -1.1800, 0.7200]` | `[0.3000, -0.0200, 0.1700]` | `Full` | `On` (checked) | `0% / Off / Off / Off` | `turbo_large, intake_highflow, exhaust_4in, intercooler_upgraded` | [`reference-frames/RF-8.png`](./reference-frames/RF-8.png) |
 | **RF-9** | `0°` | `[-0.6200, 1.2200, 0.8600]` | `[0.2800, 0.0200, 0.1600]` | `Full` | `On` (checked) | `0% / Off / Off / Off` | `turbo_large, intake_highflow, exhaust_4in, intercooler_upgraded` | [`reference-frames/RF-9.png`](./reference-frames/RF-9.png) |
 | **RF-10** | `90°` | `[1.2800, -1.0800, 0.7400]` | `[0.3100, -0.0500, 0.1800]` | `Full` | `Off` (unchecked) | `100% / Off / Off / On` | `turbo_large, pistons_lowcomp` | [`reference-frames/RF-10.png`](./reference-frames/RF-10.png) |
+| **RF-11** | `180°` | `[1.3800, -1.1800, 0.7200]` | `[0.3000, -0.0200, 0.1700]` | `Full` | `On` (checked) | `0% / Off / Off / Off` | `stock` | [`reference-frames/RF-11.png`](./reference-frames/RF-11.png) |
+| **RF-12** | `0°` | `[-0.6200, 1.2200, 0.8600]` | `[0.2800, 0.0200, 0.1600]` | `Full` | `On` (checked) | `0% / Off / Off / Off` | `stock` | [`reference-frames/RF-12.png`](./reference-frames/RF-12.png) |
+| **RF-13** | `705°` | `[0.2300, -0.0020, 1.1800]` | `[0.2300, 0.0000, 0.1400]` | `Full` | `On` (checked) | `0% / Off / Off / Off` | `stock` | [`reference-frames/RF-13.png`](./reference-frames/RF-13.png) |
 
 ---
 
@@ -68,20 +71,23 @@ These ten fixed reference frames establish canonical camera poses, crank angles,
 
 ---
 
-### RF-3 — Whole Engine with Registered Exterior Shell (`θ = 180°`, Exterior On)
+### RF-3 — Whole Engine with Project-Frame Exterior Shell (`θ = 180°`, Exterior On)
 
 - **Crank angle:** `θ = 180°` (Cylinder 7 RH firing TDC; firing order `1-2-7-8-4-5-6-3`, step 3 at `180°`)
 - **Camera position (m):** `[1.3800, -1.1800, 0.7200]`
 - **Camera target (m):** `[0.3000, -0.0200, 0.1700]`
 - **Quality profile:** `Full`
 - **Exterior:** `On` (checked)
+- **View states:** `Explode = 0%`, `Section = Off`, `X-Ray = Off`, `Labels = Off`
 - **Build selection:** `stock` (all 12 catalog slots stock)
-- **What to look for:**
-  - **Axis & orientation alignment (§5):** `public/Duramax_LLY_2005_66L_V8.glb` registered cleanly onto the project frame — front cooling fan/harmonic-balancer pulley facing `+X`, rear flywheel/bellhousing adapter overhanging `-X` (`A = 282.1 mm`), V-valley and turbocharger oriented `+Z` up, crank centerline coaxial with `(Y = 0, Z = 0)`.
-  - **Full internal containment:** Uniform scale `s = 0.430` encloses all 8 cylinders' rocker castings, heads, crank webs, and pushrods with `≥ 21.4 mm` 3D surface clearance on every side — zero internal geometry poking through the valve covers, block walls, front cover, or oil pan.
-  - **Floor clearance & material fidelity:** Exterior oil-pan sump (`Z_min = -0.2236 m`) sits cleanly above the studio ground plane (`Z = -0.2450 m`) with all 22 canonical deduplicated exterior materials (`33` merged exterior meshes post-M8 subtree preservation; `22` pre-M8) preserving the original exterior appearance (`castShadow = false`, `receiveShadow = false`).
+- **What to look for (re-baselined at M10):**
+  1. **Project-frame registration & corrected front-drive stack (M10 §§5.1, 5.4):** `public/Duramax_LLY_2005_66L_V8.glb` (`37,100` tris across `22` top-level system groups and `92` `extras.partId` features) authored directly in the master project frame (`uniformScale = 1.0`, `translationM = [0, 0, 0]`, glTF Y-up→Z-up basis `[[1,0,0],[0,0,1],[0,-1,0]]`, `det = +1`) — front cooling fan (`X = 570..615 mm`), thermal clutch (`X = 530..570 mm`), and harmonic-balancer pulley (`X = 464..492 mm`, hub anchor `[478, 0, 0] mm` enclosing the internal damper disc at `X = 466..476 mm`, `282.6 mm` rearward of the M3 concept shell's floating damper) facing `+X`, rear turbine/downpipe overhanging `-X` (`X_min = -272.52 mm`), V-valley and Garrett GT3788VA turbocharger oriented `+Z` up, crank centerline coaxial with `(Y = 0, Z = 0)`.
+  2. **Full internal containment:** Inner casting walls enclose all 8 cylinders' rocker castings, valve springs, heads, pushrods, and crank webs with `≥ 9.34 mm` general 3D clearance (`≥ 8.00 mm` requirement; `2.20 mm` at the clamped deck/head land; `3.80 mm` radial / `2.80 mm` axial at the crank snout) — zero internal geometry piercing the valve covers, heads, front cover, block skirt, or oil pan across the entire `0°..705°` cycle.
+  3. **Floor clearance & untextured PBR fidelity:** Exterior oil-pan sump (`Z_min = -0.2235 m`, `21.50 mm` above the `Z = -0.2450 m` studio ground plane) and blue spin-on oil filter sit cleanly above the studio floor across the 12-material untextured PBR palette (`23` merged exterior meshes = `12` global-merge buckets + `11` preserved-subtree meshes: `6` `turbo_unit` + `2` `turbo_downpipe` + `3` `intake_tract`; `0` embedded textures, `castShadow = false`, `receiveShadow = false`), with the M10 subtitle (`Milestone 10 — Exterior Accuracy`) and narrowed exterior disclaimer caption in the HUD.
 
-![RF-3 — θ = 180°, whole engine with registered exterior shell on](./reference-frames/RF-3.png)
+![RF-3 — θ = 180°, whole engine with project-frame LLY exterior shell on](./reference-frames/RF-3.png)
+
+*Caption: Stock 2005 Duramax LLY exterior hardware authored in the project frame (`37,100` triangles, untextured 12-material PBR palette); individual casting proportions, fitting positions, and surface detail remain illustrative.*
 
 ---
 
@@ -143,33 +149,33 @@ These ten fixed reference frames establish canonical camera poses, crank angles,
 ### RF-7 — Ghosted Exterior Shell in X-Ray Mode (`θ = 180°`, Exterior On + X-Ray On)
 
 - **Crank angle:** `θ = 180°` (Cylinder 7 RH at compression/firing TDC, firing window `[180°, 270°)`)
-- **Camera position (m):** `[1.3800, -1.1800, 0.7200]` (matching `RF-3` camera pose for direct opaque-vs-X-ray comparison)
+- **Camera position (m):** `[1.3800, -1.1800, 0.7200]` (matching `RF-3` / `RF-11` camera pose for direct opaque-vs-X-ray comparison)
 - **Camera target (m):** `[0.3000, -0.0200, 0.1700]`
 - **Quality profile:** `Full`
 - **Exterior:** `On` (checked)
 - **View states:** `Explode = 0%`, `Section = Off`, `X-Ray = On` (`transparent = true`, `opacity = 0.22`, `depthWrite = false`), `Labels = Off`
 - **Build selection:** `stock` (all 12 catalog slots stock)
-- **What to look for:**
-  - **Translucent registered packaging (`opacity = 0.22`, `depthWrite = false`):** All 33 post-M8 merged exterior shell meshes across the 22 deduplicated exterior materials (`22` merged meshes pre-M8; valve covers, block skirt, oil pan, oil filter, front serpentine belt drive, harmonic balancer, intake plumbing, and rear V-valley turbocharger) render as a clean semi-transparent silhouette around the internal V8 assembly without z-buffer occlusion artifacts.
-  - **Full internal visibility & firing highlight through shell:** All 8 detailed cylinder heads, blued-steel valve springs, pushrods, connecting rods, crank throws, and the glowing orange **Cylinder 7 (RH)** piston at rear-right TDC read clearly through the ghosted shell.
+- **What to look for (re-baselined at M10):**
+  1. **Translucent project-frame LLY packaging (`opacity = 0.22`, `depthWrite = false`):** All `23` merged exterior shell meshes (`37,100` tris across `12` global material buckets + `11` preserved-subtree meshes — upper/lower cast-aluminum valve covers with injector reliefs, proud 8-injector rows, cast-iron heads and outboard exhaust manifolds, two-piece Y-bridge, resonator, intake mouthpiece/duct, hot/cold stainless charge pipes, rear-valley GT3788VA turbocharger, corrected front serpentine belt drive + 9-blade fan at `X = 464..615 mm`, RH valve-cover fuel filter, and deep-sump oil pan) render as a clean semi-transparent silhouette around the internal V8 assembly without z-buffer occlusion artifacts.
+  2. **Coaxial front-snout nesting & internal firing highlight:** All 8 detailed cylinder heads, blued-steel valve springs, pushrods, connecting rods, shared crank throws, the internal front pulley/damper disc (`X = 466..476 mm`, `r = 57 mm`) nested coaxially inside the ghosted `ext_damper` ring (`X = 464..492 mm`, `r = 60.8..99 mm`), and the glowing orange **Cylinder 7 (RH)** piston at rear-right TDC read clearly through the ghosted shell.
 
-![RF-7 — θ = 180°, exterior on + X-Ray on, ghosted shell showing Cylinder 7 firing inside](./reference-frames/RF-7.png)
+![RF-7 — θ = 180°, exterior on + X-Ray on, ghosted LLY shell showing Cylinder 7 firing inside](./reference-frames/RF-7.png)
 
 ---
 
 ### RF-8 — Modified External Hardware, Front Three-Quarter (`θ = 180°`, Exterior On)
 
 - **Crank angle:** `θ = 180°` (Cylinder 7 RH at compression/firing TDC, firing window `[180°, 270°)`)
-- **Camera position (m):** `[1.3800, -1.1800, 0.7200]` (matching `RF-3` camera pose for direct stock-vs-modified exterior comparison)
+- **Camera position (m):** `[1.3800, -1.1800, 0.7200]` (matching `RF-3` / `RF-11` camera pose for direct stock-vs-modified exterior comparison)
 - **Camera target (m):** `[0.3000, -0.0200, 0.1700]`
 - **Quality profile:** `Full`
 - **Exterior:** `On` (checked)
 - **View states:** `Explode = 0%`, `Section = Off`, `X-Ray = Off`, `Labels = Off`
 - **Build selection:** `turbo_large`, `intake_highflow`, `exhaust_4in`, `intercooler_upgraded` (other 8 slots `stock`)
-- **What to look for:**
-  - **Clean stock-part replacement (`SHELL_PARTS_REPLACED_BY_SLOT`):** Out of the `33` post-split merged exterior shell meshes (`6` `turbo_unit` + `1` `turbo_downpipe` + `5` `intake_tract` + `21` global merge), hiding the three preserved stock subtrees (`12` meshes / `8,356` tris) leaves the `21` global-merge shell meshes (`23,040` tris — including the stock RH/LH up-pipes and blue hot-side `boostPipe`) cleanly visible with zero boundary gaps or z-fighting.
-  - **Front & RH modified external hardware in frame:** `Ø101.6 mm` (`4.0 in`) polished-aluminum high-flow intake tube with black silicone couplers and pleated conical filter (`intake_tract_engine_highflow`, bounds `X[-17.98, 778.54]`, `Y[-639.09, 56.13]`, `Z[289.14, 547.79] mm`) sweeping cleanly over the RH accessory/valve-cover corridor (`17.52 mm` minimum envelope surface gap; `20.41 mm` nearest non-excluded vertex distance to `acComp`) from `if_airbox_mount = [587.40, -510.50, 371.90] mm` to `if_compressor_inlet = [13.20, 22.60, 453.60] mm`; `Ø220 × 380 mm` stainless straight-through muffler canister and `Ø101.6 mm` downpipe (`exhaust_system_engine_4inch`) visible behind the RH bank; `turbo_unit_engine_large` (`r = 131 mm` / `Ø 262 mm` aluminum compressor cover, `r = 117 mm` / `Ø 234 mm` cast-iron turbine scroll, VGT actuator) seated in the rear V-valley; and the top of `intercooler_core_engine_upgraded` connected on the far LH (`+Y`) side at `if_hot_side_inlet = [374.60, 474.80, 146.60] mm`.
-  - **Ground plane & UI coherence:** All four external variant models sit cleanly above the `Z = -245.00 mm` studio floor (`Z_min = -85.00 mm` on V3 = `160.00 mm` ground clearance; `Z_min = -20.00 mm` on V4 = `225.00 mm` ground clearance), and the right-hand Build panel dropdowns show `Large Variable-Geometry Turbo`, `High-Flow Intake`, `4-Inch Exhaust System`, and `Upgraded Intercooler` with the remaining 8 slots on stock.
+- **What to look for (re-baselined at M10):**
+  1. **Clean stock-part replacement (`SHELL_PARTS_REPLACED_BY_SLOT`):** Out of the `23` merged exterior shell meshes (`6` `turbo_unit` + `2` `turbo_downpipe` + `3` `intake_tract` + `12` global merge), hiding the three preserved stock subtrees (`11` meshes / `6,500` tris = `3,400 + 800 + 2,300`) leaves the `12` global-merge shell meshes (`30,600` tris — including the stock RH/LH 3-bolt up-pipes, polished stainless LH `boostPipe` and RH `chargePipeCold`, two-piece `intakeBridge`, `resonator`, `valveCovers`, proud `injectors`, RH `fuelFilter`, and corrected front accessory drive) cleanly visible with zero boundary gaps or z-fighting.
+  2. **Front & RH modified external hardware mated to preserved M8 datums:** Byte-identical M8 variant GLBs attach cleanly to the rebuilt shell: `Ø101.6 mm` (`4.0 in`) polished-aluminum high-flow intake tube with black silicone couplers and pleated conical filter (`intake_tract_engine_highflow`, bounds `X[-17.98, 778.54]`, `Y[-639.09, 56.13]`, `Z[289.14, 547.79] mm`) sweeping cleanly over the RH accessory/valve-cover corridor (`2.34 mm` minimum envelope surface gap; `2.94 mm` nearest non-excluded vertex distance to `boostPipe`) from `if_airbox_mount = [587.40, -510.50, 371.90] mm` to `if_compressor_inlet = [13.20, 22.60, 453.60] mm`; `Ø220 × 380 mm` stainless straight-through muffler canister and `Ø101.6 mm` downpipe (`exhaust_system_engine_4inch`) visible behind the RH bank; `turbo_unit_engine_large` (`r = 131 mm` / `Ø 262 mm` aluminum compressor cover, `r = 117 mm` / `Ø 234 mm` cast-iron turbine scroll, VGT actuator) seated in the rear V-valley (`2.29 mm` minimum envelope surface gap; `4.15 mm` nearest non-excluded vertex distance to `boostPipe`); and the top of `intercooler_core_engine_upgraded` connected on the far LH (`+Y`) side at `if_hot_side_inlet = [374.60, 474.80, 146.60] mm`.
+  3. **Ground plane & UI coherence:** All four external variant models sit cleanly above the `Z = -245.00 mm` studio floor (`Z_min = -85.00 mm` on V3 = `160.00 mm` ground clearance; `Z_min = -20.00 mm` on V4 = `225.00 mm` ground clearance), and the right-hand Build panel dropdowns show `Large Variable-Geometry Turbo`, `High-Flow Intake`, `4-Inch Exhaust System`, and `Upgraded Intercooler` with the remaining 8 slots on stock.
 
 ![RF-8 — θ = 180°, modified external hardware front three-quarter view, exterior on](./reference-frames/RF-8.png)
 
@@ -180,16 +186,16 @@ These ten fixed reference frames establish canonical camera poses, crank angles,
 ### RF-9 — Modified External Hardware, Rear-Left Three-Quarter (`θ = 0°`, Exterior On)
 
 - **Crank angle:** `θ = 0°` (Cylinder 1 RH at compression/firing TDC, firing window `[0°, 90°)`)
-- **Camera position (m):** `[-0.6200, 1.2200, 0.8600]` (rear-left elevated three-quarter pose framing the LH intercooler assembly, V-valley turbocharger, up-pipes, and 4-inch exhaust run)
+- **Camera position (m):** `[-0.6200, 1.2200, 0.8600]` (rear-left elevated three-quarter pose matching `RF-12`, framing the LH intercooler assembly, V-valley turbocharger, up-pipes, and 4-inch exhaust run)
 - **Camera target (m):** `[0.2800, 0.0200, 0.1600]`
 - **Quality profile:** `Full`
 - **Exterior:** `On` (checked)
 - **View states:** `Explode = 0%`, `Section = Off`, `X-Ray = Off`, `Labels = Off`
 - **Build selection:** `turbo_large`, `intake_highflow`, `exhaust_4in`, `intercooler_upgraded` (other 8 slots `stock`)
-- **What to look for:**
-  - **LH charge-air service display (`intercooler_core_engine_upgraded`):** Foregrounded on the LH (`+Y`) side (`X[80.55, 682.00]`, `Y[472.68, 696.00]`, `Z[-20.00, 338.00] mm`), showing the brushed-aluminum bar-and-plate core with 18 raised vertical fin strips, black powder-coated chamfered end tanks + 3 top mounting brackets, free cold-side `Ø76.2 mm` neck + `Ø84 mm` coupler, and `Ø76.2 mm` hot-side adapter + silicone sleeves connected at the `boostPipe` service datum (`if_hot_side_inlet = [374.60, 474.80, 146.60] mm`).
-  - **Rear V-valley turbocharger mating (`turbo_unit_engine_large`):** Cast-iron turbine scroll (`r = 117 mm`), steel CHRA + `Ø60 × 80 mm` VGT actuator canister, and `r = 131 mm` (`Ø 262 mm`) aluminum compressor cover mated cleanly to the preserved stock RH/LH up-pipes (`if_turbine_inlet_rh`, `if_turbine_inlet_lh`), blue stock `boostPipe` (`if_compressor_outlet`), and high-flow intake coupler (`if_compressor_inlet`).
-  - **4-inch downpipe, muffler & flared tip (`exhaust_system_engine_4inch`):** Stock `turbo_downpipe` hidden and replaced at `if_turbine_outlet = [-146.20, -59.20, 373.30] mm` (`r = 52 mm` heat-tinted inlet flange on shared normal `[-0.782, -0.247, -0.572]`), sweeping aft (`X ∈ [-1092.64, -113.80] mm`, `Z_min = -85.00 mm`) through the `Ø101.6 mm` stainless pipe, `Ø220 × 380 mm` straight-through muffler canister, and `Ø101.6 → Ø112 mm` flared tip.
+- **What to look for (re-baselined at M10):**
+  1. **LH charge-air service display (`intercooler_core_engine_upgraded`):** Foregrounded on the LH (`+Y`) side (`X[80.55, 682.00]`, `Y[472.68, 696.00]`, `Z[-20.00, 338.00] mm`), showing the brushed-aluminum bar-and-plate core with 18 raised vertical fin strips, black powder-coated chamfered end tanks + 3 top mounting brackets, free cold-side `Ø76.2 mm` neck + `Ø84 mm` coupler, and `Ø76.2 mm` hot-side adapter + silicone sleeves connected seamlessly to the rebuilt polished-stainless `boostPipe` end flange (`if_hot_side_inlet = [374.60, 474.80, 146.60] mm`, `0.0000 mm` shell datum contact).
+  2. **Rear V-valley turbocharger mating (`turbo_unit_engine_large`) & LLY rear context:** Cast-iron turbine scroll (`r = 117 mm`), steel CHRA + `Ø60 × 80 mm` VGT actuator canister, and `r = 131 mm` (`Ø 262 mm`) aluminum compressor cover mated cleanly with zero flange mismatch to the rebuilt RH/LH 3-bolt up-pipes (`if_turbine_inlet_rh`, `if_turbine_inlet_lh`, `r = 44 mm`), polished stainless stock `boostPipe` (`if_compressor_outlet`, `r = 44 mm`), and high-flow intake coupler (`if_compressor_inlet`, `r = 48 mm`), surrounded by the outboard exhaust manifolds + shields, rear-valley EGR valve/cooler module, LH rear lifting bracket, and RH yellow-loop dipstick.
+  3. **4-inch downpipe, muffler & flared tip (`exhaust_system_engine_4inch`):** Stock `turbo_downpipe` (`800` tris) hidden and replaced at `if_turbine_outlet = [-146.20, -59.20, 373.30] mm` (`r = 52 mm` heat-tinted inlet flange on shared normal `[-0.782, -0.247, -0.572]`), sweeping aft (`X ∈ [-1092.64, -113.80] mm`, `Z_min = -85.00 mm`, `111.56 mm` envelope surface clearance to `egrSystem`) through the `Ø101.6 mm` stainless pipe, `Ø220 × 380 mm` straight-through muffler canister, and `Ø101.6 → Ø112 mm` flared tip.
 
 ![RF-9 — θ = 0°, modified external hardware rear-left three-quarter view showing large turbo and 4-inch exhaust, exterior on](./reference-frames/RF-9.png)
 
@@ -214,3 +220,91 @@ These ten fixed reference frames establish canonical camera poses, crank angles,
 ![RF-10 — θ = 90°, low-compression forged pistons in 100% exploded view with labels on, exterior off](./reference-frames/RF-10.png)
 
 *Caption: The `pistons_lowcomp` open flat-floor dish crown (with no valve-relief pockets) is an illustrative procedural shape whose bowl-volume increase (`29.59 → 32.82 cm³`, `ΔV = +3.23 cm³`) matches the catalog's `17.5 → 16.5` compression-ratio clearance-volume delta while preserving the stock piston envelope and wrist-pin kinematics.*
+
+---
+
+### RF-11 — Stock LLY Exterior, Front Three-Quarter (`θ = 180°`, Exterior On)
+
+- **Crank angle:** `θ = 180°` (Cylinder 7 RH at compression/firing TDC, firing window `[180°, 270°)`)
+- **Camera position (m):** `[1.3800, -1.1800, 0.7200]` (`fov = 42°`, `up = [0, 0, 1]`; matching `RF-3` / `RF-8` front-right three-quarter pose)
+- **Camera target (m):** `[0.3000, -0.0200, 0.1700]`
+- **Quality profile:** `Full` (`PCFSoftShadowMap` `2048×2048` enabled)
+- **Exterior:** `On` (checked)
+- **View states:** `Explode = 0%`, `Section = Off`, `X-Ray = Off`, `Labels = Off`
+- **Build selection:** `stock` (all 12 catalog slots stock)
+- **What to look for (numbered checklist — Spec §§8.1, 8.3):**
+  1. **Corrected front-drive stack & K06 serpentine belt (`beltDrive`, `frontCover`):** Harmonic-balancer ring (`ext_damper`, `OD = 198 mm` at `X = 464..492 mm`) centered on `(Y = 0, Z = 0)` over the internal damper disc (`X = 466..476 mm`), 6-rib `20 mm` serpentine belt (`ext_belt`) routed around 9 pulleys in `X = 472..492 mm` (**no water-pump pulley** on the belt; gear-driven `ext_wp_boss` sits behind the belt on `ext_front_cover` — **Discriminator #8**), finned thermal `ext_fan_clutch` (`X = 530..570 mm`), and 9-blade cooling `ext_fan` (`X = 570..615 mm`).
+  2. **RH alternator + vacuum pump & LH A/C + P/S accessories (`alternator`, `acComp`):** Upper-RH `ext_alternator` with the belt-driven `ext_vacuum_pump` mounted directly beneath it (**Discriminator #8**), and upper-LH `ext_ac_compressor` + `ext_ps_pump` + `ext_ac_hoses` on the shared `ext_ac_bracket`, flanked by `ext_tensioner`, `ext_idler_a`, and `ext_idler_b`.
+  3. **Front bolt-on oil filler neck (`oilFill`):** Discrete cast-aluminum `ext_oil_fill_neck` and black `ext_oil_cap` rising from the LH front cover beside the fan blade plane (`X = 460..540.8 mm`) — not a valve-cover oil filler (**Discriminator #6**).
+  4. **Two-piece valve covers & proud two-row injectors (`valveCovers`, `injectors`):** Upper and lower cast-aluminum valve covers per bank (`ext_vc_upper_rh/lh`, `ext_vc_lower_rh/lh`) with cambered longitudinal ribs, PCV boss (`ext_vc_pcv_boss`), grommeted perimeter fasteners (`ext_vc_fasteners`), and four semicircular valley-side reliefs per bank exposing **eight proud injector bodies and harness connectors (`ext_injector_1..8`, `ext_inj_connector_1..8`) in two rows of four** with clipped `ext_inj_return_line` (**Discriminator #1**).
+  5. **Two-piece Y-bridge & MAP sensor (`intakeBridge`):** Cast-aluminum `ext_ybridge_duct` and `ext_ybridge_crossover` spanning the front V-valley (`X = 214..346.4 mm`) with black rectangular runner seals (`ext_ybridge_seals`), top-mounted `ext_map_sensor`, and fastener rows (`ext_ybridge_fasteners`) — exposed with no plastic upper engine cover or fabricated lettering (**Discriminator #5**).
+  6. **Cold & hot charge pipes, intake mouthpiece/duct & resonator (`chargePipeCold`, `boostPipe`, `intake`, `resonator`):** Passenger-side `Ø63.5 mm` polished stainless `ext_charge_cold` rising from its front service-point coupler into the Y-bridge front with black silicone boots and worm-gear band clamps (no clip ring), driver-side `Ø63.5 mm` polished stainless `ext_charge_hot` running forward along the LH flank to `if_hot_side_inlet`, black `ext_resonator` box clamped above the turbo inlet, and corrugated `ext_intake_duct` terminating cleanly at `if_airbox_mount`.
+  7. **Block skirt, oil pan & RH valve-cover fuel filter (`blockPan`, `fuelFilter`):** Cast-iron `ext_block` skirt and engine mounts, painted deep-front-sump `ext_pan` (`Z_min = -223.50 mm` with `ext_drain_boss` and blue spin-on oil filter), and the `ext_fuel_filter_head` + vertical spin-on `ext_fuel_filter_canister` mounted on the RH valve cover.
+
+![RF-11 — θ = 180°, stock LLY exterior front three-quarter view showing front drive stack, oil fill, proud injector rows, Y-bridge, and charge pipes](./reference-frames/RF-11.png)
+
+*Caption: Stock 2005 Duramax LLY front three-quarter exterior (`RF-11`), verifying the corrected crank-snout front-drive stack, front oil filler neck, vacuum pump under the alternator (no belt-driven water pump), two-piece Y-bridge, both charge pipes, and proud valley-trough injector rows.*
+
+---
+
+### RF-12 — Stock LLY Exterior, Rear-Left Three-Quarter (`θ = 0°`, Exterior On)
+
+- **Crank angle:** `θ = 0°` (Cylinder 1 RH at compression/firing TDC, firing window `[0°, 90°)`)
+- **Camera position (m):** `[-0.6200, 1.2200, 0.8600]` (`fov = 42°`, `up = [0, 0, 1]`; matching `RF-9` rear-left elevated three-quarter pose)
+- **Camera target (m):** `[0.2800, 0.0200, 0.1600]`
+- **Quality profile:** `Full` (`PCFSoftShadowMap` `2048×2048` enabled)
+- **Exterior:** `On` (checked)
+- **View states:** `Explode = 0%`, `Section = Off`, `X-Ray = Off`, `Labels = Off`
+- **Build selection:** `stock` (all 12 catalog slots stock)
+- **What to look for (numbered checklist — Spec §§8.1, 8.3):**
+  1. **Garrett GT3788VA rear-valley turbocharger (`turbo` child 3, `turbo_unit`):** Cast-iron turbine scroll with **two separate 3-bolt inlet flanges** (`if_turbine_inlet_rh`, `if_turbine_inlet_lh`, `r = 44 mm`) and `r = 52 mm` V-band outlet neck (`if_turbine_outlet`), cast-aluminum compressor volute (`if_compressor_inlet` `r = 48 mm`, `if_compressor_outlet` `r = 44 mm`), bearing housing with top brass oil-feed banjo, coolant banjos, and lower oil drain, **small passenger-side VGT control solenoid + vane-position sensor** (no large external wastegate canister), and two-piece stamped heat shield (**Discriminator #3**).
+  2. **Dual 3-bolt up-pipes & crushed-oval downpipe (`turbo` children 0, 1, 2):** Shielded driver-side `ext_uppipe_lh` and passenger-side `ext_uppipe_rh` (with firewall-clearance flat) rising behind the cylinder heads from the outboard manifold collectors to the two separate turbine inlet flanges, plus `turbo_downpipe` (`Ø88.9 mm` round V-band mouth crushed to a flat oval mid-run behind the bellhousing with a copper-heat-tinted shield band and RH manifold support bracket).
+  3. **Outboard exhaust manifolds & heat shields (`exhaustManifolds`, `heads`):** Four-runner cast-iron `ext_exh_manifold_lh` and `ext_exh_manifold_rh` bolted to the **outboard** exhaust-port stubs (`ext_exh_port_stub_lh_1..4`, `ext_exh_port_stub_rh_1..4`) of `ext_head_lh`/`ext_head_rh`, wrapped in full-length stamped steel heat shields (`ext_exh_shield_lh`, `ext_exh_shield_rh`) that feed the lower up-pipe flanges (**Discriminator #4**).
+  4. **Rear-valley passenger-side EGR module (`egrSystem`):** `ext_egr_valve` mounted **above** the long tubular `ext_egr_cooler` (`GM 97303654`) on `ext_egr_bracket` at the rear-right of the V-valley beneath the turbo inlet ducting, with `ext_egr_pipes` routing forward toward the intake crossover (**Discriminator #2**).
+  5. **Single rear-LH lifting bracket (`liftBracket`):** Stamped steel `ext_lift_bracket` with hoist eye bolted to the rear of the LH cylinder head/block (`X = -33..-17 mm`, `Y = 156..212 mm`, `Z = 268..372 mm`) — asymmetric single rear bracket per GM installation procedure.
+  6. **RH dipstick tube & yellow loop handle (`dipstick`):** Steel `ext_dipstick_tube` rising along the rear-right flank from the lower block O-ring boss and ending in the yellow `ext_dipstick_handle` loop (`Z_max = 447.9 mm`) visible behind the RH bank/EGR zone.
+  7. **Rear-left main harness break & LH hot charge pipe (`electronics`, `boostPipe`):** Swept `ext_harness_loom` terminating at the multi-pin `ext_harness_main_break` connector bracket at the rear of the LH bank alongside `ext_glowplug_loom`, plus the `Ø63.5 mm` polished stainless `ext_charge_hot` tube sweeping forward along the LH flank to its beaded end flange at `if_hot_side_inlet = [374.6, 474.8, 146.6] mm`.
+
+![RF-12 — θ = 0°, stock LLY exterior rear-left three-quarter view showing GT3788VA turbo, dual up-pipes, downpipe, EGR module, outboard manifolds, lifting bracket, and dipstick](./reference-frames/RF-12.png)
+
+*Caption: Stock 2005 Duramax LLY rear-left three-quarter exterior (`RF-12`), verifying the GT3788VA turbocharger (two-flange inlet, V-band outlet, small passenger-side solenoid), dual up-pipes, crushed-oval downpipe, rear-valley EGR valve above cooler, outboard shielded exhaust manifolds, single LH lifting bracket, and RH yellow-loop dipstick.*
+
+---
+
+### RF-13 — Stock LLY Exterior, Top-Down Valley (`θ = 705°`, Exterior On)
+
+- **Crank angle:** `θ = 705°` (end of the 48-step `0°..705°` `15°` cycle sweep; Cylinder 3 RH in `[630°, 720°)`)
+- **Camera position (m):** `[0.2300, -0.0020, 1.1800]` (`fov = 42°`, `up = [0, 0, 1]`; matching `RF-4` top-down valley pose centered above `blockCenterX = 0.2300 m`)
+- **Camera target (m):** `[0.2300, 0.0000, 0.1400]`
+- **Quality profile:** `Full` (`PCFSoftShadowMap` `2048×2048` enabled)
+- **Exterior:** `On` (checked)
+- **View states:** `Explode = 0%`, `Section = Off`, `X-Ray = Off`, `Labels = Off`
+- **Build selection:** `stock` (all 12 catalog slots stock)
+- **What to look for (numbered checklist — Spec §§8.1, 8.3):**
+  1. **Two-piece Y-bridge & MAP sensor (`intakeBridge`):** Overhead view of `ext_ybridge_duct` and `ext_ybridge_crossover` spanning the front V-valley (`X = 214..346.4 mm`, `Y = ±144.8 mm`), showing both black rectangular rubber port seals (`ext_ybridge_seals`), top-mounted `ext_map_sensor`, and 18 M8 bolts + 8 studs (`ext_ybridge_fasteners`) (**Discriminator #5**).
+  2. **Turbo inlet resonator & intake mouthpiece/duct (`resonator`, `intake`):** Black `ext_resonator` box (`X = 92..236.5 mm`, `Z = 324..556 mm`) perched above the compressor inlet with its front `ext_resonator_clamp` lug, joined to the molded `ext_intake_mouthpiece` air horn, `ext_intake_clamps`, and 4-group corrugated `ext_intake_duct` sweeping outboard to `if_airbox_mount` on the RH (`-Y`) side.
+  3. **Proud two-row 8-injector arrangement (`injectors`, `valveCovers`):** All eight injector bodies (`ext_injector_1..8`) and weatherpack connectors (`ext_inj_connector_1..8`) standing proud inside the valley-side semicircular reliefs of `ext_vc_upper_rh` and `ext_vc_upper_lh` in **two rows of four** (`X = {57.5, 172.5, 287.5, 402.5} mm`, `|Y| = 213..291 mm`) with clipped `ext_inj_return_line` (**Discriminator #1**).
+  4. **RH valve-cover fuel filter head & vertical canister (`fuelFilter`):** Cast-aluminum `ext_fuel_filter_head` (with black hand-primer plunger, brass bleed/vent screw, and dual hose stubs) mounted on top of the RH upper valve cover (`X = 190.6..268.2 mm`, `Y = -320.0..-189.2 mm`) with the vertical spin-on `ext_fuel_filter_canister` (white canister + WIF sensor/drain base) hanging directly below it inside the viewport (**Discriminator #7**).
+  5. **Front-valley Bosch CP3 high-pressure pump (`cp3Fuel`):** `ext_cp3` body seated in the front V-valley (`X = 352..442 mm`, `Y ≈ 0`) behind `ext_front_cover` (`ext_cp3_pad`), accompanied by its side-mounted `ext_fca` actuator, valley `ext_hp_rails`, and steel `ext_hp_lines`.
+  6. **Valley harness row & bilateral packaging (`electronics`, `boostPipe`, `chargePipeCold`, `exhaustManifolds`):** Swept `ext_harness_loom` running along the valley edge to the rear-left `ext_harness_main_break`, framed symmetrically by the outboard exhaust manifold shields (`ext_exh_shield_rh/lh`), LH `ext_charge_hot`, RH `ext_charge_cold`, front `ext_oil_fill_neck`/`ext_oil_cap`, and rear GT3788VA `turbo_unit` + `egrSystem`.
+
+![RF-13 — θ = 705°, stock LLY exterior top-down valley view showing Y-bridge, resonator, intake mouthpiece/duct, proud injector rows, RH valve-cover fuel filter, CP3 pump, and valley harness](./reference-frames/RF-13.png)
+
+*Caption: Stock 2005 Duramax LLY top-down valley exterior (`RF-13`), verifying the uncovered two-piece Y-bridge + MAP sensor, resonator, intake mouthpiece/duct, two rows of four proud injectors, RH valve-cover fuel filter head + vertical canister, front-valley CP3 pump, and valley harness loom.*
+
+---
+
+## LLY Exterior Discriminators (Milestone 10 Spec §8.3)
+
+Every item below distinguishes a 2005 Duramax LLY (`VIN 2`) from generic V8 diesel placeholders and sibling Duramax generations (`LB7` internal injectors / no EGR; aftermarket canister turbos; valve-cover oil fillers; belt-driven water pumps) and is verified visible in its named reference frame(s):
+
+| # | LLY Discriminator | Named Frame(s) | Governing `extras.partId`s | Status | Fails the Milestone If |
+| ---: | --- | --- | --- | :---: | --- |
+| **1** | Eight injector bodies + connectors **proud of** the valve covers, in two rows of four | `RF-11`, `RF-13` | `ext_injector_1..8`, `ext_inj_connector_1..8`, `ext_inj_return_line`, `ext_vc_upper_rh`, `ext_vc_upper_lh` | **PASS** | Injectors are hidden under covers (LB7 style), or modelled as outboard external fuel rails |
+| **2** | EGR module at the rear of the valley (valve **above** long tubular cooler) | `RF-12` | `ext_egr_valve`, `ext_egr_cooler`, `ext_egr_pipes`, `ext_egr_bracket` | **PASS** | Absent, or placed on the wrong side/front |
+| **3** | Garrett GT3788VA in the rear valley, **two separate inlet flanges**, V-band outlet, **small passenger-side solenoid**, no wastegate canister | `RF-12` | `turbo_unit` (`turbo` child `3`) | **PASS** | A large external wastegate canister, or a single twin-scroll flange |
+| **4** | **Outboard** exhaust manifolds with heat shields feeding up-pipes behind the heads | `RF-12` | `ext_exh_manifold_rh/lh`, `ext_exh_shield_rh/lh`, `ext_exh_port_stub_*`, `ext_uppipe_rh/lh` | **PASS** | Manifolds in the valley, or up-pipes starting in mid-air |
+| **5** | Two-piece Y-bridge over the valley front with its rectangular seals and MAP sensor | `RF-11`, `RF-13` | `ext_ybridge_duct`, `ext_ybridge_crossover`, `ext_ybridge_seals`, `ext_map_sensor`, `ext_ybridge_fasteners` | **PASS** | Absent, or hidden beneath an upper plastic cosmetic cover |
+| **6** | Oil filler neck at the **front**, beside the fan shroud | `RF-11` | `ext_oil_fill_neck`, `ext_oil_cap` | **PASS** | A valve-cover oil filler |
+| **7** | Fuel filter head **on the right valve cover** with a vertical spin-on canister below | `RF-13` | `ext_fuel_filter_head`, `ext_fuel_filter_canister` | **PASS** | Absent, or frame-mounted |
+| **8** | **No water-pump pulley** on the serpentine belt; **vacuum pump under the alternator** | `RF-11` | `ext_belt`, `ext_wp_boss`, `ext_alternator`, `ext_vacuum_pump` | **PASS** | A belt-driven water-pump pulley, or a missing vacuum pump |

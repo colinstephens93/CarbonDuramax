@@ -647,7 +647,7 @@ export function mountEngineUi(
 
   const bannerSubtitle = document.querySelector('#title-banner p');
   if (bannerSubtitle) {
-    bannerSubtitle.textContent = 'Milestone 9 — Engine Sound';
+    bannerSubtitle.textContent = 'Milestone 10 — Exterior Accuracy';
   }
 
   let isPlaying = true;
@@ -1065,11 +1065,11 @@ export function mountEngineUi(
   panel.appendChild(readoutGrid);
   document.body.appendChild(panel);
 
-  // On-screen illustrative caption (M8 Spec §5.1)
+  // On-screen illustrative caption (M10 Spec §10.1)
   const caption = document.createElement('div');
   caption.id = 'm1-illustrative-caption';
   caption.textContent =
-    'Illustrative geometry, part shapes & timing: Bore spacing, deck height and piston protrusion, valve timing events, duration, and lift profile shape, lifter gallery placement, detailed part shapes, aftermarket variant part shapes and their service positions, and the registered exterior shell remain illustrative placeholders, not verified LLY measurements.';
+    "Illustrative geometry, part shapes & timing: Bore spacing, deck height and piston protrusion, valve timing events, duration, and lift profile shape, lifter gallery placement, detailed part shapes, aftermarket variant part shapes and their service positions, and the exterior shell's individual casting proportions, fitting positions and surface detail remain illustrative, not verified LLY measurements.";
   document.body.appendChild(caption);
 
   const updatePlayButtonLabel = (): void => {

@@ -7,8 +7,8 @@ import type { Build, PartSlotId } from '../core/interfaces';
 import { stockBuild } from '../perf';
 import { REFERENCE_FRAME_DEFS } from './referenceFrames';
 
-describe('Milestone 8 reference frames (src/ui/referenceFrames.test.ts)', () => {
-  it('12. validates RF-1..RF-10 states, keeps RF-1..RF-7 stock, and verifies RF-8..RF-10 variant ids & compatibility', () => {
+describe('Milestone 8 & 10 reference frames (src/ui/referenceFrames.test.ts)', () => {
+  it('12. validates RF-1..RF-13 states, keeps RF-1..RF-7 and RF-11..RF-13 stock, and verifies RF-8..RF-10 variant ids & compatibility', () => {
     const expectedIds = [
       'RF-1',
       'RF-2',
@@ -20,6 +20,9 @@ describe('Milestone 8 reference frames (src/ui/referenceFrames.test.ts)', () => 
       'RF-8',
       'RF-9',
       'RF-10',
+      'RF-11',
+      'RF-12',
+      'RF-13',
     ];
     expect(Object.keys(REFERENCE_FRAME_DEFS)).toEqual(expectedIds);
 
@@ -64,11 +67,27 @@ describe('Milestone 8 reference frames (src/ui/referenceFrames.test.ts)', () => 
       }
     }
 
-    // RF-1 .. RF-7 carry no variants field (stock builds)
-    for (const stockFrameId of ['RF-1', 'RF-2', 'RF-3', 'RF-4', 'RF-5', 'RF-6', 'RF-7']) {
+    // RF-1 .. RF-7 and RF-11 .. RF-13 carry no variants field (stock builds)
+    for (const stockFrameId of [
+      'RF-1',
+      'RF-2',
+      'RF-3',
+      'RF-4',
+      'RF-5',
+      'RF-6',
+      'RF-7',
+      'RF-11',
+      'RF-12',
+      'RF-13',
+    ]) {
       const def = REFERENCE_FRAME_DEFS[stockFrameId]!;
       expect('variants' in def).toBe(false);
       expect(def.variants).toBeUndefined();
+    }
+
+    // M10 RF-11 .. RF-13 all use stock builds with Exterior on
+    for (const m10FrameId of ['RF-11', 'RF-12', 'RF-13']) {
+      expect(REFERENCE_FRAME_DEFS[m10FrameId]!.exterior).toBe(true);
     }
 
     // RF-8 .. RF-10 carry valid visual variants and form coherent M6 builds
