@@ -59,8 +59,6 @@ VARIANT_CAPS: dict[str, int] = {
 }
 
 MATERIAL_CAP = 4
-SHELL_REGISTRATION_OFFSET_MM = np.array([204.2, 0.0, 111.8], dtype=np.float64)
-SHELL_REGISTRATION_SCALE_MM = 430.0
 SPEC_NOMINAL_MARKER_RADIUS_MM = 30.0
 APPROVED_MARKER_COLLAR_RADIUS_MM = 90.0  # D-039 approved per-marker connection-collar deviation
 MIN_OBSTACLE_CLEARANCE_MM = 2.0
@@ -1420,6 +1418,16 @@ SHELL_GROUP_NAMES = (
     "acComp",
     "beltDrive",
     "electronics",
+    "frontCover",
+    "heads",
+    "valveCovers",
+    "exhaustManifolds",
+    "chargePipeCold",
+    "intakeBridge",
+    "fuelFilter",
+    "oilFill",
+    "dipstick",
+    "liftBracket",
 )
 
 
@@ -1427,7 +1435,7 @@ def parse_frozen_shell(shell_path: Path) -> tuple[str, dict[str, np.ndarray], di
     """
     Returns:
       (sha256, group_verts_mm, fine_subtrees_mm)
-      where group_verts_mm maps each of the 12 top-level shell group names to project-mm vertices,
+      where group_verts_mm maps each of the 22 top-level shell group names to project-mm vertices,
       and fine_subtrees_mm splits `turbo` into `turbo_uppipe_rh`, `turbo_uppipe_lh`,
       `turbo_downpipe`, `turbo_unit` and `intake` into `intake_tract` so non-penetration can
       test non-replaced subtrees directly as well as per-group obstacle distances.
@@ -1449,10 +1457,8 @@ def parse_frozen_shell(shell_path: Path) -> tuple[str, dict[str, np.ndarray], di
                 for prim in doc["meshes"][node["mesh"]]["primitives"]:
                     pos_f = glb.accessor_array(prim["attributes"]["POSITION"]).astype(np.float64)
                     wp = transform_pts(w, pos_f)
-                    # Registration: p_mm = (204.2, 0, 111.8) + 430 * R * p_file, R:(x,y,z)->(z,x,y)
-                    reg_mm = SHELL_REGISTRATION_OFFSET_MM + SHELL_REGISTRATION_SCALE_MM * np.stack(
-                        [wp[:, 2], wp[:, 0], wp[:, 1]], axis=1
-                    )
+                    # M10 §5.1 / §5.6.4 Y-up registration (scale 1, zero translation): p_mm = (1000*g_x, -1000*g_z, 1000*g_y)
+                    reg_mm = gltf_yup_m_to_project_mm(wp)
                     chunks.append(reg_mm)
             stack.extend(node.get("children", []))
         return np.concatenate(chunks, axis=0) if chunks else np.zeros((0, 3), dtype=np.float64)

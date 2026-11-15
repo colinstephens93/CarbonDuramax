@@ -115,12 +115,12 @@ function countSceneTriangles(gltf: GltfJson): number {
 }
 
 describe('Milestone 8 shell split, pure variant rules, and D-033 budget guard (src/renderer/partVariants.test.ts)', () => {
-  it('7. shell split contract: frozen shell GLB subtrees match EXTERIOR_PRESERVED_SUBTREES and EXTERIOR_PRESERVED_TRIANGLES (2056 / 560 / 5740, total 31396)', () => {
+  it('7. shell split contract: frozen shell GLB subtrees match EXTERIOR_PRESERVED_SUBTREES and EXTERIOR_PRESERVED_TRIANGLES (3400 / 800 / 2300, total 37100)', () => {
     const shellPath = resolve(process.cwd(), 'public', 'Duramax_LLY_2005_66L_V8.glb');
     const shellGltf = parseGlbJson(shellPath);
     const nodes = shellGltf.nodes ?? [];
 
-    expect(countSceneTriangles(shellGltf)).toBe(31_396);
+    expect(countSceneTriangles(shellGltf)).toBe(37_100);
 
     const specIds = EXTERIOR_PRESERVED_SUBTREES.map((s) => s.id);
     expect(new Set(specIds).size).toBe(specIds.length);
@@ -145,9 +145,9 @@ describe('Milestone 8 shell split, pure variant rules, and D-033 budget guard (s
     }
 
     expect(parsedCounts).toEqual({
-      turbo_unit: 2056,
-      turbo_downpipe: 560,
-      intake_tract: 5740,
+      turbo_unit: 3400,
+      turbo_downpipe: 800,
+      intake_tract: 2300,
     });
   });
 
@@ -192,7 +192,7 @@ describe('Milestone 8 shell split, pure variant rules, and D-033 budget guard (s
   });
 
   it('9. budget guard (derived): worst-case scene triangles from VARIANT_TRIANGLE_CAPS and EXTERIOR_PRESERVED_TRIANGLES stay within D-033 phone (320k) and desktop (360k)', () => {
-    const stockSceneTrianglesExtOn = 302_620;
+    const stockSceneTrianglesExtOn = 308_324;
     const phoneSceneAssetBudget = 320_000;
     const desktopSceneAssetBudget = 360_000;
 

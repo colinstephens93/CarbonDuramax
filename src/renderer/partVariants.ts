@@ -31,9 +31,9 @@ export const EXTERIOR_PRESERVED_SUBTREES: readonly ExteriorPreservedSubtreeSpec[
 ];
 
 export const EXTERIOR_PRESERVED_TRIANGLES: Readonly<Record<string, number>> = {
-  turbo_unit: 2056,
-  turbo_downpipe: 560,
-  intake_tract: 5740,
+  turbo_unit: 3400,
+  turbo_downpipe: 800,
+  intake_tract: 2300,
 };
 
 export const VARIANT_TRIANGLE_CAPS: Readonly<Record<string, number>> = {

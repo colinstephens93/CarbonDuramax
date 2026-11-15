@@ -184,23 +184,30 @@ describe('Milestone 3 engine layout & valvetrain clearances (src/renderer/layout
     // Main shaft radius 39.95 ± 0.5 mm from published mainJournalDiameterMm (M7 Spec §4.3)
     expect(Math.abs(mainShaftRadiusMm - 39.95)).toBeLessThanOrEqual(0.5);
 
-    // Proper orthogonal rotation (det = +1)
+    // Proper orthogonal Y-up registration (M10 Spec §5.1, §9.10): det = +1, scale = 1, translation = [0,0,0]
     const [c0, c1, c2] = exterior.basisColumnsProjectFromFile;
     const det =
       c0[0] * (c1[1] * c2[2] - c1[2] * c2[1]) -
       c1[0] * (c0[1] * c2[2] - c0[2] * c2[1]) +
       c2[0] * (c0[1] * c1[2] - c0[2] * c1[1]);
     expect(det).toBe(1);
+    expect(exterior.basisColumnsProjectFromFile).toEqual([
+      [1, 0, 0],
+      [0, 0, 1],
+      [0, -1, 0],
+    ]);
+    expect(exterior.uniformScale).toBe(1);
+    expect(exterior.translationM).toEqual([0, 0, 0]);
 
-    // Crank axis (X_file = 0, Y_file = -0.26, Z_file) maps strictly onto project (Y = 0, Z = 0)
-    const [fx, fy] = exterior.fileCrankAxisXYM;
+    // Crank axis (X_file in fileCrankClusterZRangeM, Y_file = 0, Z_file = 0) maps strictly onto project (Y = 0, Z = 0)
+    const [fy, fz] = exterior.fileCrankAxisXYM;
     const s = exterior.uniformScale;
     const [tx, ty, tz] = exterior.translationM;
-    for (const fz of exterior.fileCrankClusterZRangeM) {
+    for (const fx of exterior.fileCrankClusterZRangeM) {
       const projX = tx + s * (c0[0] * fx + c1[0] * fy + c2[0] * fz);
       const projY = ty + s * (c0[1] * fx + c1[1] * fy + c2[1] * fz);
       const projZ = tz + s * (c0[2] * fx + c1[2] * fy + c2[2] * fz);
-      expect(projX).toBeCloseTo(tx + s * fz, 12);
+      expect(projX).toBeCloseTo(tx + s * fx, 12);
       expect(projY).toBeCloseTo(0, 12);
       expect(projZ).toBeCloseTo(0, 12);
     }

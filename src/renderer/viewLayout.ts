@@ -109,7 +109,7 @@ const CYLINDER_CHIP_ABOVE_INJECTOR_MM = 32;
  */
 export const EXTERIOR_SHELL_LABEL_ANCHORS_MM = {
   turbocharger: [-60.0, 0.0, 435.0] as Vec3Tuple,
-  'harmonic-balancer': [760.6, 0.0, -43.0] as Vec3Tuple,
+  'harmonic-balancer': [478.0, 0.0, 0.0] as Vec3Tuple,
   'oil-pan': [135.4, 0.0, -172.0] as Vec3Tuple,
 } as const;
 

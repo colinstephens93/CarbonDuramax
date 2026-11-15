@@ -295,47 +295,44 @@ export function computeEngineLayout(
     },
   };
 
-  // Exterior GLB registration (Spec §5):
-  // Evaluated scene-graph bounds of Duramax_LLY_2005_66L_V8.glb:
-  //   X_file in [-1.333498, +1.213536] m (vehicle lateral: -X RH, +X LH)
-  //   Y_file in [-0.780000, +1.097862] m (+Y up)
-  //   Z_file in [-1.131025, +1.601268] m (crank axis: -Z rear flywheel/turbo, +Z front balancer/fan)
-  // Crankshaft & pulley/flywheel cluster axis line in file space: (X_file = 0.000, Y_file = -0.260, Z_file),
-  // with bank midpoint at Z_file = +0.060 m.
-  // Proper rotation R (det = +1) maps (x_f, y_f, z_f) -> (z_f, x_f, y_f).
-  // Uniform scale s = 0.430 guarantees >= +21.4 mm 3D surface containment across all 8 cylinders'
-  // valve covers and block walls at all crank angles.
-  const uniformScale = 0.43;
-  const fileCrankX = 0.0;
-  const fileCrankY = -0.26;
-  const fileBankMidZ = 0.06;
-  const fileSceneMin: Vec3Tuple = [-1.333498, -0.78, -1.131025];
-  const fileSceneMax: Vec3Tuple = [1.213536, 1.097862, 1.601268];
+  // Exterior GLB registration (M10 Spec §5.1, §6.5, D-041, D-042):
+  // Duramax_LLY_2005_66L_V8.glb is authored directly in project coordinates (m) and exported with
+  // glTF Y-up convention:
+  //   X_file in [-0.272516, +0.617800] m (project +X crank axis: rear downpipe to front fan)
+  //   Y_file in [-0.223500, +0.556000] m (project +Z vertical: deep sump floor to resonator top)
+  //   Z_file in [-0.480664, +0.549860] m (project -Y lateral: -Z_file LH +Y, +Z_file RH -Y)
+  // Degenerate registration (uniformScale = 1.0, translationM = [0, 0, 0]) with proper rotation
+  // R (det = +1) mapping glTF Y-up (x_f, y_f, z_f) -> project Z-up (x_f, -z_f, y_f).
+  const uniformScale = 1.0;
+  const fileCrankY = 0.0;
+  const fileCrankZ = 0.0;
+  const fileSceneMin: Vec3Tuple = [-0.272516, -0.2235, -0.480664];
+  const fileSceneMax: Vec3Tuple = [0.6178, 0.556, 0.54986];
 
-  const txM = blockCenterXMm / 1000 - uniformScale * fileBankMidZ; // 0.230 - 0.0258 = 0.2042 m
-  const tyM = -uniformScale * fileCrankX; // 0.0 m (crank axis on Y_proj = 0)
-  const tzM = -uniformScale * fileCrankY; // +0.1118 m (crank axis on Z_proj = 0)
+  const txM = 0.0;
+  const tyM = 0.0;
+  const tzM = 0.0;
 
   const projMinMm: Vec3Tuple = [
-    (txM + uniformScale * fileSceneMin[2]) * 1000,
-    (tyM + uniformScale * fileSceneMin[0]) * 1000,
+    (txM + uniformScale * fileSceneMin[0]) * 1000,
+    (tyM - uniformScale * fileSceneMax[2]) * 1000,
     (tzM + uniformScale * fileSceneMin[1]) * 1000,
   ];
   const projMaxMm: Vec3Tuple = [
-    (txM + uniformScale * fileSceneMax[2]) * 1000,
-    (tyM + uniformScale * fileSceneMax[0]) * 1000,
+    (txM + uniformScale * fileSceneMax[0]) * 1000,
+    (tyM - uniformScale * fileSceneMin[2]) * 1000,
     (tzM + uniformScale * fileSceneMax[1]) * 1000,
   ];
 
   const exterior: ExteriorRegistrationSpec = {
     uniformScale,
     basisColumnsProjectFromFile: [
-      [0, 1, 0], // file +X -> project +Y
+      [1, 0, 0], // file +X -> project +X
       [0, 0, 1], // file +Y -> project +Z
-      [1, 0, 0], // file +Z -> project +X
+      [0, -1, 0], // file +Z -> project -Y
     ],
-    fileCrankAxisXYM: [fileCrankX, fileCrankY],
-    fileCrankClusterZRangeM: [-0.7825, 1.303],
+    fileCrankAxisXYM: [fileCrankY, fileCrankZ],
+    fileCrankClusterZRangeM: [-0.058, 0.492],
     fileSceneBoundsM: {
       min: fileSceneMin,
       max: fileSceneMax,

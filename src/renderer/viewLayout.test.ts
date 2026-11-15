@@ -3,6 +3,8 @@
 // cutaway THREE.Plane signed-distance behavior in metres across range ends & defaults, and the
 // 23-anchor label table + live motion/explode/visibility rules.
 
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { detailConfig } from '../config/detailConfig';
@@ -23,6 +25,7 @@ import {
   EXPLODE_HEAD_LIFT_MAX_MM,
   EXPLODE_LIFTER_LIFT_MAX_MM,
   EXPLODE_STATION_SPREAD_GAIN,
+  EXTERIOR_SHELL_LABEL_ANCHORS_MM,
   isLabelVisibleUnderViewRules,
   LABEL_ANCHOR_DEFINITIONS,
   SECTION_RANGES_MM,
@@ -391,5 +394,165 @@ describe('Milestone 4 view layout, cutaway planes & label anchors (src/renderer/
     expect(cutMidIds.has('flywheel-flange')).toBe(true);
     expect(cutMidIds.has('cyl-5')).toBe(true);
     expect(cutMidIds.has('cyl-8')).toBe(true);
+  });
+
+  it('7. exterior shell label anchors lie inside their GLB part-group bounding boxes and harmonic-balancer is within 1.0 mm of ext_damper centre', () => {
+    interface GlbNode {
+      name?: string;
+      mesh?: number;
+      children?: number[];
+      matrix?: number[];
+      translation?: [number, number, number];
+      rotation?: [number, number, number, number];
+      scale?: [number, number, number];
+      extras?: { partId?: string };
+    }
+    interface GlbDoc {
+      scene?: number;
+      scenes?: Array<{ nodes?: number[] }>;
+      nodes?: GlbNode[];
+      meshes?: Array<{
+        extras?: { partId?: string };
+        primitives: Array<{ attributes: Record<string, number> }>;
+      }>;
+      accessors?: Array<{
+        bufferView: number;
+        byteOffset?: number;
+        componentType: number;
+        count: number;
+        type: string;
+      }>;
+      bufferViews?: Array<{
+        byteOffset?: number;
+        byteStride?: number;
+      }>;
+    }
+
+    const glbBuf = readFileSync(resolve(process.cwd(), 'public', 'Duramax_LLY_2005_66L_V8.glb'));
+    const glbView = new DataView(glbBuf.buffer, glbBuf.byteOffset, glbBuf.byteLength);
+    const jsonLen = glbView.getUint32(12, true);
+    const doc = JSON.parse(
+      new TextDecoder('utf-8').decode(glbBuf.subarray(20, 20 + jsonLen)),
+    ) as GlbDoc;
+    const binStart = 20 + jsonLen + 8;
+
+    const nodes = doc.nodes ?? [];
+    const meshes = doc.meshes ?? [];
+    const accessors = doc.accessors ?? [];
+    const bufferViews = doc.bufferViews ?? [];
+    const rootIndices = doc.scenes?.[doc.scene ?? 0]?.nodes ?? [];
+
+    const { exterior } = computeEngineLayout(engineConfig, valveConfig, detailConfig);
+    const [c0, c1, c2] = exterior.basisColumnsProjectFromFile;
+    const s = exterior.uniformScale;
+    const [tx, ty, tz] = exterior.translationM;
+
+    const regMat = new THREE.Matrix4().set(
+      s * c0[0], s * c1[0], s * c2[0], tx,
+      s * c0[1], s * c1[1], s * c2[1], ty,
+      s * c0[2], s * c1[2], s * c2[2], tz,
+      0, 0, 0, 1,
+    );
+
+    function nodeLocalMatrix(nd: GlbNode): THREE.Matrix4 {
+      if (nd.matrix && nd.matrix.length === 16) {
+        return new THREE.Matrix4().fromArray(nd.matrix);
+      }
+      const pos = new THREE.Vector3(...(nd.translation ?? [0, 0, 0]));
+      const quat = new THREE.Quaternion(...(nd.rotation ?? [0, 0, 0, 1]));
+      const scl = new THREE.Vector3(...(nd.scale ?? [1, 1, 1]));
+      return new THREE.Matrix4().compose(pos, quat, scl);
+    }
+
+    function computeSubtreeBoundsMm(
+      startNodeIdx: number,
+      partIdFilter?: string,
+    ): { min: [number, number, number]; max: [number, number, number] } {
+      const box = new THREE.Box3();
+      const v = new THREE.Vector3();
+
+      function visit(nIdx: number, parentWorld: THREE.Matrix4): void {
+        const nd = nodes[nIdx]!;
+        const world = parentWorld.clone().multiply(nodeLocalMatrix(nd));
+        if (nd.mesh !== undefined) {
+          const m = meshes[nd.mesh]!;
+          const partId = nd.extras?.partId ?? m.extras?.partId;
+          if (!partIdFilter || partId === partIdFilter) {
+            for (const prim of m.primitives) {
+              const acc = accessors[prim.attributes.POSITION!]!;
+              expect(acc.componentType).toBe(5126);
+              expect(acc.type).toBe('VEC3');
+              const bv = bufferViews[acc.bufferView]!;
+              const stride = bv.byteStride ?? 12;
+              const base = binStart + (bv.byteOffset ?? 0) + (acc.byteOffset ?? 0);
+              for (let i = 0; i < acc.count; i += 1) {
+                const off = base + i * stride;
+                v.set(
+                  glbView.getFloat32(off, true),
+                  glbView.getFloat32(off + 4, true),
+                  glbView.getFloat32(off + 8, true),
+                )
+                  .applyMatrix4(world)
+                  .multiplyScalar(1000);
+                box.expandByPoint(v);
+              }
+            }
+          }
+        }
+        for (const ch of nd.children ?? []) {
+          visit(ch, world);
+        }
+      }
+
+      visit(startNodeIdx, regMat);
+      expect(box.isEmpty()).toBe(false);
+      return {
+        min: [box.min.x, box.min.y, box.min.z],
+        max: [box.max.x, box.max.y, box.max.z],
+      };
+    }
+
+    const groupRootIdx = (name: string): number => {
+      const idx = rootIndices.find((i) => nodes[i]?.name === name);
+      expect(idx, `Missing top-level GLB group "${name}"`).toBeDefined();
+      return idx!;
+    };
+
+    const anchorGroupPairs: ReadonlyArray<
+      [keyof typeof EXTERIOR_SHELL_LABEL_ANCHORS_MM, string]
+    > = [
+      ['turbocharger', 'turbo'],
+      ['harmonic-balancer', 'beltDrive'],
+      ['oil-pan', 'blockPan'],
+    ];
+
+    for (const [anchorKey, groupName] of anchorGroupPairs) {
+      const anchor = EXTERIOR_SHELL_LABEL_ANCHORS_MM[anchorKey];
+      const bounds = computeSubtreeBoundsMm(groupRootIdx(groupName));
+      for (let axis = 0; axis < 3; axis += 1) {
+        expect(
+          anchor[axis],
+          `${anchorKey}[${axis}] = ${anchor[axis]} below ${groupName} min ${bounds.min[axis]}`,
+        ).toBeGreaterThanOrEqual(bounds.min[axis]!);
+        expect(
+          anchor[axis],
+          `${anchorKey}[${axis}] = ${anchor[axis]} above ${groupName} max ${bounds.max[axis]}`,
+        ).toBeLessThanOrEqual(bounds.max[axis]!);
+      }
+    }
+
+    const damperBounds = computeSubtreeBoundsMm(groupRootIdx('beltDrive'), 'ext_damper');
+    const damperCenter: [number, number, number] = [
+      0.5 * (damperBounds.min[0] + damperBounds.max[0]),
+      0.5 * (damperBounds.min[1] + damperBounds.max[1]),
+      0.5 * (damperBounds.min[2] + damperBounds.max[2]),
+    ];
+    const hbAnchor = EXTERIOR_SHELL_LABEL_ANCHORS_MM['harmonic-balancer'];
+    const distToDamperCenterMm = Math.hypot(
+      hbAnchor[0] - damperCenter[0],
+      hbAnchor[1] - damperCenter[1],
+      hbAnchor[2] - damperCenter[2],
+    );
+    expect(distToDamperCenterMm).toBeLessThanOrEqual(1.0);
   });
 });
