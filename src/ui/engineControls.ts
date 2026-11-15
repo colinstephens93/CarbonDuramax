@@ -647,7 +647,7 @@ export function mountEngineUi(
 
   const bannerSubtitle = document.querySelector('#title-banner p');
   if (bannerSubtitle) {
-    bannerSubtitle.textContent = 'Milestone 10 — Exterior Accuracy';
+    bannerSubtitle.textContent = 'Milestone 11 — Capped-Solid Cutaways';
   }
 
   let isPlaying = true;
@@ -920,10 +920,11 @@ export function mountEngineUi(
 
   viewTogglesRow.append(xrayLabel, labelsToggleLabel);
 
-  // 5. Cutaway note (exact text per Spec §7)
+  // 5. Cutaway note (exact text per M11 Spec §9.1)
   const cutawayNote = document.createElement('p');
   cutawayNote.className = 'm4-cutaway-note';
-  cutawayNote.textContent = 'Cutaway shows open shells — capped solid sections come later.';
+  cutawayNote.textContent =
+    'Section cut faces are filled as solid, hatched material — a diagrammatic section, not a machined or verified LLY surface.';
 
   viewsGroup.append(viewsTitle, explodeWrap, sectionWrap, viewTogglesRow, cutawayNote);
 

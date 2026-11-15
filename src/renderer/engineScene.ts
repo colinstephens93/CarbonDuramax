@@ -28,6 +28,16 @@ import {
 } from './partVariants';
 import { loadVariantScene, type LoadedVariantScene } from './variantLoader';
 import {
+  buildCapGeometry,
+  buildSpringConvexHull,
+  createCapBuildTarget,
+  createCapMaterial,
+  prepareCapSource,
+  type CapBuildStats,
+  type CapSource,
+  type SectionSlicePlane,
+} from './sectionCaps';
+import {
   clampExplodeFactor,
   clampSectionPositionMm,
   computeHeadLiftMm,
@@ -111,6 +121,13 @@ export interface EngineRenderStats {
   effectiveQualityTier: QualityTier;
   effectivePixelRatio: number;
   estimatedTextureVramMiB: number;
+  sectionCapStaticMs?: number;
+  sectionCapDynamicMs?: number;
+  sectionCapTriangles?: number;
+  sectionCapOpenChains?: number;
+  sectionCapClosedChains?: number;
+  sectionCapDroppedGroups?: number;
+  sectionCapHullOnlySources?: number;
 }
 
 export interface EngineSceneController {
@@ -251,6 +268,7 @@ function createInstancedBatch(
     // Instances span the full 8-cylinder V8 envelope; disable local-origin sphere culling
     // so close-up camera inspections (e.g. RF-2 on Cylinder 1 head) never drop visible instances.
     instMesh.frustumCulled = false;
+    instMesh.visible = attachToParent;
     if (attachToParent) {
       parent.add(instMesh);
     }
@@ -470,6 +488,81 @@ export function createEngineScene(
   materialsToDispose.add(mainShaft.material);
   registerClippableMaterial(mainShaft.material);
   scene.add(mainShaft.mesh);
+
+  // M11 §4.1–§4.5: CPU cross-section cap material + static & dynamic cap meshes (shared unlit hatched material)
+  const ZERO_CAP_STATS: CapBuildStats = {
+    triangles: 0,
+    openChains: 0,
+    closedChains: 0,
+    droppedGroups: 0,
+    hullOnlySources: 0,
+    ambiguousJunctions: 0,
+  };
+
+  const capMaterial = createCapMaterial();
+  materialsToDispose.add(capMaterial);
+
+  const staticCapTarget = createCapBuildTarget();
+  const dynamicCapTarget = createCapBuildTarget();
+  geometriesToDispose.add(staticCapTarget.geometry);
+  geometriesToDispose.add(dynamicCapTarget.geometry);
+
+  const staticCapMesh = new THREE.Mesh(staticCapTarget.geometry, capMaterial);
+  staticCapMesh.name = 'section_cap_static';
+  staticCapMesh.castShadow = false;
+  staticCapMesh.receiveShadow = false;
+  staticCapMesh.frustumCulled = false;
+  staticCapMesh.renderOrder = 0;
+  staticCapMesh.visible = false;
+  scene.add(staticCapMesh);
+
+  const dynamicCapMesh = new THREE.Mesh(dynamicCapTarget.geometry, capMaterial);
+  dynamicCapMesh.name = 'section_cap_dynamic';
+  dynamicCapMesh.castShadow = false;
+  dynamicCapMesh.receiveShadow = false;
+  dynamicCapMesh.frustumCulled = false;
+  dynamicCapMesh.renderOrder = 0;
+  dynamicCapMesh.visible = false;
+  scene.add(dynamicCapMesh);
+
+  const staticCapSources: CapSource[] = [
+    prepareCapSource({
+      id: 'main_crank_shaft',
+      object3D: mainShaft.mesh,
+      instanced: false,
+      count: 1,
+      static: true,
+      skipWhenGhosted: false,
+      hullOnly: false,
+    }),
+  ];
+  const dynamicCapSources: CapSource[] = [];
+  let staticCapsDirty = true;
+  let lastStaticCapMs = 0;
+  let lastDynamicCapMs = 0;
+  let lastStaticCapStats: CapBuildStats = ZERO_CAP_STATS;
+  let lastDynamicCapStats: CapBuildStats = ZERO_CAP_STATS;
+
+  const registerInstancedCapSource = (
+    targetList: CapSource[],
+    id: string,
+    batch: InstancedPartBatch,
+    isStatic: boolean,
+  ): void => {
+    if (batch.meshes.length === 0) return;
+    targetList.push(
+      prepareCapSource({
+        id,
+        object3D: batch.meshes[0]!,
+        geometries: batch.meshes.map((m) => m.geometry as THREE.BufferGeometry),
+        instanced: true,
+        count: batch.count,
+        static: isStatic,
+        skipWhenGhosted: false,
+        hullOnly: false,
+      }),
+    );
+  };
 
   // Load Poly Haven CC0 2k studio HDRI via RGBELoader + PMREMGenerator
   const baseUrl = import.meta.env.BASE_URL;
@@ -971,9 +1064,19 @@ export function createEngineScene(
     if (!v8Batches) return;
     for (const [variantId, prims] of loadedPistonPrimsById) {
       if (!pistonBatchSetsById.has(variantId)) {
-        pistonBatchSetsById.set(
-          variantId,
-          buildPistonBatchSet(`piston_${variantId}`, prims, v8Batches.root, false),
+        const variantSet = buildPistonBatchSet(`piston_${variantId}`, prims, v8Batches.root, false);
+        pistonBatchSetsById.set(variantId, variantSet);
+        registerInstancedCapSource(
+          dynamicCapSources,
+          `piston_${variantId}_std`,
+          variantSet.standard,
+          false,
+        );
+        registerInstancedCapSource(
+          dynamicCapSources,
+          `piston_${variantId}_firing`,
+          variantSet.firing,
+          false,
         );
       }
     }
@@ -1047,15 +1150,19 @@ export function createEngineScene(
           : stockPistonBatchSet;
 
       for (const m of prevSet.standard.meshes) {
+        m.visible = false;
         v8Batches.root.remove(m);
       }
       for (const m of prevSet.firing.meshes) {
+        m.visible = false;
         v8Batches.root.remove(m);
       }
       for (const m of nextSet.standard.meshes) {
+        m.visible = true;
         v8Batches.root.add(m);
       }
       for (const m of nextSet.firing.meshes) {
+        m.visible = true;
         v8Batches.root.add(m);
       }
 
@@ -1070,10 +1177,13 @@ export function createEngineScene(
         normalizeAngle720(lastState.crankAngleDeg),
       );
     }
+
+    staticCapsDirty = true;
   };
 
   // M4 §5: Synchronize exterior shell group visibility (exteriorChecked || xrayEnabled) and ghosting state
   const syncExteriorShellState = (): void => {
+    staticCapsDirty = true;
     if (!exteriorShell) return;
 
     exteriorShell.group.visible = exteriorVisible || xrayEnabled;
@@ -1281,6 +1391,58 @@ export function createEngineScene(
           totalTriangles,
         };
 
+        // Register static & dynamic internal cap sources (M11 §2.2, §4.2):
+        // Static: 8 cylinder heads + 8 fuel injectors.
+        registerInstancedCapSource(staticCapSources, 'head', head, true);
+        registerInstancedCapSource(staticCapSources, 'injector', injector, true);
+
+        // Dynamic: stock pistons, conrods, crank throws, valves, bridges, rockers, pushrods, lifters,
+        // plus the 2 spring batches marked hullOnly through their closed ConvexHull proxies.
+        registerInstancedCapSource(dynamicCapSources, 'piston_std', pistonStandard, false);
+        registerInstancedCapSource(dynamicCapSources, 'piston_firing', pistonFiring, false);
+        registerInstancedCapSource(dynamicCapSources, 'conrod', conrod, false);
+        registerInstancedCapSource(dynamicCapSources, 'crankthrow', crankThrow, false);
+        registerInstancedCapSource(dynamicCapSources, 'intake_valve', intakeValve, false);
+        registerInstancedCapSource(dynamicCapSources, 'exhaust_valve', exhaustValve, false);
+        registerInstancedCapSource(dynamicCapSources, 'bridge', bridge, false);
+        registerInstancedCapSource(dynamicCapSources, 'rocker_in_rh', rhIntakeRocker, false);
+        registerInstancedCapSource(dynamicCapSources, 'rocker_ex_rh', rhExhaustRocker, false);
+        registerInstancedCapSource(dynamicCapSources, 'rocker_in_lh', lhIntakeRocker, false);
+        registerInstancedCapSource(dynamicCapSources, 'rocker_ex_lh', lhExhaustRocker, false);
+        registerInstancedCapSource(dynamicCapSources, 'pushrod', pushrod, false);
+        registerInstancedCapSource(dynamicCapSources, 'lifter', lifter, false);
+
+        const intakeSpringHull = buildSpringConvexHull(intakeSpringPrims.map((p) => p.geometry));
+        const exhaustSpringHull = buildSpringConvexHull(exhaustSpringPrims.map((p) => p.geometry));
+        dynamicCapSources.push(
+          prepareCapSource({
+            id: 'intake_spring',
+            object3D: intakeSpring.meshes[0]!,
+            instanced: true,
+            count: intakeSpring.count,
+            static: false,
+            skipWhenGhosted: false,
+            hullOnly: true,
+            cachedHull: intakeSpringHull.hull,
+            hullPositions: intakeSpringHull.hullPositions,
+            localBounds: intakeSpringHull.localBounds,
+          }),
+        );
+        dynamicCapSources.push(
+          prepareCapSource({
+            id: 'exhaust_spring',
+            object3D: exhaustSpring.meshes[0]!,
+            instanced: true,
+            count: exhaustSpring.count,
+            static: false,
+            skipWhenGhosted: false,
+            hullOnly: true,
+            cachedHull: exhaustSpringHull.hull,
+            hullPositions: exhaustSpringHull.hullPositions,
+            localBounds: exhaustSpringHull.localBounds,
+          }),
+        );
+
         scene.add(root);
         applyHeadAndInjectorTransforms(v8Batches);
         applyV8KinematicState(
@@ -1289,6 +1451,7 @@ export function createEngineScene(
           normalizeAngle720(lastState.crankAngleDeg),
         );
         syncVisualVariants();
+        staticCapsDirty = true;
       },
     )
     .catch((err) => {
@@ -1327,9 +1490,26 @@ export function createEngineScene(
         });
         shellPartTrianglesById.set(partId, tris);
       }
+      let shellMeshIndex = 0;
+      loaded.group.traverse((child) => {
+        if (!(child instanceof THREE.Mesh)) return;
+        staticCapSources.push(
+          prepareCapSource({
+            id: child.name || `exterior_shell_mesh_${shellMeshIndex}`,
+            object3D: child,
+            instanced: false,
+            count: 1,
+            static: true,
+            skipWhenGhosted: true,
+            hullOnly: false,
+          }),
+        );
+        shellMeshIndex += 1;
+      });
       syncExteriorShellState();
       syncVisualVariants();
       scene.add(loaded.group);
+      staticCapsDirty = true;
     })
     .catch((err) => {
       console.error('Failed to load registered exterior GLB shell:', err);
@@ -1368,7 +1548,19 @@ export function createEngineScene(
             materialsToDispose.add(m);
             registerClippableMaterial(m);
           }
+          loaded.group.visible = false;
           loadedExternalVariants.set(desc.variantId, { descriptor: desc, loaded });
+          staticCapSources.push(
+            prepareCapSource({
+              id: `variant_${desc.variantId}`,
+              object3D: loaded.group,
+              instanced: false,
+              count: 1,
+              static: true,
+              skipWhenGhosted: false,
+              hullOnly: false,
+            }),
+          );
         }
         syncVisualVariants();
       } catch (err) {
@@ -1456,6 +1648,7 @@ export function createEngineScene(
         normalizeAngle720(lastState.crankAngleDeg),
       );
     }
+    staticCapsDirty = true;
   };
 
   const getExplodeFactor = (): number => explodeFactor;
@@ -1521,6 +1714,7 @@ export function createEngineScene(
     for (const mat of clippableMaterials) {
       mat.clippingPlanes = activeClippingPlanes;
     }
+    staticCapsDirty = true;
   };
 
   const getSectionState = (): SectionState => ({
@@ -1629,6 +1823,33 @@ export function createEngineScene(
     }
 
     controls.update();
+
+    if (sectionMode === 'off') {
+      staticCapMesh.visible = false;
+      dynamicCapMesh.visible = false;
+      lastStaticCapMs = 0;
+      lastDynamicCapMs = 0;
+      lastStaticCapStats = ZERO_CAP_STATS;
+      lastDynamicCapStats = ZERO_CAP_STATS;
+    } else {
+      const slicePlane: SectionSlicePlane = {
+        mode: sectionMode,
+        positionMm: sectionPositionMm,
+      };
+      if (staticCapsDirty) {
+        const tStatic0 = performance.now();
+        scene.updateMatrixWorld(true);
+        lastStaticCapStats = buildCapGeometry(staticCapSources, slicePlane, staticCapTarget);
+        lastStaticCapMs = performance.now() - tStatic0;
+        staticCapMesh.visible = lastStaticCapStats.triangles > 0;
+        staticCapsDirty = false;
+      }
+      const tDyn0 = performance.now();
+      lastDynamicCapStats = buildCapGeometry(dynamicCapSources, slicePlane, dynamicCapTarget);
+      lastDynamicCapMs = performance.now() - tDyn0;
+      dynamicCapMesh.visible = lastDynamicCapStats.triangles > 0;
+    }
+
     renderer.render(scene, camera);
   };
 
@@ -1712,6 +1933,14 @@ export function createEngineScene(
       effectiveQualityTier: effectiveTier,
       effectivePixelRatio,
       estimatedTextureVramMiB: +(totalVramBytes / (1024 * 1024)).toFixed(2),
+      sectionCapStaticMs: +lastStaticCapMs.toFixed(4),
+      sectionCapDynamicMs: +lastDynamicCapMs.toFixed(4),
+      sectionCapTriangles: lastStaticCapStats.triangles + lastDynamicCapStats.triangles,
+      sectionCapOpenChains: lastStaticCapStats.openChains + lastDynamicCapStats.openChains,
+      sectionCapClosedChains: lastStaticCapStats.closedChains + lastDynamicCapStats.closedChains,
+      sectionCapDroppedGroups: lastStaticCapStats.droppedGroups + lastDynamicCapStats.droppedGroups,
+      sectionCapHullOnlySources:
+        lastStaticCapStats.hullOnlySources + lastDynamicCapStats.hullOnlySources,
     };
   };
 

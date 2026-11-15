@@ -1,12 +1,12 @@
 # Visual Reference Frames
 
-Project: Duramax LLY Engine Lab · Governing plan: [`docs/PLAN.md`](./PLAN.md) · Milestone 3 Spec: [`docs/specs/M3-full-engine.md`](./specs/M3-full-engine.md) §9 · Milestone 4 Spec: [`docs/specs/M4-views.md`](./specs/M4-views.md) §9 · Milestone 8 Spec: [`docs/specs/M8-part-variants.md`](./specs/M8-part-variants.md) §5.2, §7.3 · Milestone 10 Spec: [`docs/specs/M10-exterior-accuracy.md`](./specs/M10-exterior-accuracy.md) §8 · Measurements: [`docs/M3-MEASUREMENTS.md`](./M3-MEASUREMENTS.md), [`docs/M4-MEASUREMENTS.md`](./M4-MEASUREMENTS.md), [`docs/M8-MEASUREMENTS.md`](./M8-MEASUREMENTS.md), [`docs/M10-MEASUREMENTS.md`](./M10-MEASUREMENTS.md) · Exterior model record: [`docs/M10-EXTERIOR.md`](./M10-EXTERIOR.md)
+Project: Duramax LLY Engine Lab · Governing plan: [`docs/PLAN.md`](./PLAN.md) · Milestone 3 Spec: [`docs/specs/M3-full-engine.md`](./specs/M3-full-engine.md) §9 · Milestone 4 Spec: [`docs/specs/M4-views.md`](./specs/M4-views.md) §9 · Milestone 8 Spec: [`docs/specs/M8-part-variants.md`](./specs/M8-part-variants.md) §5.2, §7.3 · Milestone 10 Spec: [`docs/specs/M10-exterior-accuracy.md`](./specs/M10-exterior-accuracy.md) §8 · Milestone 11 Spec: [`docs/specs/M11-capped-cutaways.md`](./specs/M11-capped-cutaways.md) §7 · Measurements: [`docs/M3-MEASUREMENTS.md`](./M3-MEASUREMENTS.md), [`docs/M4-MEASUREMENTS.md`](./M4-MEASUREMENTS.md), [`docs/M8-MEASUREMENTS.md`](./M8-MEASUREMENTS.md), [`docs/M10-MEASUREMENTS.md`](./M10-MEASUREMENTS.md), [`docs/M11-MEASUREMENTS.md`](./M11-MEASUREMENTS.md) · Exterior model record: [`docs/M10-EXTERIOR.md`](./M10-EXTERIOR.md) · Cutaway technique record: [`docs/M11-CUTAWAYS.md`](./M11-CUTAWAYS.md)
 
-These thirteen fixed reference frames establish canonical camera poses, crank angles, display/view configurations, and catalog build selections for visual regression checks across milestones (`RF-1`…`RF-4` established at M3; `RF-5`…`RF-7` added at M4; `RF-8`…`RF-10` added at M8; `RF-11`…`RF-13` added and exterior-on frames `RF-3`, `RF-7`, `RF-8`, `RF-9` re-baselined at M10).
+These seventeen fixed reference frames establish canonical camera poses, crank angles, display/view configurations, and catalog build selections for visual regression checks across milestones (`RF-1`…`RF-4` established at M3; `RF-5`…`RF-7` added at M4; `RF-8`…`RF-10` added at M8; `RF-11`…`RF-13` added and exterior-on frames `RF-3`, `RF-7`, `RF-8`, `RF-9` re-baselined at M10; `RF-14`…`RF-17` added and `RF-6` re-baselined with capped-solid cutaways at M11).
 
 ## Common Capture Convention
 
-- **Build:** Production bundle (`npm run build && npm run preview`), reproducible directly via `?rf=RF-1` through `?rf=RF-13`
+- **Build:** Production bundle (`npm run build && npm run preview`), reproducible directly via `?rf=RF-1` through `?rf=RF-17`
 - **Viewport:** `1440 × 900` CSS px (`devicePixelRatio = 1`; Antigravity's built-in Chromium webview `page.screenshot()` serializes `1440×900` `16:10` viewports as `1024×640` `16:10` PNGs including the HUD readouts — standing `1024×640` convention for all frames)
 - **Camera Lens & Up Axis:** `PerspectiveCamera` with `fov = 42°`, `near = 0.02 m`, `far = 20 m`, `camera.up = [0, 0, 1]` (`+Z` vertical; `+X` front of engine along crank axis; `-Y` RH bank `[1,3,5,7]`; `+Y` LH bank `[2,4,6,8]`)
 - **Block Midpoint Reference:** `centerXM = 0.2300 m` (`230.0 mm` ahead of the `X = 0` rear block plane)
@@ -31,6 +31,23 @@ These thirteen fixed reference frames establish canonical camera poses, crank an
 | **RF-11** | `180°` | `[1.3800, -1.1800, 0.7200]` | `[0.3000, -0.0200, 0.1700]` | `Full` | `On` (checked) | `0% / Off / Off / Off` | `stock` | [`reference-frames/RF-11.png`](./reference-frames/RF-11.png) |
 | **RF-12** | `0°` | `[-0.6200, 1.2200, 0.8600]` | `[0.2800, 0.0200, 0.1600]` | `Full` | `On` (checked) | `0% / Off / Off / Off` | `stock` | [`reference-frames/RF-12.png`](./reference-frames/RF-12.png) |
 | **RF-13** | `705°` | `[0.2300, -0.0020, 1.1800]` | `[0.2300, 0.0000, 0.1400]` | `Full` | `On` (checked) | `0% / Off / Off / Off` | `stock` | [`reference-frames/RF-13.png`](./reference-frames/RF-13.png) |
+| **RF-14** | `180°` | `[0.9000, -0.6200, 0.2500]` | `[0.4000, -0.1500, 0.0200]` | `Full` | `Off` (unchecked) | `0% / Front–Back (X) @ 402.5 mm / Off / Off` | `stock` | [`reference-frames/RF-14.png`](./reference-frames/RF-14.png) |
+| **RF-15** | `470°` | `[0.6600, -0.3800, 0.5600]` | `[0.4025, -0.2000, 0.2550]` | `Full` | `Off` (unchecked) | `0% / Front–Back (X) @ 402.5 mm / Off / Off` | `stock` | [`reference-frames/RF-15.png`](./reference-frames/RF-15.png) |
+| **RF-16** | `180°` | `[1.3800, -1.1800, 0.7200]` | `[0.3000, -0.0200, 0.1700]` | `Full` | `On` (checked) | `0% / Front–Back (X) @ 402.5 mm / Off / Off` | `stock` | [`reference-frames/RF-16.png`](./reference-frames/RF-16.png) |
+| **RF-17** | `0°` | `[0.2300, 1.0500, 0.4500]` | `[0.2300, -0.1200, 0.1600]` | `Full` | `Off` (unchecked) | `0% / Side (Y) @ -185 mm / Off / Off` | `stock` | [`reference-frames/RF-17.png`](./reference-frames/RF-17.png) |
+
+---
+
+## Section-Fill Checklist (Shared by `RF-6` and `RF-14`…`RF-17`, Milestone 11 Spec §7.2)
+
+Every section-active reference frame (`RF-6`, `RF-14`, `RF-15`, `RF-16`, `RF-17`) must pass all six shared criteria — failing any single item fails the frame:
+
+1. **Solid cut faces:** Every visible part that meets the section plane shows a flat, uniformly hatched section face at the plane — no far interior wall, no open tube/box interior, no dark cavity along the cut. (Genuine cylinder bores above/below the piston, two-wall duct inner bores, and empty clearances between separate parts remain open.)
+2. **Depth correctness:** Nothing behind the plane draws in front of a cut face; the cap occludes the internals it should, and no cap covers un-cut geometry in front of the plane.
+3. **One section colour:** All cut faces use the same unlit cut-bronze base (`[0.290, 0.170, 0.086]` linear) and hatch (`[0.196, 0.112, 0.055]` linear) colour; no part PBR material or firing orange (`0xf97316`) appears *on* a cut face.
+4. **Hatch quality:** `45°` lines, uniform world spacing (`5.0 mm` perpendicular period, `1/3` duty), no swimming/stretching/moiré, and no hatch on non-cut surfaces.
+5. **Crisp cut edge:** The boundary between the cap and the part's outer surface is a clean silhouette; no gap ring of background appears between them.
+6. **No spurious fill:** No cap patch floats in air or appears where the plane does not cut material.
 
 ---
 
@@ -128,21 +145,23 @@ These thirteen fixed reference frames establish canonical camera poses, crank an
 
 ---
 
-### RF-6 — Front–Back Station 1 Cross-Section Cutaway (`θ = 0°`, Section X @ `402.5 mm`)
+### RF-6 — Front–Back Station 1 Capped Cross-Section Cutaway (`θ = 0°`, Section X @ `402.5 mm`)
 
 - **Crank angle:** `θ = 0°` (Cylinder 1 RH at compression/firing TDC, firing window `[0°, 90°)`)
-- **Camera position (m):** `[1.0600, -0.5400, 0.4800]`
+- **Camera position (m):** `[1.0600, -0.5400, 0.4800]` (`fov = 42°`, `up = [0, 0, 1]`)
 - **Camera target (m):** `[0.2900, -0.0200, 0.1400]`
 - **Quality profile:** `Full`
 - **Exterior:** `Off` (unchecked)
 - **View states:** `Explode = 0%`, `Section = Front–Back (X)` at `402.5 mm` (`plane normal = (-1, 0, 0)`, `constant = +0.4025 m`, keeping `x <= 0.4025 m`), `X-Ray = Off`, `Labels = Off`
 - **Build selection:** `stock` (all 12 catalog slots stock)
-- **What to look for:**
-  - **Exact Station 1 (`X = 402.5 mm`) cutaway:** Slicing through the front paired station's bore centerline cleanly bisects **Cylinder 1's orange firing piston** at TDC, **Cylinder 2's LH piston**, both wrist-pin bosses, Cylinder 1 & 2's cylinder heads and fuel injectors, the front shared crankpin/connecting-rod big-end, and the turned main crankshaft, leaving stations `3&4`, `5&6`, and `7&8` behind the plane completely intact.
-  - **Open-shell interior walls:** `DoubleSide` internal PBR materials reveal clean open-shell interior geometry at the cut plane (matching the UI note *"Cutaway shows open shells — capped solid sections come later."*).
-  - **Unclipped studio ground & clipped shadow (`clipShadows = true`):** The studio ground disc (`Z = -0.245 m`) and dark studio backdrop are completely unclipped, while the directional shadow cast onto the floor terminates cleanly along the `X = 402.5 mm` section plane.
+- **What to look for (re-baselined at M11 — shared Section-Fill Checklist items 1–6 plus per-frame subjects):**
+  1. **Exact Station 1 (`X = 402.5 mm`) cutaway:** Slicing through the front paired station's bore centerline cleanly bisects **Cylinder 1's orange firing piston** at TDC, **Cylinder 2's LH piston**, both front cylinder heads and fuel injectors, the valve bridges and rocker arms, the front shared crankpin/connecting-rod big-ends, and the turned main crankshaft, leaving stations `3&4`, `5&6`, and `7&8` behind the plane completely intact.
+  2. **Solid hatched section caps (replaces M4 open-shell look):** Every cut part along `X = 402.5 mm` (`874` cap triangles = `188` static + `686` dynamic) presents a flat, crisp, 45°-hatched cut-bronze cross-section with real depth occlusion; Cylinder 1's un-cut outer piston skirt keeps its orange firing emissive while its cut face renders strictly in the diagrammatic section material; the prior open-shell interior-wall look is completely gone, and the Views panel displays *"Section cut faces are filled as solid, hatched material — a diagrammatic section, not a machined or verified LLY surface."*
+  3. **Unclipped studio ground & clipped shadow (`clipShadows = true`):** The studio ground disc (`Z = -0.245 m`) and dark studio backdrop are completely unclipped, while the directional shadow cast onto the floor terminates cleanly along the `X = 402.5 mm` section plane (`section_cap_*` meshes keep `castShadow = false`).
 
-![RF-6 — θ = 0°, Section Front–Back (X) at 402.5 mm, exterior off](./reference-frames/RF-6.png)
+![RF-6 — θ = 0°, Section Front–Back (X) at 402.5 mm, capped-solid front-station cutaway, exterior off](./reference-frames/RF-6.png)
+
+*Caption: Front-station (`X = 402.5 mm`) cutaway re-baselined at Milestone 11 (`RF-6`), showing solid 45°-hatched cut-bronze cross-sections across Cylinder 1 (firing at TDC), Cylinder 2, both front heads, injectors, bridges, rockers, connecting rods, crank throw, and main shaft.*
 
 ---
 
@@ -291,6 +310,90 @@ These thirteen fixed reference frames establish canonical camera poses, crank an
 ![RF-13 — θ = 705°, stock LLY exterior top-down valley view showing Y-bridge, resonator, intake mouthpiece/duct, proud injector rows, RH valve-cover fuel filter, CP3 pump, and valley harness](./reference-frames/RF-13.png)
 
 *Caption: Stock 2005 Duramax LLY top-down valley exterior (`RF-13`), verifying the uncovered two-piece Y-bridge + MAP sensor, resonator, intake mouthpiece/duct, two rows of four proud injectors, RH valve-cover fuel filter head + vertical canister, front-valley CP3 pump, and valley harness loom.*
+
+---
+
+### RF-14 — Cut Piston Close-Up (`θ = 180°`, Section X @ `402.5 mm`, Exterior Off)
+
+- **Crank angle:** `θ = 180°` (Cylinder 1 RH at BDC; Cylinder 7 RH firing TDC)
+- **Camera position (m):** `[0.9000, -0.6200, 0.2500]` (`fov = 42°`, `up = [0, 0, 1]`)
+- **Camera target (m):** `[0.4000, -0.1500, 0.0200]`
+- **Quality profile:** `Full` (`PCFSoftShadowMap` `2048×2048` enabled)
+- **Exterior:** `Off` (unchecked)
+- **View states:** `Explode = 0%`, `Section = Front–Back (X)` at `402.5 mm`, `X-Ray = Off`, `Labels = Off`
+- **Build selection:** `stock` (all 12 catalog slots stock)
+- **What to look for (numbered checklist — Milestone 11 Spec §7.1–§7.2):**
+  1. **Solid piston section from crown to skirt:** The RH Cylinder 1 piston at BDC reads as one continuous solid 45°-hatched cut-bronze cross-section from combustion bowl/crown through the ring belt and wrist-pin region down to the lower skirt, with zero visible hollow interior walls.
+  2. **Solid connecting-rod, crank-throw & main-shaft cuts:** Beneath Cylinder 1, the connecting rod's wrist-pin eye/beam/big-end, the front crank throw web/pin, and the main crankshaft journal are cleanly capped in the same plane with crisp outer silhouette edges.
+  3. **Open cylinder space above BDC piston:** The swept space above the BDC piston crown up to the Cylinder 1 head deck is **not** filled — kept valves, head deck, and rear station assemblies remain cleanly visible behind the cut plane.
+  4. **Shared Section-Fill Checklist items 1–6:** All six shared section-fill invariants pass (no open shells, true bores open, single plane-locked 45° hatch face, exact depth occlusion, crisp cut edge, zero spurious fill).
+
+![RF-14 — θ = 180°, close-up of Cylinder 1 piston at BDC, connecting rod, and crank throw capped at X = 402.5 mm](./reference-frames/RF-14.png)
+
+*Caption: Cylinder 1 BDC piston close-up (`RF-14`, Section `X @ 402.5 mm`, Exterior Off), proving a continuous solid hatched cross-section from crown bowl through ring belt and skirt, solid rod/throw/main-shaft sections below, and open swept cylinder space above.*
+
+---
+
+### RF-15 — Cut Cylinder Head Close-Up (`θ = 470°`, Section X @ `402.5 mm`, Exterior Off)
+
+- **Crank angle:** `θ = 470°` (Cylinder 1 peak intake lift `≈ 12.1 mm`, matching `RF-2`'s crank angle and camera pose)
+- **Camera position (m):** `[0.6600, -0.3800, 0.5600]` (`fov = 42°`, `up = [0, 0, 1]`; identical to `RF-2`)
+- **Camera target (m):** `[0.4025, -0.2000, 0.2550]`
+- **Quality profile:** `Full` (`PCFSoftShadowMap` `2048×2048` enabled)
+- **Exterior:** `Off` (unchecked)
+- **View states:** `Explode = 0%`, `Section = Front–Back (X)` at `402.5 mm`, `X-Ray = Off`, `Labels = Off`
+- **Build selection:** `stock` (all 12 catalog slots stock)
+- **What to look for (numbered checklist — Milestone 11 Spec §7.1–§7.2):**
+  1. **Solid RH cylinder-head casting section:** Cylinder 1's head casting deck, port/gallery walls, and upper tower at `X = 402.5 mm` read as a clean, solid hatched bronze casting section rather than hollow paper-thin walls.
+  2. **Solid injector, valve-bridge & rocker cross-sections:** The central fuel injector body/nozzle tip, depressed intake/exhaust valve bridges, and forged rocker arms crossing `X = 402.5 mm` are cleanly capped in the same plane and occlude geometry behind them.
+  3. **Rear blued-steel helical springs visible & un-cut at `X = 402.5 mm`:** Because `X = 402.5 mm` passes cleanly between Cylinder 1's front (`X ≈ 424.5 mm`, clipped away) and rear (`X ≈ 380.5 mm`, kept) valve/spring rows, no spring `ConvexHull` proxy is falsely emitted at `X = 402.5 mm`, and the kept rear blued-steel helical coils read intact behind the head/injector caps.
+  4. **Shared Section-Fill Checklist items 1–6:** All six shared section-fill invariants pass with zero hollow openings or gap rings.
+
+![RF-15 — θ = 470°, close-up of Cylinder 1 head, injector, bridges, and rockers capped at X = 402.5 mm](./reference-frames/RF-15.png)
+
+*Caption: Cylinder 1 head close-up at peak intake lift (`RF-15`, Section `X @ 402.5 mm`, `RF-2` pose), verifying solid hatched cross-sections across the head casting, central injector, bridges, and rockers while keeping the un-cut `X ≈ 380.5 mm` rear spring row intact.*
+
+---
+
+### RF-16 — Sectioned Exterior Shell (`θ = 180°`, Section X @ `402.5 mm`, Exterior On)
+
+- **Crank angle:** `θ = 180°` (matching `RF-3` / `RF-11` crank angle and front three-quarter camera pose)
+- **Camera position (m):** `[1.3800, -1.1800, 0.7200]` (`fov = 42°`, `up = [0, 0, 1]`; identical to `RF-3` / `RF-11`)
+- **Camera target (m):** `[0.3000, -0.0200, 0.1700]`
+- **Quality profile:** `Full` (`PCFSoftShadowMap` `2048×2048` enabled)
+- **Exterior:** `On` (checked)
+- **View states:** `Explode = 0%`, `Section = Front–Back (X)` at `402.5 mm`, `X-Ray = Off`, `Labels = Off`
+- **Build selection:** `stock` (all 12 catalog slots stock)
+- **What to look for (numbered checklist — Milestone 11 Spec §7.1–§7.2):**
+  1. **Solid exterior casting & pan cross-section (`1,068` shell cap triangles, `1,942` total):** The upper/lower valve covers, cylinder heads, deep-skirt V-block, valley CP3 pump body, outboard exhaust manifolds/shields, and oil pan sliced at `X = 402.5 mm` form a crisp, continuous hatched cut-bronze section (`2` non-watertight fastener open chains closed cleanly by local in-plane chords, `0` dropped groups, `0` false valley cutouts across material-merged shell buckets).
+  2. **No hollow tube or duct openings:** Cut plumbing and air-tract conduits crossing `X = 402.5 mm` (corrugated RH intake duct, LH hot-side charge pipe, RH cold-side charge pipe, return/fuel lines) are cleanly capped according to their modelled single-wall or annular geometry — zero open paper-thin shells.
+  3. **Honest solid-section occlusion (§2.2 convention):** Because the exterior shell castings are closed single-surface solids, their solid cross-section at `X = 402.5 mm` legitimately occludes internal parts behind the cut face (toggling X-Ray On or Exterior Off reveals the capped internals behind it).
+  4. **Shared Section-Fill Checklist items 1–6:** All six shared section-fill invariants pass across all `23` exterior shell meshes.
+
+![RF-16 — θ = 180°, sectioned exterior shell at X = 402.5 mm showing solid block, oil pan, valve covers, and plumbing cross-sections](./reference-frames/RF-16.png)
+
+*Caption: Sectioned 2005 Duramax LLY exterior shell (`RF-16`, Section `X @ 402.5 mm`, `RF-3`/`RF-11` pose), eliminating hollow open-shell castings and pipes across the block, oil pan, valve covers, CP3 valley, exhaust manifolds, intake duct, and charge pipes.*
+
+---
+
+### RF-17 — Longitudinal RH Bank Section (`θ = 0°`, Section Y @ `-185 mm`, Exterior Off)
+
+- **Crank angle:** `θ = 0°` (Cylinder 1 RH at compression/firing TDC, firing window `[0°, 90°)`)
+- **Camera position (m):** `[0.2300, 1.0500, 0.4500]` (`fov = 42°`, `up = [0, 0, 1]`; viewed from the `+Y` LH side toward `-Y` RH bank)
+- **Camera target (m):** `[0.2300, -0.1200, 0.1600]`
+- **Quality profile:** `Full` (`PCFSoftShadowMap` `2048×2048` enabled)
+- **Exterior:** `Off` (unchecked)
+- **View states:** `Explode = 0%`, `Section = Side (Y)` at `-185 mm` (`plane normal = (0, -1, 0)`, `constant = -0.185 m`, keeping `y <= -0.185 m`), `X-Ray = Off`, `Labels = Off`
+- **Build selection:** `stock` (all 12 catalog slots stock)
+- **What to look for (numbered checklist — Milestone 11 Spec §7.1–§7.2):**
+  1. **Solid longitudinal RH bank cross-sections (`2,600` cap triangles):** Slicing along `Y = -185 mm` through the RH bank (`Cylinders 1, 3, 5, 7`) cleanly caps all four RH cylinder-head castings, all four RH pistons (Cylinder 1 at TDC, Cylinders 3/5/7 along their stroke phases), and the intersected RH intake-valve stems/heads and bridges/rockers in one coplanar 45°-hatched cut-bronze plane.
+  2. **LH bank & V-valley cleanly clipped away:** Everything with `Y > -185 mm` (entire LH bank `Cylinders 2, 4, 6, 8`, central crankshaft, connecting rods whose world-`Y` span `[-174.0, +27.7] mm` lies inboard of `-185 mm`, and valley lifters/pushrods) is completely removed by the Side (`Y`) clip plane rather than painted over.
+  3. **Kept outboard RH spring rows intact & un-cut:** The outboard RH spring rows (`Y ≈ -202 / -235 mm`, strictly on the kept `y <= -185 mm` side) remain visible in their true helical coil geometry behind the cut plane with zero spurious spring hull caps.
+  4. **Shared Section-Fill Checklist items 1–6:** Proves Side (`Y`) mode extracts, classifies, and renders solid hatched caps identically to Front–Back (`X`) mode.
+
+![RF-17 — θ = 0°, longitudinal Side (Y) cutaway at -185 mm along RH Cylinders 1, 3, 5, 7](./reference-frames/RF-17.png)
+
+*Caption: Longitudinal Side (`Y @ -185 mm`) cutaway (`RF-17`, viewed from `+Y` toward the RH bank), showing solid hatched sections across RH Cylinders `1, 3, 5, 7` heads, pistons, and valve stems with the LH bank and valley cleanly clipped away.*
 
 ---
 

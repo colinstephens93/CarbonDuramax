@@ -19,6 +19,7 @@ Unresolved questions and data still to source. An item leaves this list only whe
 - [ ] **User volume control / loudness calibration** — M9 ships a fixed master and limiter with no dB claim. A volume slider and a calibrated loudness target are deferred.
 - [ ] **LLY plastic upper intake manifold cover (`21994000`) and its lettering** — the only lettered surface on the engine; excluded in M10 because it hides the Y-bridge. A closed-up engine-bay look would need it as an optional cosmetic part (with the unverified `6.6 turbo diesel` wording treated as illustrative).
 - [ ] **Dual-generator idler, medium-duty oil filler/filter arrangement, vehicle-side hardware (airbox, intercooler core, radiator/shroud, exhaust beyond the downpipe)** — out of scope for M10.
+- [ ] **Per-part or per-material section colours / section outlines** — M11 chooses one section colour so the cut plane reads as a diagrammatic convention; part identity stays with labels/build panels. Revisit only alongside a legibility study.
 
 ## Watch items
 
@@ -33,3 +34,6 @@ Unresolved questions and data still to source. An item leaves this list only whe
 - [ ] **LLY turbo shaft-speed vs boost map and measured turbo noise levels** — no published map or measured LLY spectrum was found (M9 survey §3); M9 uses an illustrative 20,000–115,000 rpm proxy and a 3rd-order whistle. Revisit if a sourced map or a licensed recording appears.
 - [ ] **iOS silent-switch behavior for Web Audio** — `navigator.audioSession.type = 'playback'` is an experimental API (W3C editor's draft/MDN); M9 records the real-device result and the fallback. Revisit if Safari changes the category behavior.
 - [ ] **Per-cylinder combustion variation / LLY acoustic reference** — M9 uses half-order modulation rather than per-cylinder voices; no per-cylinder LLY acoustic data exists. Revisit only with a sourced recording/licensed reference.
+- [ ] **Spring hull caps are solid ellipses (diagrammatic)** — the 32 springs are capped through a closed convex hull, so a plane through a coil shows a solid section rather than wire cross-sections, consistent with the solid convention but not a real spring section. Revisit if a cheap analytic coil section or real spring wall geometry appears.
+- [ ] **Cap rebuild CPU on low-end phones** — the static rebuild is the heaviest single event (target ≤ 16 ms phone); M11 measures it on the reference machine. Revisit with a worker/incremental rebuild if real phones exceed the budget.
+- [ ] **True wall-thickness section caps** — M11 caps the modelled solid cross-section; real castings are thin-walled. A future asset project that gives the shell/heads wall thickness would allow material-band caps instead of solid fills; it would also change the D-033 asset budgets.
