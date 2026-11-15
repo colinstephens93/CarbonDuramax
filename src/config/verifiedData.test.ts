@@ -1,5 +1,5 @@
 // Milestone 7 verified LLY data, derivation identity, stack, and per-valve clearance test suite
-// (docs/specs/M7-verified-data.md §§2, 3, 6; D-035).
+// (docs/specs/M7-verified-data.md §§2, 3, 6; D-035; cam/valve lift updated per LLY data cross-check, D-044).
 
 import { describe, expect, it } from 'vitest';
 import { pistonValveClearanceM } from '../core/kinematics';
@@ -46,25 +46,27 @@ describe('Milestone 7 verified LLY data & stack invariants (src/config/verifiedD
     expect(detailConfig.lifterBodyDiameterMm.value).toBe(23.85);
     expect(detailConfig.lifterBodyDiameterMm.confidence).toBe('placeholder');
 
-    expect(valveConfig.lobeLift.value).toBe(7.14);
-    expect(valveConfig.lobeLift.confidence).toBe('published');
+    expect(valveConfig.intakeLobeLift.value).toBe(7.273);
+    expect(valveConfig.intakeLobeLift.confidence).toBe('published');
+    expect(valveConfig.exhaustLobeLift.value).toBe(5.907);
+    expect(valveConfig.exhaustLobeLift.confidence).toBe('published');
     expect(valveConfig.rockerRatioIntake.value).toBe(1.36);
     expect(valveConfig.rockerRatioIntake.confidence).toBe('published');
     expect(valveConfig.rockerRatioExhaust.value).toBe(1.69);
     expect(valveConfig.rockerRatioExhaust.confidence).toBe('published');
-    expect(valveConfig.intakeMaxLift.value).toBe(9.7);
+    expect(valveConfig.intakeMaxLift.value).toBe(9.9);
     expect(valveConfig.intakeMaxLift.confidence).toBe('published');
     expect(valveConfig.intakeMaxLift.source.startsWith('derived:')).toBe(true);
-    expect(valveConfig.exhaustMaxLift.value).toBe(12.1);
+    expect(valveConfig.exhaustMaxLift.value).toBe(10.0);
     expect(valveConfig.exhaustMaxLift.confidence).toBe('published');
     expect(valveConfig.exhaustMaxLift.source.startsWith('derived:')).toBe(true);
   });
 
   it('2. enforces valve-lift and rocker-cup derivation identities within rounding tolerance', () => {
     const derivedIntakeLiftMm =
-      valveConfig.lobeLift.value * valveConfig.rockerRatioIntake.value;
+      valveConfig.intakeLobeLift.value * valveConfig.rockerRatioIntake.value;
     const derivedExhaustLiftMm =
-      valveConfig.lobeLift.value * valveConfig.rockerRatioExhaust.value;
+      valveConfig.exhaustLobeLift.value * valveConfig.rockerRatioExhaust.value;
 
     expect(Math.abs(valveConfig.intakeMaxLift.value - derivedIntakeLiftMm)).toBeLessThanOrEqual(
       0.05,
@@ -104,6 +106,8 @@ describe('Milestone 7 verified LLY data & stack invariants (src/config/verifiedD
   it('4. removes superseded single-channel keys from valveConfig and detailConfig', () => {
     expect('maxLift' in valveConfig).toBe(false);
     expect((valveConfig as unknown as Record<string, unknown>).maxLift).toBeUndefined();
+    expect('lobeLift' in valveConfig).toBe(false);
+    expect((valveConfig as unknown as Record<string, unknown>).lobeLift).toBeUndefined();
 
     expect('rockerTailValleyOffsetMm' in detailConfig).toBe(false);
     expect(

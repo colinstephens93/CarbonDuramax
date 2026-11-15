@@ -1,6 +1,6 @@
 # Milestone 7 Verified LLY Data, Derivations & Provenance Register
 
-Project: Duramax LLY Engine Lab · Governing plan: [`docs/PLAN.md`](./PLAN.md) (Milestone 7) · Decisions: D-010, D-011, D-012, D-028, D-035 · Spec: [`docs/specs/M7-verified-data.md`](./specs/M7-verified-data.md) · Source survey: [`docs/research/L7-verified-data-survey.md`](./research/L7-verified-data-survey.md)
+Project: Duramax LLY Engine Lab · Governing plan: [`docs/PLAN.md`](./PLAN.md) (Milestone 7) · Decisions: D-010, D-011, D-012, D-028, D-035, D-044 · Spec: [`docs/specs/M7-verified-data.md`](./specs/M7-verified-data.md) · Source survey: [`docs/research/L7-verified-data-survey.md`](./research/L7-verified-data-survey.md)
 
 **Provenance & grading conventions:**
 - **Survey reliability grades** (from [`docs/research/L7-verified-data-survey.md`](./research/L7-verified-data-survey.md)): **A** = GM service literature / faithful mirror of GM service text; **B** = established diesel publication or OE-parts manufacturer publishing OE specs (DieselHub, MotorTrend/DrivingLine, MAHLE Original, UEM, ZZ Diesel); **C** = specialist vendor spec page publishing dimensions its parts must match (Callies, Manley, BoostLine/Wiseco, Manton, Edelbrock, DuramaxTuner/Calibrated Power, Dynomite Diesel).
@@ -16,11 +16,12 @@ Project: Duramax LLY Engine Lab · Governing plan: [`docs/PLAN.md`](./PLAN.md) (
 | --- | --- | ---: | --- | --- | --- | :---: | :---: |
 | `engineConfig.rodLengthMm` | `163.0` (`placeholder`) | **163.0** | `mm` | `published` | Manley `6.417 in` (`162.99 mm`), BoostLine `6.418 in` (`163.02 mm`), Callies `6.418 in`, UEM `163.000 mm` — four independent sources converge | **B + C** | §1 |
 | `engineConfig.crankThrowMm` | `49.5` (`placeholder`) | **49.5** | `mm` | `published` *(derived)* | Half of published `99.0 mm` (`3.897 in`) stroke (DieselHub; GM Authority; XDP; Callies `3.898 in`) | **B + C** | §6 |
-| `valveConfig.lobeLift` *(new)* | — *(replaced `maxLift: 12`)* | **7.14** | `mm` | `published` | GM LLY service literature (via `dieselmechanic.info` mirror): intake & exhaust cam lobe lift `0.281 ± 0.002 in` (`0.281 × 25.4 = 7.1374 mm`) | **A** | §4 |
-| `valveConfig.rockerRatioIntake` *(new)* | — | **1.36** | `ratio` | `published` | Callies factory-ratio Duramax cam table (`2001–2016`): `1.36:1` intake rocker ratio, corroborated by forum consensus | **C** | §9 |
-| `valveConfig.rockerRatioExhaust` *(new)* | — | **1.69** | `ratio` | `published` | Callies factory-ratio Duramax cam table (`2001–2016`): `1.69:1` exhaust rocker ratio (matches MotorTrend L5P exhaust check) | **C** | §9 |
-| `valveConfig.intakeMaxLift` *(new)* | `12` (`maxLift`, `placeholder`) | **9.7** | `mm` | `published` *(derived)* | `lobeLift (7.14 mm) × rockerRatioIntake (1.36) = 9.71 mm` (`0.281 in × 1.36 = 0.382 in = 9.707 mm`) | **A × C** | §4, §9 |
-| `valveConfig.exhaustMaxLift` *(new)* | `12` (`maxLift`, `placeholder`) | **12.1** | `mm` | `published` *(derived)* | `lobeLift (7.14 mm) × rockerRatioExhaust (1.69) = 12.07 mm` (`0.281 in × 1.69 = 0.475 in = 12.062 mm`) | **A × C** | §4, §9 |
+| `valveConfig.intakeLobeLift` *(D-044)* | `7.14` (`lobeLift`, M7; `12` `maxLift` pre-M7) | **7.273** | `mm` | `published` | GM 2006 Silverado 2500 LLY service manual ("Engine General Specifications & Service Limits"): intake cam lobe lift production value `7.273 mm` (`0.2863 in`), superseding M7's `0.281 ± 0.002 in` service-procedure figure | **A** | §4 |
+| `valveConfig.exhaustLobeLift` *(D-044)* | `7.14` (`lobeLift`, M7; `12` `maxLift` pre-M7) | **5.907** | `mm` | `published` | GM 2006 Silverado 2500 LLY service manual ("Engine General Specifications & Service Limits"): exhaust cam lobe lift production value `5.907 mm` (`0.2326 in`), superseding M7's `0.281 ± 0.002 in` service-procedure figure | **A** | §4 |
+| `valveConfig.rockerRatioIntake` *(new)* | — | **1.36** | `ratio` | `published` | GM 2006 Silverado 2500 LLY service manual (`1.36:1` intake rocker ratio); corroborated by Callies factory-ratio Duramax cam table (`2001–2016`) and forum consensus | **A + C** | §9 |
+| `valveConfig.rockerRatioExhaust` *(new)* | — | **1.69** | `ratio` | `published` | GM 2006 Silverado 2500 LLY service manual (`1.69:1` exhaust rocker ratio); corroborated by Callies factory-ratio Duramax cam table (`2001–2016`) | **A + C** | §9 |
+| `valveConfig.intakeMaxLift` *(D-044)* | `9.7` (M7) / `12` (`maxLift` pre-M7) | **9.9** | `mm` | `published` *(derived)* | `intakeLobeLift (7.273 mm) × rockerRatioIntake (1.36) = 9.891 mm` (`0.3894 in`), rounded to one decimal place (`9.9 mm`) | **A × A** | §4, §9 |
+| `valveConfig.exhaustMaxLift` *(D-044)* | `12.1` (M7) / `12` (`maxLift` pre-M7) | **10.0** | `mm` | `published` *(derived)* | `exhaustLobeLift (5.907 mm) × rockerRatioExhaust (1.69) = 9.983 mm` (`0.3930 in`), rounded to one decimal place (`10.0 mm`) | **A × A** | §4, §9 |
 | `detailConfig.pistonCompressionHeightMm` | `52` (`placeholder`) | **49.8** | `mm` | `published` | MAHLE Original (OE supplier, `224-3451` / `224-3452`) LB7/LLY compression height `1.961 in` (`49.81 mm`); UEM `1.96 in / 49.8 mm` agrees | **B** | §8 |
 | `detailConfig.wristPinDiameterMm` | `33` (`placeholder`) | **34.5** | `mm` | `published` | MAHLE OE, UEM, Speed of Air, BoostLine: floating offset wrist pin `1.358 in` (`34.49 mm`) | **B + C** | §8 |
 | `detailConfig.pinJournalDiameterMm` | `60` (`placeholder`) | **62.9** | `mm` | `published` | Callies `2.477 in`, BoostLine `2.476 in`, MotorTrend L5P teardown noting pre-L5P rod journal `2.4764 in` (`62.901 mm`) | **B + C** | §6 |
@@ -38,11 +39,11 @@ Project: Duramax LLY Engine Lab · Governing plan: [`docs/PLAN.md`](./PLAN.md) (
 
 ## 2. Derivations, Dimension Stack & Not-Adopted Register (Spec §§2.2–2.4, §3)
 
-### 2.1 Per-Valve Lift Derivation (`valveConfig.ts`)
-- Published GM LLY lobe lift is symmetric across intake and exhaust lobes: `0.281 ± 0.002 in` (`7.1374 mm`, stored as `lobeLift = 7.14 mm`, Survey §4, Grade A).
-- Published pre-L5P Duramax rocker ratios are asymmetric: `1.36:1` intake and `1.69:1` exhaust (Callies `2001–2016` factory-ratio cam table, Survey §9, Grade C).
+### 2.1 Per-Valve Lift Derivation (`valveConfig.ts`, updated per D-044)
+- Published GM LLY production lobe lift is asymmetric across intake and exhaust lobes: `7.273 mm` (`0.2863 in`) intake and `5.907 mm` (`0.2326 in`) exhaust (2006 Chevrolet Silverado 2500 RPO LLY service manual "Engine General Specifications & Service Limits", Survey §4, Grade A; superseding M7/D-035's `0.281 ± 0.002 in` / `7.14 mm` service-procedure figure per D-044).
+- Published LLY rocker ratios are asymmetric: `1.36:1` intake and `1.69:1` exhaust (confirmed in the same GM LLY specifications table and corroborated by Callies' `2001–2016` factory-ratio cam table, Survey §9, Grade A + C).
 - Resulting peak valve lifts:
-  $$\text{intakeMaxLift} = 7.14 \times 1.36 = 9.7104\text{ mm} \rightarrow \mathbf{9.7\text{ mm}}, \qquad \text{exhaustMaxLift} = 7.14 \times 1.69 = 12.0666\text{ mm} \rightarrow \mathbf{12.1\text{ mm}}$$
+  $$\text{intakeMaxLift} = 7.273 \times 1.36 = 9.89128\text{ mm} \rightarrow \mathbf{9.9\text{ mm}}, \qquad \text{exhaustMaxLift} = 5.907 \times 1.69 = 9.98283\text{ mm} \rightarrow \mathbf{10.0\text{ mm}}$$
 - [`src/core/kinematics.ts`](../src/core/kinematics.ts) reads `valves.intakeMaxLift` and `valves.exhaustMaxLift` separately in `computeState` and `pistonValveClearanceM` without altering any exported function signature or [`src/core/interfaces.ts`](../src/core/interfaces.ts).
 
 ### 2.2 Per-Channel Rocker Cup Offsets (`detailConfig.ts`, `layout.ts`)
@@ -61,9 +62,9 @@ Project: Duramax LLY Engine Lab · Governing plan: [`docs/PLAN.md`](./PLAN.md) (
   - Bridge undersides (closed): `264.3 + 100 = 364.3 mm` (was `366.5 mm`)
   - Bridge tops / rocker pads / rocker shaft axis: `264.3 + 110 = 374.3 mm` (was `376.5 mm`)
   - Lifter pushrod-seat tops: `130.0 mm` from crank axis (unchanged) → nominal vertical span `ΔB = 374.3 - 130.0 = 244.3 mm` (`pushrodLengthMm = 244 mm`, `placeholder`; true 3D rest lengths from M3 gallery seats are `250.0 mm` intake and `249.0 mm` exhaust).
-- **Piston-to-valve clearance (`pistonValveClearanceM`, `0°–720°`):**
-  - **Intake (`9.7 mm` peak lift, `350°–590°`):** minimum **`1.802 mm` at `α = 362.00°`** (up from `1.743 mm` under the `12 mm` placeholder lift).
-  - **Exhaust (`12.1 mm` peak lift, `110°–350°`):** open-window minimum **`2.979 mm` at `α = 350.00°`**; full-cycle minimum **`2.000 mm`** at closed-valve TDCs (`0° / 360° / 720°`, equal to `deckGap`).
+- **Piston-to-valve clearance (`pistonValveClearanceM`, `0°–720°`, D-044 lifts):**
+  - **Intake (`9.9 mm` peak lift, `350°–590°`):** minimum **`1.797 mm` at `α = 362.00°`** (`1.7970 mm` at `362.05°`; was `1.802 mm` under M7's `9.7 mm` lift and `1.743 mm` under the pre-M7 `12 mm` placeholder lift).
+  - **Exhaust (`10.0 mm` peak lift, `110°–350°`):** open-window minimum **`2.979 mm` at `α = 350.00°`**; full-cycle minimum **`2.000 mm`** at closed-valve TDCs (`0° / 360° / 720°`, equal to `deckGap`).
   - Both channels remain strictly positive across all `720°` without tuning any §2 input or altering `deckGap = 2.0 mm`.
 
 ### 2.4 Published / Partially Published Data Recorded, **Not** Adopted (Spec §2.4)
@@ -89,7 +90,7 @@ Every geometric parameter below remains `confidence: 'placeholder'` (or an unmod
 | --- | --- | --- | --- |
 | **Bore spacing / cylinder pitch** | `valveConfig.borePitch = 115 mm` (bank stagger `0 mm` in bank-local station slices, paired throws) | **NOT PUBLICLY AVAILABLE** (§2) | Trade-press mention of `"103 mm bore spacing"` is an editorial garble of the `103 mm` bore diameter. |
 | **Block deck height & TDC piston protrusion** | `valveConfig.deckGap = 2.0 mm` → modeled deck plane `B = 264.3 mm` above crank axis | **NOT PUBLICLY AVAILABLE** (§3) | Crown-at-TDC stack (`262.3 mm`) is derived from published parts, but LLY block deck height and piston protrusion/clearance at TDC are unpublished. |
-| **Cam duration, LSA & valve timing events** | `intakeOpenDeg = 350°`, `intakeCloseDeg = 590°`, `exhaustOpenDeg = 110°`, `exhaustCloseDeg = 350°`, `sin²` lift profile | **PARTIALLY PUBLISHED** overall; timing/duration/LSA **NOT PUBLICLY AVAILABLE** (§4) | GM service text gives lobe lift (`0.281 in`, adopted) and bearing journals, not IVO/IVC/EVO/EVC, duration, or lobe profile shape. |
+| **Cam duration, LSA & valve timing events** | `intakeOpenDeg = 350°`, `intakeCloseDeg = 590°`, `exhaustOpenDeg = 110°`, `exhaustCloseDeg = 350°`, `sin²` lift profile | **PARTIALLY PUBLISHED** overall; timing/duration/LSA **NOT PUBLICLY AVAILABLE** (§4) | GM LLY specifications table gives production lobe lifts (`7.273 / 5.907 mm`, adopted per D-044) and bearing journals, not IVO/IVC/EVO/EVC, duration, or lobe profile shape. |
 | **Valve springs** | `springFreeLengthMm = 48 mm`, `springDiameterMm = 28 mm`, `springSeatHeightMm = 45 mm` | **NOT PUBLICLY AVAILABLE** (§5) | Published aftermarket beehive specs (`2006–2016`) do not cover the `2004.5–2005` LLY. *(Edelbrock's `27 mm` OD applies to its LB7 head kit.)* |
 | **Roller lifter body diameter** | `detailConfig.lifterBodyDiameterMm = 23.85 mm` (`lifter_r = 11.925 mm`, `lifter_h = 35.1 mm`) | **NOT PUBLICLY AVAILABLE** (§9) | Decoupled from `pushrodDiameterMm` at M7 so `Ø 11.1 mm` pushrods do not inflate lifter diameter into piston-skirt sweep (`pistonLifterThresholdMm = 63.35 mm` preserved). |
 | **Lifter gallery placement** | `lifterIntakeXOffsetMm = 56 mm`, `lifterIntakeValleyOffsetMm = 36 mm`, `lifterExhaustXOffsetMm = 35 mm`, `lifterExhaustValleyOffsetMm = 55 mm`, `lifterTopBoreOffsetMm = 130 mm` | **NOT PUBLICLY AVAILABLE** (§10) | No dimensioned block-valley drawing is public; M3 coordinates are retained to clear piston sweep, neighbor bores, and crank webs. |
