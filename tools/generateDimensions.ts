@@ -20,7 +20,8 @@ const dimensions: Record<string, number> = {
 
   // valveConfig interface dimensions (mm, preserving exact TS field names without Mm suffix)
   borePitch: valveConfig.borePitch.value,
-  maxLift: valveConfig.maxLift.value,
+  intakeMaxLift: valveConfig.intakeMaxLift.value,
+  exhaustMaxLift: valveConfig.exhaustMaxLift.value,
   deckGap: valveConfig.deckGap.value,
 };
 

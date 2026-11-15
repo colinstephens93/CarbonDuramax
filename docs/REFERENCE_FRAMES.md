@@ -73,7 +73,7 @@ Every section-active reference frame (`RF-6`, `RF-14`, `RF-15`, `RF-16`, `RF-17`
 
 ### RF-2 — Cylinder 1 Head & Peak Intake Lift Close-Up (`θ = 470°`, Exterior Off)
 
-- **Crank angle:** `θ = 470°` (Cylinder 1 intake cam lobe at peak lift, `intakeLift ≈ 12.0 mm`, `exhaustLift = 0.0 mm`)
+- **Crank angle:** `θ = 470°` (Cylinder 1 intake cam lobe at peak lift, `intakeLift = 9.9 mm`, `exhaustLift = 0.0 mm`)
 - **Camera position (m):** `[0.6600, -0.3800, 0.5600]`
 - **Camera target (m):** `[0.4025, -0.2000, 0.2550]` (aimed at Cylinder 1's RH head & rocker gallery at `stationCenterX = 0.4025 m`)
 - **Quality profile:** `Full`
@@ -336,7 +336,7 @@ Every section-active reference frame (`RF-6`, `RF-14`, `RF-15`, `RF-16`, `RF-17`
 
 ### RF-15 — Cut Cylinder Head Close-Up (`θ = 470°`, Section X @ `402.5 mm`, Exterior Off)
 
-- **Crank angle:** `θ = 470°` (Cylinder 1 peak intake lift `≈ 12.1 mm`, matching `RF-2`'s crank angle and camera pose)
+- **Crank angle:** `θ = 470°` (Cylinder 1 peak intake lift `= 9.9 mm`, matching `RF-2`'s crank angle and camera pose)
 - **Camera position (m):** `[0.6600, -0.3800, 0.5600]` (`fov = 42°`, `up = [0, 0, 1]`; identical to `RF-2`)
 - **Camera target (m):** `[0.4025, -0.2000, 0.2550]`
 - **Quality profile:** `Full` (`PCFSoftShadowMap` `2048×2048` enabled)

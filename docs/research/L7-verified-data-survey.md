@@ -61,13 +61,20 @@ labeled DERIVED; where no credible publication exists, the verdict says so.
 
 ## 4. Stock camshaft (LLY)
 
-- **Lobe lift: 0.281 ± 0.002 in (7.13 ± 0.05 mm), intake and exhaust the same** — from GM service
-  text for the LLY ("Measure lift. Lift for both intake and exhaust valve lobes should be
-  0.281 ± 0.002 in"), mirrored at dieselmechanic.info's Duramax LLY camshaft service page.
-  Same source: cam bearing journals 1–4 = 54.975–55.025 mm, journal 5 = 50.975–51.025 mm.
-  — grade A (GM service literature via mirror).
-- **Valve lift (DERIVED from published inputs):** lobe lift × rocker ratio (§9):
-  intake 0.281 × 1.36 = **0.382 in (9.7 mm)**; exhaust 0.281 × 1.69 = **0.475 in (12.1 mm)**.
+- **Lobe lift: intake 7.273 mm (0.2863 in), exhaust 5.907 mm (0.2326 in)** — GM production values
+  from the 2006 Chevrolet Silverado 2500 service manual, RPO LLY, "Engine General Specifications &
+  Service Limits" ("Camshaft Lobe Lift — Intake — Production Value 7.273 mm (0.2863 in)"; "Camshaft
+  Lobe Lift — Exhaust — Production Value 5.907 mm (0.2326 in)", scanned GM specifications table via
+  Operation CHARM, reconciled in the 2026-11-15 LLY data cross-check; D-044). — grade A (GM
+  specifications table). *(Note: an earlier 0.281 ± 0.002 in / 7.13 ± 0.05 mm figure mirrored at
+  dieselmechanic.info's Duramax LLY camshaft service page — "Measure lift. Lift for both intake and
+  exhaust valve lobes should be 0.281 ± 0.002 in" — is retained here only as a noted service
+  measurement-procedure value and is superseded as the production specification; same mirror gives
+  cam bearing journals 1–4 = 54.975–55.025 mm, journal 5 = 50.975–51.025 mm.)*
+- **Valve lift (DERIVED from published inputs):** lobe lift × rocker ratio (§9; 1.36:1 intake and
+  1.69:1 exhaust also directly published in the same GM LLY specifications table):
+  intake 7.273 × 1.36 = **9.891 mm (0.3894 in; ≈9.89 mm, 9.9 mm one-decimal)**; exhaust 5.907 × 1.69
+  = **9.983 mm (0.3930 in; ≈9.98 mm, 10.0 mm one-decimal)**.
 - **Duration, lobe separation, IVO/IVC/EVO/EVC for the LLY: not found in any credible source.**
   GM service literature publishes lobe lift and wear limits, not timing events. Numbers in
   circulation are for other variants and must not be imported: a forum-measured **LBZ** cam
@@ -75,7 +82,8 @@ labeled DERIVED; where no credible publication exists, the verdict says so.
   aftermarket, and the L5P's measured lobes (0.389/0.393 in) are a different engine.
 - **Verdict: PARTIALLY PUBLISHED** — lobe lift VERIFIED-PUBLISHED; timing events/duration/LSA
   NOT PUBLICLY AVAILABLE. Our placeholder valve-timing/lift profile stays illustrative except
-  that max lift can now be anchored: ~9.7 mm intake / ~12.1 mm exhaust at the valve.
+  that max lift can now be anchored: ~9.89 mm intake / ~9.98 mm exhaust at the valve (9.9 / 10.0 mm
+  in sim config).
 
 ## 5. Valves and springs
 
@@ -211,7 +219,7 @@ grade C, a tuner that measures cores; corroborated in part by DrivingLine and XD
 | 1 | Rod length 163.0 mm | **VERIFIED-PUBLISHED** | Upgrade placeholder → published (Manley/BoostLine/Callies/UEM). Rod end widths stay vendor-grade |
 | 2 | Bore spacing | NOT PUBLICLY AVAILABLE | 115 mm pitch stays **illustrative** |
 | 3 | Deck height | NOT PUBLICLY AVAILABLE | Stays **illustrative** (262.3 mm TDC stack is a labeled derivation only) |
-| 4 | Cam lobe lift 0.281 in; valve lift ≈9.7/12.1 mm | PARTIALLY PUBLISHED | Lift can be anchored to published inputs; duration/timing/LSA stay **illustrative** |
+| 4 | Cam lobe lift 7.273 / 5.907 mm; valve lift ≈9.89/9.98 mm | PARTIALLY PUBLISHED | Lift can be anchored to published inputs (9.9 / 10.0 mm); duration/timing/LSA stay **illustrative** |
 | 5 | Valves 33.0 / 31.0 mm | **VERIFIED-PUBLISHED** | Upgrade. Spring specs stay illustrative |
 | 6 | Main journal 79.9 mm; rod journal 62.9 mm; throw 49.5 mm; shared pin | VERIFIED (journals/throw) / PARTIAL (shared pin) | Upgrade journals; shared-pin layout already correct, keep provenance note |
 | 7 | 30×30×32 in approx; 835 lb dry | PARTIALLY PUBLISHED | Use as published-approximate check on exterior shell |
