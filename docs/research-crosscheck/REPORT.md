@@ -4,7 +4,7 @@
 
 **Method / independence note:** This survey was built only from external published sources located during this research. I did not read `docs/research/L7-verified-data-survey.md`, `src/data/dimensions.json`, or any other project data file for these values. Values are quoted first in the units used by the source; conversions follow in parentheses. Where a source is for a different RPO, it is explicitly labelled as such and is **not** presented as an LLY value.
 
-**Key primary source:** 2006 Chevrolet Silverado 2500 service manual, “Engine General Specifications & Service Limits,” RPO **LLY**, as hosted by Operation CHARM. The page is a scanned GM table; the relevant images are linked below. The same LLY values are repeated in the 2007 GMC Savana RPO LLY “Engine Mechanical Specifications” text page.
+**Key primary source:** 2006 Chevrolet Silverado 2500 service manual, “Engine General Specifications & Service Limits,” RPO **LLY**, as hosted by Operation CHARM. The page is a scanned GM table; the relevant images are linked below. The rod, crankshaft and piston-pin values are repeated in the 2007 GMC Savana RPO LLY “Engine Mechanical Specifications” text page; that later page lists a different compression ratio, so it is used only for the dimensions it repeats.
 
 - Manual page: [2006 Silverado 2500 LLY — Engine General Specifications & Service Limits](https://charm.li/Chevrolet/2006/Silverado%202500%202WD%20V8-6.6L%20DSL%20Turbo/Repair%20and%20Diagnosis/Engine%2C%20Cooling%20and%20Exhaust/Engine/Specifications/Mechanical%20Specifications/Engine%20General%20Specifications%20%26%20Service%20Limits/)
 - Scanned table, general data and cam lobe lift: [image 320351269](https://charm.li/images/DM13Q313/gm60/320351269/)
