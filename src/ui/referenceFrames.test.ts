@@ -1,14 +1,16 @@
-// Milestone 8 reference-frame definition tests (docs/specs/M8-part-variants.md §9.12).
+// Milestone 8, 10 & 11 reference-frame definition tests
+// (docs/specs/M8-part-variants.md §9.12, docs/specs/M11-capped-cutaways.md §8 test 7).
 // Imports the pure, DOM-free and Three.js-free src/ui/referenceFrames.ts table directly.
 
 import { describe, expect, it } from 'vitest';
 import { checkCompatibility, fullCatalog, slotForVariantId } from '../catalog';
 import type { Build, PartSlotId } from '../core/interfaces';
 import { stockBuild } from '../perf';
+import { SECTION_RANGES_MM } from '../renderer/viewLayout';
 import { REFERENCE_FRAME_DEFS } from './referenceFrames';
 
-describe('Milestone 8 & 10 reference frames (src/ui/referenceFrames.test.ts)', () => {
-  it('12. validates RF-1..RF-13 states, keeps RF-1..RF-7 and RF-11..RF-13 stock, and verifies RF-8..RF-10 variant ids & compatibility', () => {
+describe('Milestone 8, 10 & 11 reference frames (src/ui/referenceFrames.test.ts)', () => {
+  it('7. validates RF-1..RF-17 states, keeps stock frames variant-free, verifies RF-14..RF-17 section ranges/cutting planes, and verifies RF-8..RF-10 compatibility', () => {
     const expectedIds = [
       'RF-1',
       'RF-2',
@@ -23,6 +25,10 @@ describe('Milestone 8 & 10 reference frames (src/ui/referenceFrames.test.ts)', (
       'RF-11',
       'RF-12',
       'RF-13',
+      'RF-14',
+      'RF-15',
+      'RF-16',
+      'RF-17',
     ];
     expect(Object.keys(REFERENCE_FRAME_DEFS)).toEqual(expectedIds);
 
@@ -67,7 +73,7 @@ describe('Milestone 8 & 10 reference frames (src/ui/referenceFrames.test.ts)', (
       }
     }
 
-    // RF-1 .. RF-7 and RF-11 .. RF-13 carry no variants field (stock builds)
+    // RF-1 .. RF-7 and RF-11 .. RF-17 carry no variants field (stock builds)
     for (const stockFrameId of [
       'RF-1',
       'RF-2',
@@ -79,6 +85,10 @@ describe('Milestone 8 & 10 reference frames (src/ui/referenceFrames.test.ts)', (
       'RF-11',
       'RF-12',
       'RF-13',
+      'RF-14',
+      'RF-15',
+      'RF-16',
+      'RF-17',
     ]) {
       const def = REFERENCE_FRAME_DEFS[stockFrameId]!;
       expect('variants' in def).toBe(false);
@@ -88,6 +98,25 @@ describe('Milestone 8 & 10 reference frames (src/ui/referenceFrames.test.ts)', (
     // M10 RF-11 .. RF-13 all use stock builds with Exterior on
     for (const m10FrameId of ['RF-11', 'RF-12', 'RF-13']) {
       expect(REFERENCE_FRAME_DEFS[m10FrameId]!.exterior).toBe(true);
+    }
+
+    // M11 §8 test 7: RF-14 .. RF-17 section mode/position within SECTION_RANGES_MM and at a true cutting plane
+    for (const m11FrameId of ['RF-14', 'RF-15', 'RF-16', 'RF-17']) {
+      const def = REFERENCE_FRAME_DEFS[m11FrameId]!;
+      expect(def.sectionMode === 'x' || def.sectionMode === 'y').toBe(true);
+      expect(def.sectionPositionMm).toBeDefined();
+      const mode = def.sectionMode as 'x' | 'y';
+      const posMm = def.sectionPositionMm!;
+      const range = SECTION_RANGES_MM[mode];
+      expect(posMm).toBeGreaterThanOrEqual(range.minMm);
+      expect(posMm).toBeLessThanOrEqual(range.maxMm);
+
+      if (mode === 'x') {
+        expect(posMm).toBeLessThan(617.8);
+      } else {
+        const hasIntercooler = def.variants?.includes('intercooler_upgraded') ?? false;
+        expect(posMm).toBeLessThan(hasIntercooler ? 696.0 : 480.66);
+      }
     }
 
     // RF-8 .. RF-10 carry valid visual variants and form coherent M6 builds

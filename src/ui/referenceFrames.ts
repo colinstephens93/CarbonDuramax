@@ -1,4 +1,4 @@
-// Pure, DOM-free and Three.js-free reference-frame table (RF-1 .. RF-10)
+// Pure, DOM-free and Three.js-free reference-frame table (RF-1 .. RF-17)
 // (Milestone 8, D-038; docs/specs/M8-part-variants.md §5.2, §9.12).
 
 import type { UiSectionMode } from './engineControls';
@@ -126,6 +126,50 @@ export const REFERENCE_FRAME_DEFS: Readonly<Record<string, ReferenceFrameDef>> =
     exterior: true,
     explodePercent: 0,
     sectionMode: 'off',
+    xray: false,
+    labels: false,
+  },
+  'RF-14': {
+    thetaDeg: 180,
+    position: [0.9, -0.62, 0.25],
+    target: [0.4, -0.15, 0.02],
+    exterior: false,
+    explodePercent: 0,
+    sectionMode: 'x',
+    sectionPositionMm: 402.5,
+    xray: false,
+    labels: false,
+  },
+  'RF-15': {
+    thetaDeg: 470,
+    position: [0.66, -0.38, 0.56],
+    target: [0.4025, -0.2, 0.255],
+    exterior: false,
+    explodePercent: 0,
+    sectionMode: 'x',
+    sectionPositionMm: 402.5,
+    xray: false,
+    labels: false,
+  },
+  'RF-16': {
+    thetaDeg: 180,
+    position: [1.38, -1.18, 0.72],
+    target: [0.3, -0.02, 0.17],
+    exterior: true,
+    explodePercent: 0,
+    sectionMode: 'x',
+    sectionPositionMm: 402.5,
+    xray: false,
+    labels: false,
+  },
+  'RF-17': {
+    thetaDeg: 0,
+    position: [0.23, 1.05, 0.45],
+    target: [0.23, -0.12, 0.16],
+    exterior: false,
+    explodePercent: 0,
+    sectionMode: 'y',
+    sectionPositionMm: -185,
     xray: false,
     labels: false,
   },
