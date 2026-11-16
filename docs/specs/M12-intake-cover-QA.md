@@ -300,3 +300,106 @@ git grep -n "WebGLRenderTarget\|stencil: true\|setRenderTarget\|overrideMaterial
 ```
 
 **No spec or survey edits were made in this run.**
+
+---
+
+## Second QA pass — D-037 step 5 confirmation (2026-11-16)
+
+- **Reviewer:** independent QA agent, second pass; separate from the drafting and revision contexts.
+- **Branch / revision reviewed:** `plan/m12-intake-cover` at `307291d` (“Revise M12 intake-cover spec after QA…”). Spec 824 lines; survey 185 lines; QA record 302 lines before this section.
+- **Method:** re-parsed the frozen shell (`public/Duramax_LLY_2005_66L_V8.glb`, SHA-256 `d51f88a0…8554`), the ten internal stock GLBs, the five M8 variant GLBs and `assets-src/variant_dimensions.json`; re-derived every changed/added number and the D-033 totals; re-read the revised spec, survey and QA dispositions for stale copies; checked the changed test/acceptance text against the shipped code seams. WebGL benchmark rows were again **not re-executed** (no headless WebGL browser in this sandbox); they were checked against the committed M11 detail rows, and that limitation is stated below.
+- **Result:** **3/3 blockers closed. 1 new should-fix (N1) and 5 nits (N2–N6). No new blocker.** The substantive revision is sound; N1 is a one-line test/acceptance coverage gap that should be corrected before Buckley's audit. No spec or survey edit was made in this pass.
+
+### B1. Per-blocker verdicts
+
+| Blocker | Verdict | Evidence |
+| --- | :---: | --- |
+| **QA-01** — `electronics` omitted / false “all other ≥ 67.07” floor | **CLOSED** | All 22 shell groups re-parsed. `electronics` min **25.908 mm** at **(249.485, 91.198, 344.092)** — inside the planform in XY and 25.908 mm below the 370.0 mm underside. `cp3Fuel` **67.070 mm** at (291.579, 165.219, 320.467); the lowest remaining group is `beltDrive` **73.407 mm** at (472.000, 134.305, 414.156), next `boostPipe` 73.740. The revised §4.5 table (spec `:220-228`), §15.4 (`:718-727`), test 3 (`:495`) and acceptance 4 (`:622`) now name `electronics` and state the remaining-group floor. The old “all other ≥ 67.07” sentence is gone. **New N1** is a coverage gap in how test 3/acceptance 4 express the remaining-group floor, not a defect in the measured data. |
+| **QA-02** — X-Ray ghosting load-order race | **CLOSED** | The shipped code still has the one-shot `exteriorMaterialsGhosted` boolean and the `if (!exteriorShell) return;` early return (`src/renderer/engineScene.ts:1186-1218`), so the original race was real. The revision replaces it with `createExteriorGhostRegistry` (§5.1 `:267`), whose `register()` stores the original snapshot and **immediately applies the current ghost state**, and whose `setGhosted()` is idempotent for the snapshot. The load path registers the cover materials then calls `syncExteriorShellState()` (§5.2 items 2/4, `:288,290`); `syncExteriorShellState` calls `setGhosted(xrayEnabled)` unconditionally. Test 7 (`:499`) now exercises the exact sequence `setGhosted(true)` → `register(coverMaterials)` at runtime and asserts the late materials are ghosted, then restores; the source half asserts the load-path call and the removal of the one-shot boolean. Acceptance 8 (`:626`) adds the browser pre-load X-Ray check. This genuinely catches the described race, not just a source literal. |
+| **QA-03** — planform orientation vs survey form / “form-matched” claim | **CLOSED** | The deviation and reason are recorded in every place the disposition names: §15.7 item 10 (`:771`), the draft D-046 entry (§12.2, `:571`), the OPEN ITEMS text (§12.3, `:581`), and the `docs/M12-COVER.md` deliverable (§11.1, `:541`). §1 item 4 (`:18`), §4.2 (`:159`) and the parameter table (`:175`) now label the planform **clearance-driven, not form-matched**, and explain that re-orienting it would put the cover into the intake-duct/V2 corridor the rear-right relief clears. A grep of the spec finds no affirmative “form-matched” claim; the only occurrences are negations (“not form-matched”). **N4** records one stale survey sentence. |
+
+### B2. Recomputation of the changed / added numbers
+
+All values below were recomputed independently in this pass. The shell parse used the same node/world-matrix transform as `src/renderer/shellAssets.test.ts` (`p_mm = (1000·g_x, −1000·g_z, 1000·g_y)`) and the same P1–P6 planform with the body envelope Z 370.0–417.2.
+
+| Claim (revised spec) | Independent recomputation | Match? |
+| --- | --- | :---: |
+| `electronics` min **25.908 mm** at (249.485, 91.198, 344.092) | **25.908 mm** at (249.485, 91.198, 344.092); XY-inside planform, vertical distance to Z 370.0 | ✅ |
+| Remaining-group floor **73.407 mm** (`beltDrive`) | **73.407 mm** at (472.000, 134.305, 414.156); next-lowest remaining `boostPipe` **73.740 mm**; `cp3Fuel` still **67.070 mm** | ✅ |
+| `chargePipeCold` **5.172 mm** at (342.338, −99.358, 364.828) | **5.172 mm** = 370.0 − 364.828; that is the highest pipe vertex under the footprint | ✅ |
+| `chargePipeCold` group max **369.078 mm** at (348.544, −140.375), outside planform; **0.922 mm** gap | **369.078 mm** at (348.544, −140.375); point-in-polygon returns **outside**; 370.0 − 369.078 = **0.922 mm** | ✅ |
+| `resonator` max X **236.546 mm**; rear gap **8.454 mm** | max X **236.546 mm** at (236.546, 19.201, 366.367); 245.0 − 236.546 = **8.454 mm**. The 8.793 mm min-clearance vertex (236.207, 22.301, 387.112) is a different vertex, as the spec says | ✅ |
+| V1/V3/V4 actual bounds **47.12 / −113.80 / 472.68** → separations **197.88 / 358.80 / 352.68** | Parsed the five variant GLBs in the project frame: `turbo_large` max X **47.12**, `exhaust_4in` max X **−113.80**, `intercooler_upgraded` min Y **472.68**. 245.0 − 47.12 = **197.88**; 245.0 − (−113.80) = **358.80**; 472.68 − 120.0 = **352.68** | ✅ |
+| p95 baselines desktop **16.8 ms**, phone **17.0 ms** | M11 §3.2 detail row desktop stock p95 **16.8 ms**; M11 §3.3 detail row phone stock p95 **17.0 ms**. The spec pins these and names the §3.4 rounding convention | ✅ |
+| GLB cap page weight **+0.652 %** at 65,536 B vs 10,050,510 B | 65,536 / 10,050,510 = **0.652066 %** → **0.652 %** | ✅ |
+| Stock + cover **310,124**; worst + cover **306,432**; cap-guard **317,368** | Stock **308,324** + 1,800 = **310,124**. Worst **304,632** + 1,800 = **306,432**. Cap guard 308,324 − 6,500 + 10,800 + 2,944 + 1,800 = **317,368**; headroom 320,000 − 317,368 = **2,632**, 360,000 − 317,368 = **42,632** | ✅ |
+
+**D-033 totals re-derived from the assets, not copied:** parsing the ten internal GLBs gives **4,832×8 + 1,180×8 + 1,352×4 + 3,532×8 + 4,504×16 + 4,504×16 + 1,272×16 + 1,240×8 + 408×16 + 924×8 = 270,080**; the shell parses to **37,100** triangles; adding the procedural main shaft **1,080** and ground **64** gives **308,324**. The measured worst case is 308,324 − 6,912 (8 pistons 4,832→3,968) − 6,500 (preserved shell subtrees) + 9,720 (measured external variants 3,204+2,560+2,436+1,520) = **304,632**. Every revised +cover row follows.
+
+**All 22 groups, sorted by minimum clearance (mm):** `chargePipeCold` 5.172; `alternator` 8.084; `acComp` 8.246; `resonator` 8.793; `intakeBridge` 18.046; `electronics` 25.908; `intake` 48.049; `cp3Fuel` 67.070; `beltDrive` 73.407; `boostPipe` 73.740; `egrSystem` 83.346; `oilFill` 91.762; `fuelFilter` 92.754; `heads` 115.367; `valveCovers` 115.794; `frontCover` 124.085; `injectors` 126.918; `blockPan` 128.494; `turbo` 195.807; `exhaustManifolds` 254.527; `liftBracket` 267.196; `dipstick` 304.200. The inside-envelope count is **0** for every group, and **no** shell vertex above Z 417.2 lies inside the planform.
+
+### B3. New findings introduced or left by the revision
+
+| ID | Severity | Location | Finding | Required action |
+| --- | --- | --- | --- | --- |
+| **N1** | **should-fix** | spec `:495` (test 3), `:622` (acceptance 4); table `:228` | **The remaining-group floor is asserted through one proxy group, not across all remaining groups.** Test 3 names nine groups and then `beltDrive` “the lowest remaining group”; acceptance 4 repeats `beltDrive ≥ 73.4`. The other **13** remaining groups are not asserted. A future shell re-pin that lowered, say, `boostPipe` (currently 73.740) to 70 mm would leave `beltDrive` at 73.407 and both test 3 and acceptance 4 would still pass — exactly the class of regression QA-01 was raised to prevent. The measured data and the §4.5 table are correct; the **test/acceptance expression** of “all remaining groups” is not. | Make test 3 compute the minimum over all 22 groups (or at least all 14 non-eight-named groups) and assert that minimum ≥ 73.4 with `beltDrive` as the expected argmin; make acceptance 4 say “all remaining groups ≥ 73.4, minimum `beltDrive` 73.407”. |
+| **N2** | nit | spec `:182`, `:183`, `:210`, `:494` | **“Rounded to 0.1 mm from the measured vertex” is false.** The rear marker (260.0, 0.0, 333.4) is **0.6916 mm** from the measured vertex (260.690, 0.0, 333.356); the clamp marker (372.0, −95.4, 353.4) is **0.3672 mm** from (371.634, −95.400, 353.367). The same sentences quote those deviations, so the 0.1-mm claim contradicts its own evidence. The geometry is safe under the stated 15 mm pad; the provenance wording is not. | Say “placeholder marker, 0.6916 / 0.3672 mm from the measured contact vertex under the 15 mm pad” (or state X rounded to 1 mm, Y/Z to 0.1 mm), and stop claiming 0.1 mm for both coordinates. |
+| **N3** | nit | spec `:766` (§15.7 item 5) | **“Resolved by the measured planform/height” contradicts the revision's own label.** The planform is now a clearance-driven placeholder, not a measured surface; only its clearances/height are measured-from-code. | Reword to “resolved by the clearance-driven planform and the measured-from-code underside/height”. |
+| **N4** | nit | survey `:104` (§5 consequence) | **The survey still says every cover dimension is a placeholder “derived from the measured M10 shell and the GM EPC/photo form.”** That is no longer true for the planform orientation, which the spec now labels clearance-driven and not form-matched. The survey's §3/§4 form evidence is correct and should stay; only this consequence sentence needs the caveat. | Add “except the planform orientation, which is a clearance-driven placeholder, not form-matched (§15.7)”. |
+| **N5** | nit | spec `:442` (§7.4); QA-22 disposition `:42` | **The M11 §3.4 rounding statement is inaccurate.** M11 §3.4 reports the phone measured value as **16.8–17.0 ms**, not “rounds the phone value to 16.8 ms”. The pinned baseline (phone 17.0, desktop 16.8) is correct; only the explanatory sentence is wrong. | Say “M11 §3.4 reports the phone range 16.8–17.0 ms; the §3.3 detail row's 17.0 ms is the pinned baseline”, and correct the QA-22 disposition wording in the same edit. |
+| **N6** | nit | spec `:95` (§2.4 material table), `:187` (§4.2 budget row) | **Two residual “clamp” labels survive the QA-14 rename.** The material table says the plastic is used by “Cover body, boss, clamp”; the body-triangle-cap row says “Simple closed shell + boss + clamp”. §15.7 item 11 says the spec does not claim the leg is the EPC clamp. The main labels are correct; these two table notes should say “front mount/leg”. | Replace “clamp” with “front mount/leg” in those two table cells. |
+
+No new **blocker** was found. N1 is the only new finding that should be corrected before handoff under `docs/PLANNING.md` step 5; N2–N6 are record/provenance nits and do not change a dimension, threshold or budget.
+
+### B4. Should-fix spot check (four dispositions)
+
+| Finding | Disposition claimed | Verified in the revised spec | Verdict |
+| --- | --- | --- | :---: |
+| **QA-04** measured vs capped cover cost | Header/§1 wording changed; §7.3 keeps 1,800 as conservative arithmetic and adds a build-actual row | Header `:5` says “budgeted ≤ 1,800 … cap (the asset is not built yet; actuals are recorded at build)”; §1 item 6 `:20` says “A budget record with a cap, not a measured asset”; §7.3 `:423-424` separates “budget cap” from “build actual; ≤ 1,800”; §15.3 `:710` repeats “The cover cap is a cap, not a measured asset”. No remaining claim that 1,800 is a measured body. | **Fixed** |
+| **QA-09** V1/V3/V4 called measured | Relabel as conservative envelope separations; cite actual bounds 47.12 / −113.80 / 472.68 and separations 197.88 / 358.80 / 352.68 | §6.6 `:361-368` labels them “conservative envelope separation” and gives the actual bounds plus the earlier shell/envelope values as parenthetical comparison; §12.1 PLAN `:561` and D-046 `:571` carry the same wording; §15.9 `:797-807` shows the arithmetic. I independently parsed the variant GLBs and reproduced 47.12 / −113.80 / 472.68. | **Fixed** |
+| **QA-10** pixel-diff acceptance not executable | Downgrade to a manual visual gate with recorded reviewer notes; no pixel-diff harness claimed | §8.2 `:483` says “compared visually”, “manual visual gate (no pixel-diff harness is committed)”, and requires the comparison/difference in `docs/M12-MEASUREMENTS.md`; acceptance 7 `:625` repeats that and says any visible difference is a stop-and-report; §16 step 7 `:821` says “compare them visually (manual gate), recording the notes”. | **Fixed** |
+| **QA-12** no GLB byte/page-weight budget | File-size cap and actual record; page-weight delta versus M9 baseline; test/acceptance | §4.1 `:149` caps the GLB at **≤ 64 KiB (65,536 B)**; §7.3 `:425` has a file-size row with actual-at-build; §7.4 `:444` states 65,536 / 10,050,510 = **+0.652 %** and the stop-and-report; test 1 `:493` asserts the cap; acceptance 3 `:621` and 5 `:623` check it; §12.4 `:593` carries the cap into the asset contract. Arithmetic reproduces. | **Fixed** |
+
+### B5. Gates and limitations
+
+- `npm test -- --reporter=dot` on this docs-only branch: **20 files, 95/95 tests passing**. `npm run typecheck`: **0 errors**. The revision changed only the spec, survey and QA record; no code or asset is touched by this pass.
+- The WebGL `?benchmark=1` rows and the three new RF captures were **not** re-executed here (no headless WebGL browser). This is the same limitation as the first pass and is not a new finding; the p95 baselines were checked against the committed M11 detail rows, and the geometry/budget arithmetic is re-derived above.
+- The shell parse reproduces **36,233 vertices / 37,100 triangles / 22 groups**, matching the first pass and `docs/M10-MEASUREMENTS.md`. The ten internal GLBs reproduce their M3 per-file triangle counts exactly.
+- No spec or survey text was edited in this pass. This section is the only change.
+
+### B6. Second-pass verdict
+
+- **Blockers:** **3 of 3 closed** (QA-01, QA-02, QA-03). No blocker remains open.
+- **Open findings:** **N1** is a new **should-fix** (test 3 / acceptance 4 remaining-group coverage). **N2–N6** are nits (marker rounding wording, “measured planform”, stale survey form sentence, M11 §3.4 rounding wording, two residual “clamp” labels).
+- **Ready for Buckley's audit?** **Not quite yet.** The substantive revision is sound and every decisive number reproduces, but `docs/PLANNING.md` step 5 requires should-fixes to be fixed; N1 is a one-line test/acceptance wording change. Once N1 is corrected (N2–N6 optional), the package is ready for Buckley's audit.
+
+### B7. Second-pass commands / evidence
+
+```bash
+# Reviewed revision
+git show --stat 307291d
+git status --short                 # clean before this QA-record edit
+
+# Shell parse (node, same transform as shellAssets.test.ts)
+#   p_mm = (1000*g_x, -1000*g_z, 1000*g_y)
+#   22 groups / 36,233 vertices / 37,100 triangles
+#   min per group: chargePipeCold 5.172; alternator 8.084; acComp 8.246;
+#     resonator 8.793; intakeBridge 18.046; electronics 25.908; intake 48.049;
+#     cp3Fuel 67.070; beltDrive 73.407; boostPipe 73.740; ... dipstick 304.200
+#   inside body envelope = 0; no shell vertex > 417.2 inside planform
+#   chargePipeCold max Z 369.078 at (348.544, -140.375), outside planform; gap 0.922
+#   resonator max X 236.546; rear gap 8.454
+
+# Internal GLB triangle parse (10 files, M3 instance counts)
+#   total 270,080; shell 37,100; + main shaft 1,080 + ground 64 = 308,324
+#   worst 304,632 = 308,324 - 6,912 - 6,500 + 9,720
+#   stock + cover 310,124; worst + cover 306,432
+#   cap guard 317,368 = 308,324 - 6,500 + 10,800 + 2,944 + 1,800
+
+# Variant GLB project-frame bounds
+#   turbo_large max X 47.12; exhaust_4in max X -113.80; intercooler min Y 472.68
+#   -> 197.88 / 358.80 / 352.68
+
+# Page weight
+node -e "console.log(65536/10050510*100)"   # 0.652066...
+```
