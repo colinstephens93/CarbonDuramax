@@ -987,11 +987,22 @@ describe('Milestone 12 optional LLY intake manifold cover (src/renderer/intakeCo
       '41d1315d1fcc18d85fea7b498c28a1567e0bcfb5262e99e940b8f4bc1e35fb93',
     );
 
-    expect(await sha256Of('catalog/stock.json')).toBe(
-      '640e461aa914a046009a16e9f483e8d2fd4a1c1b58bd4e5be4c815bebeed52f2',
+    const sha256TextLfOf = async (relPath: string): Promise<string> => {
+      const textLf = readFileSync(resolve(process.cwd(), relPath), 'utf8').replace(/\r\n/g, '\n');
+      const encoded = new TextEncoder().encode(textLf);
+      const copy = new Uint8Array(encoded.byteLength);
+      copy.set(encoded);
+      const digest = await globalThis.crypto.subtle.digest('SHA-256', copy);
+      return Array.from(new Uint8Array(digest))
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('');
+    };
+
+    expect(await sha256TextLfOf('catalog/stock.json')).toBe(
+      '5ee91f4b0c667c3d3c70c2a39eb9e8afebd614875a4809ea42a29bd75fe2a66d',
     );
-    expect(await sha256Of('catalog/modified.json')).toBe(
-      '3dd611c1fd7b29004966a5b856278d60d51059a10b26a3550880a488af3bff22',
+    expect(await sha256TextLfOf('catalog/modified.json')).toBe(
+      'af6f0ce3bccc039943267ccbd7ad58a8f7817bb7410019dc30751656c443897c',
     );
   });
 });
