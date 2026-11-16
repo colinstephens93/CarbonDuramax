@@ -55,7 +55,7 @@ The GM EPC group carries a line drawing (`p013890.jpg`) showing the cover in an 
 | Cover form | A broad, roughly shield-shaped cover with a wide rear section, a narrower front tongue/tab, rounded corners, and a large relief/notch on one front corner | [GM EPC line drawing p013890.jpg](https://gmsklad.ru/gmcat/pics/cadillac/p013890.jpg) | GM parts illustration | A (illustration) | **PARTIALLY PUBLISHED** — shape is visible, no scale |
 | Mounting, rear | A long vertical bolt shown entering the cover from above at the rear; EPC item 001 is the bolt | [GM EPC TC00-668](https://www.gmsklad.ru/catalog/cadillac/ESCALADE-ESV-(2WD)-2005/18178) | official parts catalog | A | **VERIFIED-PUBLISHED** (feature); position not dimensioned |
 | Mounting, front | Item 003, **`CLAMP, CHRG AIR CLR OTLT DUCT (PART OF 2)`**, shown at the front underside of the cover; the cover assembly includes it | [GM EPC TC00-668](https://www.gmsklad.ru/catalog/cadillac/ESCALADE-ESV-(2WD)-2005/18178) | official parts catalog | A | **VERIFIED-PUBLISHED** (feature); clamp diameter not published |
-| Rear fastener | **11588339**, `BOLT, TORX HD, SHLDR W/FL WA, M8X1.25X113.7, 15 THD, 9.8, 6174M (UPR INT MANIF CVR BRKT)`, qty 01, 2004–2007 | [GM EPC TC00-668](https://www.gmsklad.ru/catalog/cadillac/ESCALADE-ESV-(2WD)-2005/18178) | official parts catalog | A | **VERIFIED-PUBLISHED** (size and thread); torque **NOT PUBLISHED** |
+| Rear fastener | **11588339**, `BOLT, TORX HD, SHLDR W/FL WA, M8X1.25X113.7, 15 THD, 9.8, 6174M (UPR INT MANIF CVR BRKT)`, qty 01, 2004–2007 | [GM EPC TC00-668](https://www.gmsklad.ru/catalog/cadillac/ESCALADE-ESV-(2WD)-2005/18178) | official parts catalog | A | **VERIFIED-PUBLISHED** (size and thread); rear-bolt torque **NOT PUBLISHED**; the front clamp torque is a prior M10 record (6 N·m) |
 | Cover-to-manifold interface | The drawing shows the cover sitting over the intake manifold casting, with the front clamp wrapping the charge-air-cooler outlet duct; no gasket is itemised for the cover itself | [GM EPC line drawing](https://gmsklad.ru/gmcat/pics/cadillac/p013890.jpg), [GM EPC group](https://www.gmsklad.ru/catalog/cadillac/ESCALADE-ESV-(2WD)-2005/18178) | GM parts illustration / catalog | A | **PARTIALLY PUBLISHED** — arrangement visible; no dimensions |
 | Overall dimensions on the drawing | **None.** No scale bar, no callouts, no datum coordinates | [GM EPC line drawing](https://gmsklad.ru/gmcat/pics/cadillac/p013890.jpg) | GM parts illustration | A | **NOT PUBLISHED** |
 
@@ -96,7 +96,8 @@ No dimensioned GM drawing, no GM service dimension, and no measured sample were 
 | Wall thickness | **Not published** | no section drawing or measured sample | **NOT PUBLISHED** |
 | Letter cap height / stroke width / relief depth | **Not published** | no GM text spec; photographs have no scale | **NOT PUBLISHED** |
 | Diamond-field pitch / rib width / depth | **Not published** | no GM text spec; photographs have no scale | **NOT PUBLISHED** |
-| Fastener torque | **Not published** | the EPC gives the bolt size/class but no torque; no LLY service procedure for the cover was located | **NOT PUBLISHED** |
+| Rear bolt torque | **Not published** | the EPC gives the bolt size/class but no torque; no LLY service procedure for the rear bracket bolt was located | **NOT PUBLISHED** |
+| Front clamp torque | **6 N·m (53 lb·in)** | GM SI Intake Manifold Cover Replacement, recorded grade A/ADOPTED in the prior M10 survey (`docs/research/M10-exterior-accuracy-survey.md:142`) | **ADOPTED (prior project record)** — narrows the blanket "fastener torque not published" claim to the rear bolt |
 | Mass | **Not published** | no listing weight | **NOT PUBLISHED** |
 | Shipping carton dimensions | Occasionally available on dealer/marketplace pages | not a part dimension; **not adopted** | **RECORDED-NOT-ADOPTED** |
 
@@ -130,6 +131,7 @@ The milestone brief calls this "the only lettered surface on the real engine ('D
 | Colour code | No GM colour code located | searched GM EPC / dealer pages | — | **NOT PUBLISHED** |
 | Fastener class | Bolt `9.8` (property class as printed in the EPC), M8×1.25, 15 threads, 113.7 mm | [GM EPC](https://www.gmsklad.ru/catalog/cadillac/ESCALADE-ESV-(2WD)-2005/18178) | A | **VERIFIED-PUBLISHED** |
 | Clamp type | `CHRG AIR CLR OTLT DUCT` clamp, included with the cover | [GM EPC](https://www.gmsklad.ru/catalog/cadillac/ESCALADE-ESV-(2WD)-2005/18178) | A | **VERIFIED-PUBLISHED** (feature); diameter **NOT PUBLISHED** |
+| Clamp torque | **6 N·m (53 lb·in)** | prior M10 survey (`docs/research/M10-exterior-accuracy-survey.md:142`), GM SI | A | **ADOPTED (prior project record)**; the rear bolt torque remains **NOT PUBLISHED** |
 
 **Modelling consequence:** model the cover as a thin-walled black plastic shield with two attachment features (rear bolt boss, front duct clamp), the evidenced three-line legend as raised geometry, and a smooth top pad where the legend sits. The diamond field is **not** modelled: its pitch and depth are not published, and a guessed texture would be a fabricated surface. It is recorded as a labeled omission in the spec and the docs, not silently smoothed away.
 
@@ -142,10 +144,10 @@ No external source discusses fitting the cosmetic cover with an aftermarket high
 | Question | External answer | Repo-side answer needed |
 | --- | --- | --- |
 | Does the cover fit over the stock intake tract? | The EPC drawing shows the cover over the manifold and clamped to the charge-air duct; the stock tract is a separate part. | Measure the stock shell's lowest/highest vertices over the cover footprint. The spec's self-check does this. |
-| Does it fit with `intake_highflow` (V2)? | **NOT PUBLISHED** | Compute the V2 tube surface (Ø101.6 mm, couplers Ø116 mm) against the cover envelope. The spec's self-check does this; the measured result is a pass with a positive gap. |
+| Does it fit with `intake_highflow` (V2)? | **NOT PUBLISHED** | Compute the V2 tube surface (Ø101.6 mm, couplers Ø116 mm) against the cover envelope. The spec's self-check does this; the computed result is a pass with a positive gap. |
 | Does it hide the intake tract? | The cover is a top shield over the intake manifold; the turbo-inlet tract is outboard/front. | The cover hides the Y-bridge and part of the cold charge pipe, not the turbo-inlet tract or the V2 filter. The spec states this. |
-| Does it hide the resonator? | The EPC/photo show a relief/notch at one corner; the M10 survey records the resonator clamped at the intake manifold cover. | The cover's rear edge is 8.5 mm forward of the measured resonator envelope; the spec's self-check records the gap. |
-| Any catalog compatibility rule? | None published. | If the measured V2 gap were negative, a rule would be needed. The self-check measures a positive gap, so no rule is added; the test pins it so a future V2 or cover edit fails loudly. |
+| Does it hide the resonator? | The EPC/photo show a relief/notch at one corner; the M10 survey records the resonator clamped at the intake manifold cover. | The cover's rear edge is 8.454 mm forward of the measured resonator envelope (max X 236.546); the spec's self-check records the gap. |
+| Any catalog compatibility rule? | None published. | If the computed V2 gap were negative, a rule would be needed. The self-check computes a positive gap, so no rule is added; the test pins it so a future V2 or cover edit fails loudly. |
 
 **This is the one place where the research cannot carry the decision.** The spec does not import a web claim about intake-cover fitment; it computes the clearance from the frozen M8 control points and the measured shell, and the build must reproduce the same result.
 
@@ -164,11 +166,11 @@ No external source discusses fitting the cosmetic cover with an aftermarket high
 | 7 | Wall thickness | **NOT PUBLISHED** | Labeled placeholder 2.5 mm |
 | 8 | Letter cap height / stroke / depth | **NOT PUBLISHED** | Labeled placeholder; rectilinear stroke construction |
 | 9 | Diamond-field pitch/depth | **NOT PUBLISHED** | Omit the field; record the omission |
-| 10 | Fastener torque | **NOT PUBLISHED** | Do not display a torque; model the fastener only |
+| 10 | Rear-bolt torque / front-clamp torque | Rear bolt **NOT PUBLISHED**; front clamp **6 N·m (53 lb·in)** per the prior M10 survey | Do not display a torque; model the fastener only; record the clamp value as a prior project record |
 | 11 | Polymer family / colour code | **NOT PUBLISHED** (legacy viewer says ABS, grade D) | Use a matte-black PBR approximation; record it |
-| 12 | V2 high-flow intake fitment | **NOT PUBLISHED externally** | Compute from repo control points; spec self-check measures a positive gap |
+| 12 | V2 high-flow intake fitment | **NOT PUBLISHED externally** | Compute from repo control points; spec self-check computes a positive gap |
 
-**Bottom line:** the part's identity, retention features, visible form and legend wording are published well enough to model a recognizable, honest cover. Its dimensions, wall thickness, letter metrics, texture pitch, polymer and torque are not published and must be labeled placeholders. The brief's `DURAMAX` wording is the one direct factual conflict: the evidence says `6.6 TURBO DIESEL`, and the spec follows the evidence.
+**Bottom line:** the part's identity, retention features, visible form and legend wording are published well enough to model a recognizable, honest cover. Its dimensions, wall thickness, letter metrics, texture pitch, polymer and rear-bolt torque are not published and must be labeled placeholders; the front clamp torque is a prior M10 GM service record (6 N·m), adopted for the record and not used to size geometry. The brief's `DURAMAX` wording is the one direct factual conflict: the evidence says `6.6 TURBO DIESEL`, and the spec follows the evidence.
 
 ---
 
@@ -179,5 +181,5 @@ No external source discusses fitting the cosmetic cover with an aftermarket high
 - GMPartsGiant part page, "21994000 - Genuine GM Cover Assembly, Upper Intake Manifold": <https://www.gmpartsgiant.com/parts/gm-cover-21994000.html>
 - Diesel Specialty Parts (Birch Island Diesel) used-parts listing with seven photographs, "2006 GMC CHEVROLET 3500 LLY 6.6 DIESEL ENGINE OE INTAKE RESONATOR COVER 21994000": <https://dieselspecialtyparts.com/2006-gmc-chevrolet-3500-lly-66-diesel-engine-oe-intake-resonator-cover-21994000>
 - eBay listing title, "05-07 DURAMAX Chevy Silverado/GMC Intake Manifold Cover Part# 21994000 OEM LBZ": <https://www.ebay.com.au/itm/134869344856>
-- Prior project research: [`docs/research/M10-exterior-accuracy-survey.md`](./M10-exterior-accuracy-survey.md) §12 (cover P/N, `6.6 turbo diesel` wording, clamp + bolt retention); [`docs/OPEN_ITEMS.md`](../OPEN_ITEMS.md) (M10 deferral); [`docs/specs/M10-exterior-accuracy.md`](../specs/M10-exterior-accuracy.md) §2.1/§2.3 (why the cover was excluded).
+- Prior project research: [`docs/research/M10-exterior-accuracy-survey.md`](./M10-exterior-accuracy-survey.md) §12 (cover P/N, `6.6 turbo diesel` wording, clamp + bolt retention) and §6 (GM SI clamp torque **6 N·m / 53 lb·in**, grade A, ADOPTED); [`docs/OPEN_ITEMS.md`](../OPEN_ITEMS.md) (M10 deferral); [`docs/specs/M10-exterior-accuracy.md`](../specs/M10-exterior-accuracy.md) §2.1/§2.3 (why the cover was excluded).
 - Project legacy (recorded, not adopted as published): [`public/legacy/index.html:225`](../../public/legacy/index.html) — "Molded black grained ABS Helmholtz resonator … raised diamond-plate pads and embossed '6.6 TURBO DIESEL' badge".
