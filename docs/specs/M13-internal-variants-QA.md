@@ -242,3 +242,102 @@ Sampled the survey's load-bearing sources and grades; fetched the vendor pages w
 - **Nits:** QA-15 `git diff` command, QA-16 "measured states" cap wording, QA-17 p95 16.8 vs 17.0, QA-18 phone headroom 15,368 vs 11,676, QA-19 derived stock-dimension provenance, QA-20 OPEN_ITEMS D-035 stale, QA-21 computePartGroup/stock-materials wording.
 
 **Single most important finding:** **QA-01 — RF-22's `X = 402.5 mm` plane sits in the 0.724 mm inter-rod gap, so it cuts no rod.** The spec's own clearance row proves it. RF-22 cannot show a rod cross-section, acceptance 8 cannot pass, and the only rod-cap measurement/test is therefore vacuous. The revision should choose a rod-cutting plane (or drop the rod-section claim) and add a pure intersection test before the build; the G-FRAME-M13 stop is real but should not be the first time this is discovered.
+
+---
+
+## 11. Second QA pass (confirmation run, 2026-11-16)
+
+- **Reviewer:** independent QA agent, second pass, separate from the drafting context. **Scope:** confirmation of the revision commit `e8122ec` on `plan/m13-internal-variants`; the spec and survey were not edited in this run.
+- **Method:** full re-read of the revised spec, survey and QA record; independent `vite-node` execution of the shipped `computeEngineLayout()` / `detailConfig` (not a re-typed formula) for all eight rod intervals; independent Three.js projection of the committed stock rod's cut section as a proxy for the uncommitted variant; GLB triangle parse of the committed piston/rod assets; grep of `engineScene.ts`, `sectionCaps.ts`, `layout.ts`, `referenceFrames.ts`, `partVariants.ts`; SHA-256 verification of all 20 `main` hashes and the pre-M13 `modified.json`; `npm run typecheck` (exit 0) and `npm test` (`104/104`, 21 files). No WebGL: runtime benchmark/RF captures were not re-executed.
+- **Result:** **both original blockers are closed** (QA-01, QA-02). The four should-fix spot checks pass. The confirmation pass found **two new should-fix defects** and **three nits**; the two new should-fixes do not reopen the original blockers, but the package is **not ready for Buckley's audit** until they are corrected. Details in §11.3/§11.6.
+
+### 11.1 Per-blocker verdict
+
+| Blocker | Verdict | Evidence |
+| --- | --- | --- |
+| **QA-01** — RF-22 plane cuts no rod | **closed** | The revised plane `X = 388.3 mm` is the station-0 RH rod seat and is **13.838 mm inside** that rod's face; `402.5 mm` is inside no rod. The frame table, checklist, cap test, benchmark matrix and acceptance 5/6/8 all use `388.3 mm`; no current RF-22 claim depends on `402.5`. The camera-side proof holds; the quoted NDC extremes do not reproduce exactly (new nit N-03), but the face remains in frame. |
+| **QA-02** — combined accounting drops the rod delta | **closed** | The named variables and one `recomputeCombinedInternalTriangles()` are implementable against the shipped `engineScene.ts`; `baseNonPistonInternalTriangles = 221,984` is correct, the old `nonPistonInternalTriangles + nextSet.totalTriangles` assignment is explicitly deleted, and both swap branches use the same three-term sum. The cap arithmetic `221,984 + 11,200 + 41,600 = 274,784` and the stock-rod control `221,984 + 9,440 + 41,600 = 273,024` are correct. The test would fail on the old piston branch **through its source assertions** (the numeric assertion alone does not exercise the renderer). Two implementation details need correction before the build: the runtime total is not `274,784` (new should-fix N-01), and the shared prims map needs a piston filter (new should-fix N-02). |
+
+#### QA-01 evidence — independent recomputation
+
+Executed against the shipped module, not the spec's formula:
+
+```
+rodSeatOffsetMm 14.2   big-end half-width 0.22 × 62.9 = 13.838
+cyl  bank  station  centre   seat    interval            contains 388.3  contains 402.5
+1    RH    0        402.5    388.3   374.462–402.138     yes              no
+2    LH    0        402.5    416.7   402.862–430.538     no               no
+3    RH    1        287.5    273.3   259.462–287.138     no               no
+4    LH    1        287.5    301.7   287.862–315.538     no               no
+5    RH    2        172.5    158.3   144.462–172.138     no               no
+6    LH    2        172.5    186.7   172.862–200.538     no               no
+7    RH    3        57.5     43.3    29.462–57.138       no               no
+8    LH    3        57.5     71.7    57.862–85.538       no               no
+```
+
+- `388.3` is `388.3 − 374.462 = 13.838 mm` from the low face and `402.138 − 388.3 = 13.838 mm` from the high face. It cuts exactly one rod.
+- `402.5` lies between `402.138` and `402.862`, i.e. in the **0.724 mm** gap (`2 × 14.2 − 27.676`), **0.362 mm** from each face. It is inside no rod interval.
+- The rod's local X axis is world X: `composeAimMatrix` sets `aimX = (1,0,0)` (`engineScene.ts:696-713`) and both rod endpoints share the same seat X (`:839-844`). The interval is therefore plane-independent of crank angle.
+- **Consistency:** `RF-22` code `:322`, frame table `:509`, checklist `:525`, cap test `:555`, benchmark `:498`/`:731-733`, acceptance 5 `:731-733`, acceptance 6 `:735`, acceptance 8 `:737`, docs/measurement deliverables `:591`/`:663`/`:684`/`:686`, handoff `:992`/`:994`/`:995`. Every current claim uses `388.3`; the only `402.5` occurrences are RF-6's committed baseline, the negative cap control, and the historical QA-01 record.
+- **Camera side:** `buildSectionPlane('x', 388.3)` gives normal `(−1,0,0)` and constant `0.3883`, so Three.js keeps `X ≤ 388.3 mm`. RF-22's camera is at `X = 1.06 m > 0.3883 m`, on the removed side, looking at the `+X` cut face; the paired LH rod at `416.7 mm` is on the removed side and cannot occlude it. The reasoning holds.
+- **Projection caveat (new nit N-03):** projecting the committed stock rod's cut section through the RF-6 camera gives NDC x `−0.143…0.158`, y `−0.514…−0.064`, not the spec's `−0.143…0.131`, `−0.466…−0.064`. Both are inside `[−1,1]`, so visibility is not in doubt; the variant GLB is uncommitted, so its exact projection cannot be verified from this branch.
+
+#### QA-02 evidence — code-path and combined total
+
+- **Implementable as specified:** `stockConrodBatch`, `rodBatch`, `currentRodBatch`, `currentPistonSet`, `baseNonPistonInternalTriangles` and `attachedRodVariantId` are all addable at the existing state block (`engineScene.ts:1021-1025`); `ensureVariantRodBatchBuilt()` mirrors the shipped lazy `ensureVariantPistonBatchSetsBuilt()` (`:1076-1096`); the construction site is `:1377-1378`; the old overwrite is `:1184`; `nonPistonInternalTriangles` includes the stock conrod (`:1360-1376`). The spec's construction snippet sets `stockConrodBatch = conrod`, `currentRodBatch = conrod`, `currentPistonSet = stockPistonBatchSet`, and `baseNonPistonInternalTriangles = nonPistonInternalTriangles − conrod.totalTriangles = 221,984`. The one recompute function is called from both branches; the old piston assignment is deleted. This is the right shape.
+- **Cap arithmetic:** `221,984 + 11,200 + 41,600 = 274,784`; `221,984 + 9,440 + 41,600 = 273,024`. Both reproduce exactly.
+- **Runtime arithmetic (new should-fix N-01):** the shipped `rot_piston_c1_lowcomp.glb` is **3,968 tris/instance**, not the 5,200 cap; its 8-instance set is **31,744**. The corrected runtime internal total with the rod cap is `221,984 + 11,200 + 31,744 = 264,928` (rod prototype `264,704`); the old piston-branch value with the stock rod is `221,984 + 9,440 + 31,744 = 263,168`. `274,784` is the **cap-conservative** total, not the runtime scene total.
+- **Does the test fail on old behavior?** The pure numeric assertion alone does not: it compares `274,784` with `273,024` and would pass even if the renderer still had the old branch, as long as the helper existed. The test **as a whole** does fail, because it asserts `engineScene.ts` contains one `recomputeCombinedInternalTriangles` called from both branches and **no** `nonPistonInternalTriangles + nextSet.totalTriangles` assignment; the old code contains exactly that assignment (`:1184`) and lacks the recompute. The catch is source-level, which the spec states.
+- **Implementability gap (new should-fix N-02):** §5.3.1 renames the map to `loadedInternalPrimsById` and §5.3.2 stores **both** piston and rod prims in it, but §5.3.3 only adds `ensureVariantRodBatchBuilt()`. The shipped `ensureVariantPistonBatchSetsBuilt()` still loops every entry in the (renamed) map and will build a bogus `piston_rods_forged_std` / `piston_rods_forged_firing` set from the rod prims, plus two hidden cap sources. The scene total is unaffected (the set is never selected), but it is wasted geometry and a latent bug. The spec must store the slot (or filter the piston loop to `slotId === 'pistons'`) and test that `pistonBatchSetsById` has no rods entry.
+
+### 11.2 Recomputation results — changed numbers
+
+| Claim (location) | Independent recomputation | Verdict |
+| --- | --- | --- |
+| Section-on submitted, desktop stock `600,804` (`:485`, `:733`, `:924`) | `584,804 + 16,000 = 600,804` | ✅ |
+| Section-on submitted, desktop worst `590,200` (`:486`, `:733`, `:924`) | `574,200 + 16,000 = 590,200` | ✅ |
+| Section-on submitted, phone stock `327,436` (`:487`, `:733`, `:924`) | `311,436 + 16,000 = 327,436` | ✅ |
+| Section-on submitted, phone worst `324,072` (`:488`, `:733`, `:924`) | `308,072 + 16,000 = 324,072` | ✅ |
+| Section-on calls `100/101` desktop, `62/64` phone (`:485-488`, `:733`, `:860`) | `98+2=100`, `99+2=101`, `60+2=62`, `62+2=64` | ✅ |
+| Phone headroom rows `11,676 / 10,636 / 8,876 / 9,100 / 8,116` (`:852-856`) | `320,000−308,324=11,676`; `−309,364=10,636`; `−311,124=8,876`; `−310,900=9,100`; `−311,884=8,116` | ✅ (the 8,116 row remains correctly labelled cap-conservative) |
+| D-033 guard `319,128`, phone headroom `872` (`:458-465`, `:919-921`) | `308,324−6,500+10,800+2,944+1,800+1,760 = 319,128`; `320,000−319,128=872` (0.2725 %) | ✅ unchanged |
+| Combined internal total `274,784` (`:232`, `:554`, `:737`, `:919`, `:994`) | Cap arithmetic correct (`221,984+11,200+41,600`); **runtime** with shipped low-comp = `264,928` | ⚠️ **new should-fix N-01** |
+| Dropped-rod control `273,024` (`:232`, `:554`, `:919`) | Cap arithmetic correct (`221,984+9,440+41,600`); runtime old-branch = `263,168` | ⚠️ cap-level control only |
+| Prototype provenance in spec/survey/QA record | All current mentions label the `1,372 / 28,008 B` prototype **uncommitted / provisional / Blender 4.0.2**, not a 5.2.3 measurement; `+0.279 %` is explicitly not a page-weight claim; the cap rows use 1,400. | ✅ honest |
+| Prototype hash/byte claims | No committed `build_rod_variant.py` / `rot_conrod_c1_forged.glb`; the values remain unverifiable from this branch, exactly as the revised wording says. | ✅ wording honest; value unverified |
+| All frozen `main` SHA-256 values (`:953-977`) | Recomputed every frozen-file row from `git show main:<path>`; all 20 match. The pre-M13 `catalog/modified.json` row also matches `main`: `af6f0ce3…`, 7,122 B. | ✅ |
+| Suite state | `npm run typecheck` exit 0; `npm test` **104/104**, 21 files. | ✅ |
+
+### 11.3 New findings from this pass
+
+| ID | Severity | Location | Finding | Recommendation |
+| --- | --- | --- | --- | --- |
+| **N-01** | **should-fix** | `:232`, `:554`, `:737`, `:919`, `:994` | **The revised combined total `274,784` is cap-only, but acceptance 8/handoff use it as the runtime internal scene total.** The shipped `rot_piston_c1_lowcomp.glb` is 3,968 tris/instance (31,744 for 8), not the 5,200 cap. The correct runtime total with the rod cap is `221,984 + 11,200 + 31,744 = 264,928`; the old-branch control is `263,168`; the provisional rod prototype gives `264,704`. An acceptance check that asserts `274,784` in the browser cannot pass. The QA-02 blocker is still closed — the rod delta of +1,760 is preserved — but the expected value must be labelled cap or replaced with the measured value. | In §9 test 5 keep `274,784`/`273,024` explicitly as **cap** arithmetic; in §13.8 and §16.8 either assert the runtime `264,928`/`263,168` (or the build-measured value) or say "cap-conservative 274,784". Add a runtime/measured assertion so the cap and measured totals cannot be confused. |
+| **N-02** | **should-fix** | `:249-251`; `engineScene.ts:1076-1096` | **The shared `loadedInternalPrimsById` map is not filtered by slot in the piston ensure path.** §5.3.2 stores both `pistons` and `rods` prims in the renamed map; the shipped `ensureVariantPistonBatchSetsBuilt()` loops every entry and will build `piston_rods_forged_std/firing` from rod prims and register two hidden cap sources. It does not corrupt the selected-scene total (the bogus set is never selected), but it is wasted geometry and a latent cap-source bug. | Store `{ slotId, prims }` (or a separate rod map) and filter the piston loop to `slotId === 'pistons'`; add a test that `pistonBatchSetsById` contains no `rods_forged` entry. |
+| **N-03** | nit | `:532`, `:951` | The quoted RF-22 projection extremes do not reproduce with the committed stock rod as a proxy: NDC x `−0.143…0.158`, y `−0.514…−0.064` vs the spec's `−0.143…0.131`, `−0.466…−0.064`. Both are inside `[−1,1]`; the camera-side conclusion is unaffected. The variant GLB is uncommitted, so its exact projection cannot be checked. | Label the projection as an approximate stock-rod proxy, or record the variant's measured extremes at G-FRAME-M13; do not present the numbers as independently reproduced. |
+| **N-04** | nit | `:414`, `:449` | §7.2 says "Runtime calls/VRAM/p95 are the M12 measured values", but the p95 row and §7.9/§13.5 now correctly cite the **M11** detail rows (16.8/17.0) with M12 measured stock 17.0/17.0. The sentence is stale after the QA-17 fix. | Say "calls/VRAM are the M12 measured values; p95 is the M11 detail-row target, with M12 measured stock 17.0/17.0". |
+| **N-05** | nit | `:845` | §15.4 still says "section state = +1,400 scene tris + rod cap tris". §7.7 correctly says scene triangles are unchanged by capping, and the rod's full-engine scene total at cap is 11,200 (`+1,760` delta); the 1,400 is per-instance. | Reword to "rod scene delta +1,760 at cap (11,200 batch); cap triangles additional; scene triangles unchanged". |
+
+### 11.4 Should-fix spot check (four dispositions)
+
+| Finding | Claimed disposition | Verified in the revised package | Does it do what the disposition says? |
+| --- | --- | --- | --- |
+| **QA-03** | Independent `main` hashes for the ten stock GLBs, five M8 variants, M12 cover, M10 shell, catalog JSON and `interfaces.ts`; pre-M13 `modified.json` fixture and only-one-diff assertion; acceptance 1 includes `catalog/modified.json` and `THREE_API_NOTES.md`. | `§9` test 11 `:560`, `§13.1` `:696-727`, `§15.9` table `:953-979`. All 20 frozen-file SHA-256 rows match `main`; the pre-M13 hash `af6f0ce3…` and 7,122 B also match `git show main:catalog/modified.json`; acceptance 1 includes the catalog diff command and the notes file. The fixture itself is a build deliverable and is not in the planning tree yet. | **Yes** — the hashes are genuinely independent and the only-diff check is executable once the fixture is committed. |
+| **QA-04** | `visible = false` mandatory on every removed rod mesh, with a zero-cap assertion for the hidden stock source. | `§5.3.5` `:284` requires `m.visible = false` **and** `v8Batches.root.remove(m)`; `§6.3` `:363` says the stock source is skipped only when every removed mesh has `visible = false`; test 6 `:555` asserts a removed-and-hidden stock source returns 0. The shipped `isObjectAndAncestorsVisible` does walk `visible` flags (`sectionCaps.ts:1358-1365`) and `buildCapGeometry` skips on it (`:1910`). | **Yes** — removal alone would still cap; the revised spec now makes hiding mandatory and tests it. |
+| **QA-06** | One grade-C vendor, generic catalog entry, 12-point profile labelled illustrative placeholder, single-weak-source flag. | `§1.1`, `§2.1`, `§4.2` `:155-168`, `§12.2` D-048 `:621`; survey `§2.4` `:83`, `§3.2` `:136`, `§3.3` `:149`, `§9` `:242`. The "published as" framing is gone; the 12-point is explicitly "not published"; the catalog entry is called generic; the single weak source is flagged. | **Yes** — the visual is now an explicitly illustrative H-beam, not a specific vendor's part. |
+| **QA-10** | Assert small-end flange Y `18.568`, flange thickness `8.177`, web half-width `5.258`; add a rod-cutting cap test with nonzero at 388.3 and zero at 402.5. | `§9` test 1 `:550` asserts all four signature values (±0.20 mm), not just the big-end flange; test 6 `:555` requires `> 0` cap triangles at `X = 388.3` and `0` at `X = 402.5`; acceptance 3 `:729` repeats the signature values. | **Yes** — the pinned placeholders now have a headless failure path, and the cap test exercises the new source at a cutting plane. |
+
+### 11.5 No-new-damage scan
+
+- **Old plane:** no current spec or survey claim uses `X = 402.5 mm` for RF-22. The remaining `402.5` references are RF-6's committed baseline (`:329`, `:532`, `:895`, `:897`, `:934`, `:938-947`), the deliberate negative cap control in test 6 (`:555`), and the historical first-pass QA record. The frame table, checklist, cap test, benchmark matrix, §13.5/6/8 and the measurement/handoff sections are consistent at `388.3`.
+- **Renamed functions:** `computeCombinedInternalSceneTriangles`, `recomputeCombinedInternalTriangles`, `ensureVariantRodBatchBuilt`, `resolveVariantLoadFailure` and `ROD_VARIANT_TRIANGLE_CAP` are used consistently; no stale `computeCombinedInternalTriangles`/`ensureVariantRodBatchSetsBuilt` variant appears. The test/acceptance references match the spec names.
+- **Superseded figures:** `15,368` is now correctly the M8 five-variant worst case (`:127`, `:858`); `8,116` is correctly cap-conservative (`:848`); `1,372 / 28,008 B / +0.279 %` are consistently provisional; `16.8 ms` is correctly M11 with M12 measured 17.0 (`:449`, `:498`, `:734`). The only stale wording found is N-04 (the §7.2 "M12 measured" p95 sentence) and N-05 (§15.4's "`+1,400` scene tris").
+- **New contradiction introduced by the revision:** N-01 — the spec's own runtime piston asset (3,968/instance) contradicts the `274,784` acceptance value; this is a cap-vs-measured conflation, not an accounting-design failure.
+- **No code/suite damage:** the branch still typechecks and passes `104/104`; the QA run edited only this record.
+
+### 11.6 Second-pass summary and readiness
+
+- **Original blockers closed: 2 / 2** — QA-01 (RF-22 now cuts the station-0 RH rod at `X = 388.3 mm`, with consistent frame/cap/benchmark/acceptance references) and QA-02 (one shared three-term recompute is implementable and preserves the `+1,760` rod delta; the old overwrite is explicitly deleted).
+- **Should-fix spot checks: 4 / 4 pass** — QA-03, QA-04, QA-06, QA-10.
+- **New findings: 2 should-fix + 3 nits.** N-01 (cap `274,784` used as the runtime acceptance total; measured `264,928`) and N-02 (shared prims map not filtered in the piston ensure path) are open. N-03/N-04/N-05 are nits.
+- **Ready for Buckley's audit?** **Not yet.** The original blockers are closed and the package is substantially improved, but N-01 makes acceptance 8's expected runtime number wrong and N-02 leaves an implementable-code ambiguity in the QA-02 fix. Both need a short revision to the spec (not the survey) before Buckley's audit; neither requires redoing the RF-22 plane or the combined-accounting design.
