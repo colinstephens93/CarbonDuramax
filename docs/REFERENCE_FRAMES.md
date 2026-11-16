@@ -1,12 +1,12 @@
 # Visual Reference Frames
 
-Project: Duramax LLY Engine Lab · Governing plan: [`docs/PLAN.md`](./PLAN.md) · Milestone 3 Spec: [`docs/specs/M3-full-engine.md`](./specs/M3-full-engine.md) §9 · Milestone 4 Spec: [`docs/specs/M4-views.md`](./specs/M4-views.md) §9 · Milestone 8 Spec: [`docs/specs/M8-part-variants.md`](./specs/M8-part-variants.md) §5.2, §7.3 · Milestone 10 Spec: [`docs/specs/M10-exterior-accuracy.md`](./specs/M10-exterior-accuracy.md) §8 · Milestone 11 Spec: [`docs/specs/M11-capped-cutaways.md`](./specs/M11-capped-cutaways.md) §7 · Measurements: [`docs/M3-MEASUREMENTS.md`](./M3-MEASUREMENTS.md), [`docs/M4-MEASUREMENTS.md`](./M4-MEASUREMENTS.md), [`docs/M8-MEASUREMENTS.md`](./M8-MEASUREMENTS.md), [`docs/M10-MEASUREMENTS.md`](./M10-MEASUREMENTS.md), [`docs/M11-MEASUREMENTS.md`](./M11-MEASUREMENTS.md) · Exterior model record: [`docs/M10-EXTERIOR.md`](./M10-EXTERIOR.md) · Cutaway technique record: [`docs/M11-CUTAWAYS.md`](./M11-CUTAWAYS.md)
+Project: Duramax LLY Engine Lab · Governing plan: [`docs/PLAN.md`](./PLAN.md) · Milestone 3 Spec: [`docs/specs/M3-full-engine.md`](./specs/M3-full-engine.md) §9 · Milestone 4 Spec: [`docs/specs/M4-views.md`](./specs/M4-views.md) §9 · Milestone 8 Spec: [`docs/specs/M8-part-variants.md`](./specs/M8-part-variants.md) §5.2, §7.3 · Milestone 10 Spec: [`docs/specs/M10-exterior-accuracy.md`](./specs/M10-exterior-accuracy.md) §8 · Milestone 11 Spec: [`docs/specs/M11-capped-cutaways.md`](./specs/M11-capped-cutaways.md) §7 · Milestone 12 Spec: [`docs/specs/M12-intake-cover.md`](./specs/M12-intake-cover.md) §8 (with owner-approved pose/checklist deviation **D-047**) · Measurements: [`docs/M3-MEASUREMENTS.md`](./M3-MEASUREMENTS.md), [`docs/M4-MEASUREMENTS.md`](./M4-MEASUREMENTS.md), [`docs/M8-MEASUREMENTS.md`](./M8-MEASUREMENTS.md), [`docs/M10-MEASUREMENTS.md`](./M10-MEASUREMENTS.md), [`docs/M11-MEASUREMENTS.md`](./M11-MEASUREMENTS.md), [`docs/M12-MEASUREMENTS.md`](./M12-MEASUREMENTS.md) · Exterior model record: [`docs/M10-EXTERIOR.md`](./M10-EXTERIOR.md) · Cutaway technique record: [`docs/M11-CUTAWAYS.md`](./M11-CUTAWAYS.md) · Intake cover record: [`docs/M12-COVER.md`](./M12-COVER.md)
 
-These seventeen fixed reference frames establish canonical camera poses, crank angles, display/view configurations, and catalog build selections for visual regression checks across milestones (`RF-1`…`RF-4` established at M3; `RF-5`…`RF-7` added at M4; `RF-8`…`RF-10` added at M8; `RF-11`…`RF-13` added and exterior-on frames `RF-3`, `RF-7`, `RF-8`, `RF-9` re-baselined at M10; `RF-14`…`RF-17` added and `RF-6` re-baselined with capped-solid cutaways at M11).
+These twenty fixed reference frames establish canonical camera poses, crank angles, display/view configurations, and catalog build selections for visual regression checks across milestones (`RF-1`…`RF-4` established at M3; `RF-5`…`RF-7` added at M4; `RF-8`…`RF-10` added at M8; `RF-11`…`RF-13` added and exterior-on frames `RF-3`, `RF-7`, `RF-8`, `RF-9` re-baselined at M10; `RF-14`…`RF-17` added and `RF-6` re-baselined with capped-solid cutaways at M11; `RF-18`…`RF-20` added for the optional LLY intake manifold cover at M12, with `RF-19`/`RF-20` poses and `RF-19` clipped-legend scope recorded under **D-047** while `RF-1`…`RF-17` keep `intakeCover` off).
 
 ## Common Capture Convention
 
-- **Build:** Production bundle (`npm run build && npm run preview`), reproducible directly via `?rf=RF-1` through `?rf=RF-17`
+- **Build:** Production bundle (`npm run build && npm run preview`), reproducible directly via `?rf=RF-1` through `?rf=RF-20`
 - **Viewport:** `1440 × 900` CSS px (`devicePixelRatio = 1`; Antigravity's built-in Chromium webview `page.screenshot()` serializes `1440×900` `16:10` viewports as `1024×640` `16:10` PNGs including the HUD readouts — standing `1024×640` convention for all frames)
 - **Camera Lens & Up Axis:** `PerspectiveCamera` with `fov = 42°`, `near = 0.02 m`, `far = 20 m`, `camera.up = [0, 0, 1]` (`+Z` vertical; `+X` front of engine along crank axis; `-Y` RH bank `[1,3,5,7]`; `+Y` LH bank `[2,4,6,8]`)
 - **Block Midpoint Reference:** `centerXM = 0.2300 m` (`230.0 mm` ahead of the `X = 0` rear block plane)
@@ -35,14 +35,17 @@ These seventeen fixed reference frames establish canonical camera poses, crank a
 | **RF-15** | `470°` | `[0.6600, -0.3800, 0.5600]` | `[0.4025, -0.2000, 0.2550]` | `Full` | `Off` (unchecked) | `0% / Front–Back (X) @ 402.5 mm / Off / Off` | `stock` | [`reference-frames/RF-15.png`](./reference-frames/RF-15.png) |
 | **RF-16** | `180°` | `[1.3800, -1.1800, 0.7200]` | `[0.3000, -0.0200, 0.1700]` | `Full` | `On` (checked) | `0% / Front–Back (X) @ 402.5 mm / Off / Off` | `stock` | [`reference-frames/RF-16.png`](./reference-frames/RF-16.png) |
 | **RF-17** | `0°` | `[0.2300, 1.0500, 0.4500]` | `[0.2300, -0.1200, 0.1600]` | `Full` | `Off` (unchecked) | `0% / Side (Y) @ -185 mm / Off / Off` | `stock` | [`reference-frames/RF-17.png`](./reference-frames/RF-17.png) |
+| **RF-18** | `180°` | `[1.3800, -1.1800, 0.7200]` | `[0.3000, -0.0200, 0.1700]` | `Full` | `On` (checked) | `0% / Off / Off / Off` *(Intake cover `On`)* | `stock` | [`reference-frames/RF-18.png`](./reference-frames/RF-18.png) |
+| **RF-19** | `705°` | `[0.9200, -0.5800, 0.5600]` *(D-047)* | `[0.2800, -0.0100, 0.3100]` *(D-047)* | `Full` | `On` (checked) | `0% / Front–Back (X) @ 300.0 mm / Off / Off` *(Intake cover `On`)* | `stock` | [`reference-frames/RF-19.png`](./reference-frames/RF-19.png) |
+| **RF-20** | `90°` | `[1.2800, -1.0800, 1.1200]` *(D-047)* | `[0.3100, -0.0200, 0.3000]` *(D-047)* | `Full` | `On` (checked) | `100% / Off / Off / Off` *(Intake cover `On`)* | `stock` | [`reference-frames/RF-20.png`](./reference-frames/RF-20.png) |
 
 ---
 
-## Section-Fill Checklist (Shared by `RF-6` and `RF-14`…`RF-17`, Milestone 11 Spec §7.2)
+## Section-Fill Checklist (Shared by `RF-6`, `RF-14`…`RF-17`, and `RF-19`, Milestone 11 Spec §7.2, extended M12)
 
-Every section-active reference frame (`RF-6`, `RF-14`, `RF-15`, `RF-16`, `RF-17`) must pass all six shared criteria — failing any single item fails the frame:
+Every section-active reference frame (`RF-6`, `RF-14`, `RF-15`, `RF-16`, `RF-17`, `RF-19`) must pass all six shared criteria — failing any single item fails the frame:
 
-1. **Solid cut faces:** Every visible part that meets the section plane shows a flat, uniformly hatched section face at the plane — no far interior wall, no open tube/box interior, no dark cavity along the cut. (Genuine cylinder bores above/below the piston, two-wall duct inner bores, and empty clearances between separate parts remain open.)
+1. **Solid cut faces:** Every visible part that meets the section plane shows a flat, uniformly hatched section face at the plane — no far interior wall, no open tube/box interior, no dark cavity along the cut. (Genuine cylinder bores above/below the piston, two-wall duct inner bores, and empty clearances between separate parts remain open.) The M12 cover's open thin-walled underside is a material band at the cut: the cover cap must show the wall band and leave the open cavity as air, not a filled slab. The "no dark cavity along the cut" rule applies to the cut wall material, not to the intentionally open underside.
 2. **Depth correctness:** Nothing behind the plane draws in front of a cut face; the cap occludes the internals it should, and no cap covers un-cut geometry in front of the plane.
 3. **One section colour:** All cut faces use the same unlit cut-bronze base (`[0.290, 0.170, 0.086]` linear) and hatch (`[0.196, 0.112, 0.055]` linear) colour; no part PBR material or firing orange (`0xf97316`) appears *on* a cut face.
 4. **Hatch quality:** `45°` lines, uniform world spacing (`5.0 mm` perpendicular period, `1/3` duty), no swimming/stretching/moiré, and no hatch on non-cut surfaces.
@@ -394,6 +397,68 @@ Every section-active reference frame (`RF-6`, `RF-14`, `RF-15`, `RF-16`, `RF-17`
 ![RF-17 — θ = 0°, longitudinal Side (Y) cutaway at -185 mm along RH Cylinders 1, 3, 5, 7](./reference-frames/RF-17.png)
 
 *Caption: Longitudinal Side (`Y @ -185 mm`) cutaway (`RF-17`, viewed from `+Y` toward the RH bank), showing solid hatched sections across RH Cylinders `1, 3, 5, 7` heads, pistons, and valve stems with the LH bank and valley cleanly clipped away.*
+
+---
+
+### RF-18 — Optional LLY Intake Manifold Cover On, Front Three-Quarter (`θ = 180°`, Exterior On, Intake Cover On)
+
+- **Crank angle:** `θ = 180°` (Cylinder 7 RH at compression/firing TDC; matching `RF-3` / `RF-11` pose for direct uncovered-vs-covered Y-bridge comparison)
+- **Camera position (m):** `[1.3800, -1.1800, 0.7200]` (`fov = 42°`, `up = [0, 0, 1]`; identical to `RF-11`)
+- **Camera target (m):** `[0.3000, -0.0200, 0.1700]`
+- **Quality profile:** `Full` (`PCFSoftShadowMap` `2048×2048` enabled)
+- **Exterior:** `On` (checked)
+- **View states:** `Explode = 0%`, `Section = Off`, `X-Ray = Off`, `Labels = Off`, **`Intake cover = On`**
+- **Build selection:** `stock` (all 12 catalog slots stock)
+- **What to look for (numbered checklist — Milestone 12 Spec §8.1):**
+  1. **Separate black plastic shield over the front/mid valley:** `public/models/intake_cover_lly.glb` (`1,040` tris = `500` body + `540` lettering; `0` textures) reads as a removable matte-black plastic shield (`mat_cover_plastic`, linear RGB `[0.028, 0.029, 0.032]`, roughness `0.62`) seated cleanly above the cast-aluminium Y-bridge (`18.046 mm` vertical clearance above `ext_map_sensor`) and valve covers with zero z-fighting.
+  2. **Evidenced three-line `6.6` / `TURBO` / `DIESEL` legend (`45` stroke prisms):** Raised rectilinear stroke geometry (`0.8 mm` relief on the flat `Z = 417.2 mm` top pad; `mat_cover_letter` roughness `0.38`) catches the studio key light in three stacked lines (`6.6` / `TURBO` / `DIESEL`) without looking like a separate metal badge; no fabricated `DURAMAX` wordmark and no guessed diamond-field texture appear.
+  3. **Y-bridge main top hidden, rear-right plumbing corridor exposed:** The cover hides the main top of `intakeBridge` (`ext_ybridge_duct` / `ext_ybridge_crossover` / `ext_map_sensor`) while the rear-right relief (`P1–P2–P3`) leaves the RH turbo-inlet plumbing corridor (`ext_intake_duct`) and rear `ext_resonator` (`8.454 mm` X gap) cleanly exposed.
+  4. **Clearance & simplified two-point retention:** Zero clipping against `chargePipeCold` (`5.172 mm` under-footprint clearance; `369.078 mm` group max sits outside the rear-right relief), `alternator` (`8.084 mm`), `acComp` (`8.246 mm`), `resonator` (`8.793 mm`), `electronics` (`25.908 mm`), or `intake` (`48.049 mm`); the simplified integrated front mount leg meets the cold charge pipe at `if_intake_cover_duct_clamp` (`[372.0, -95.4, 353.4] mm`, representing, not modelling, the separate EPC clamp) and the rear tower sits over `intakeBridge` at `if_intake_cover_rear_bolt` (`[260.0, 0.0, 333.4] mm`).
+
+![RF-18 — θ = 180°, stock LLY exterior with optional GM 21994000 plastic intake manifold cover on, front three-quarter view](./reference-frames/RF-18.png)
+
+*Caption: Optional GM `21994000` plastic upper intake manifold cover enabled over the stock LLY exterior (`RF-18`), showing the matte-black shield, raised three-line `6.6 TURBO DIESEL` legend, rear-right plumbing relief, and simplified front/rear mounts (planform, dimensions, wall thickness, and stroke font are illustrative placeholders).*
+
+---
+
+### RF-19 — Sectioned Intake Manifold Cover & Open Underside Cavity (`θ = 705°`, Section X @ `300.0 mm`, Exterior On, Intake Cover On)
+
+- **Crank angle:** `θ = 705°` (end of the `0°..705°` cycle sweep)
+- **Camera position (m):** `[0.9200, -0.5800, 0.5600]` (`fov = 42°`, `up = [0, 0, 1]` — **owner-approved deviation D-047** front-side cutaway pose with `X = +920.0 mm > 300.0 mm` so the `+X`-facing cut plane at `X = 300.0 mm` is viewed directly rather than occluded from behind by the kept cover roof at `RF-13`'s `X = +230.0 mm`)
+- **Camera target (m):** `[0.2800, -0.0100, 0.3100]` (**D-047**)
+- **Quality profile:** `Full` (`PCFSoftShadowMap` `2048×2048` enabled)
+- **Exterior:** `On` (checked)
+- **View states:** `Explode = 0%`, `Section = Front–Back (X)` at `300.0 mm` (`plane normal = (-1, 0, 0)`, `constant = +0.300 m`, keeping `x <= 0.300 m`), `X-Ray = Off`, `Labels = Off`, **`Intake cover = On`**
+- **Build selection:** `stock` (all 12 catalog slots stock)
+- **What to look for (numbered checklist — Milestone 12 Spec §8.1 + shared Section-Fill Checklist items 1–6 + D-047):**
+  1. **True thin-wall material-band cap on the cover (`+28` cover cap triangles, `3,102` total):** Slicing `ext_intake_cover_body` (watertight `2.5 mm` wall with `0` boundary edges) at `X = 300.0 mm` renders a flat, crisp, 45°-hatched cut-bronze U-band (`Z = 370.0..417.2 mm`, `Y = -40.0..+120.0 mm`) — neither an uncapped paper-thin shell nor a chord-closed solid block.
+  2. **Intentionally open under-cover air cavity:** Beneath the `2.5 mm` roof band (`Z = 370.0..414.7 mm`), the cover's open underside remains air (exposing the un-cut rear mounting boss at `X = 260.0 mm` inside the cavity), satisfying the M12 open-underside rule in item 1 of the shared Section-Fill Checklist.
+  3. **Unchanged solid M11 Y-bridge & engine section below:** Directly beneath the open under-cover cavity, `intakeBridge` (`ext_ybridge_duct` / `ext_ybridge_crossover`), `valveCovers`, `heads`, `blockPan`, `turbo`/intake plumbing, and internal Cylinder 3/4 assemblies present solid 45°-hatched cut-bronze sections (`3,074` non-cover cap triangles) with zero floating caps or silhouette gaps.
+  4. **Clipped forward legend pad (`D-047` scope):** Because `Section X @ 300.0 mm` clips `X > 300.0 mm` (leaving `55.0 mm` of rear cover length `X ∈ [245.0, 300.0]`), the forward `6.6 / TURBO / DIESEL` legend block (`X ∈ [304.0, 386.0]`) lies on the clipped side; no `DURAMAX` wordmark or diamond-field texture appears on the kept rear cover (`RF-18` and `RF-20` verify full three-line legend legibility).
+
+![RF-19 — θ = 705°, Section Front–Back (X) at 300.0 mm with intake cover on, showing the 2.5 mm hatched wall band, open underside cavity, and solid Y-bridge section below](./reference-frames/RF-19.png)
+
+*Caption: Front-side cutaway at `X = 300.0 mm` (`RF-19`, pose per D-047), proving the cover's hatched `2.5 mm` thin-wall U-band (`+28` cap triangles), intentionally open under-cover cavity (with the rear mounting tower visible inside), and unchanged solid M11 Y-bridge cross-section beneath.*
+
+---
+
+### RF-20 — Exploded Intake Manifold Cover (`+Z 260 mm`) Over Exposed Y-Bridge (`θ = 90°`, Explode `100%`, Exterior On, Intake Cover On)
+
+- **Crank angle:** `θ = 90°` (Cylinder 2 LH at compression/firing TDC)
+- **Camera position (m):** `[1.2800, -1.0800, 1.1200]` (`fov = 42°`, `up = [0, 0, 1]` — **owner-approved deviation D-047** elevated front-right pose above the `+260 mm` lifted cover top `Z = 0.6780 m`, replacing `RF-5`'s `Z = 0.7400 m` `2.52°` grazing angle with a `17.2°` pad view)
+- **Camera target (m):** `[0.3100, -0.0200, 0.3000]` (**D-047**)
+- **Quality profile:** `Full` (`PCFSoftShadowMap` `2048×2048` enabled)
+- **Exterior:** `On` (checked)
+- **View states:** `Explode = 100%` (`e = 1.0`, cover offset `[0, 0, +260] mm`), `Section = Off`, `X-Ray = Off`, `Labels = Off`, **`Intake cover = On`**
+- **Build selection:** `stock` (all 12 catalog slots stock)
+- **What to look for (numbered checklist — Milestone 12 Spec §8.1 + D-047):**
+  1. **Exact `+Z 260 mm` rigid group lift (`Z_max = 678.0 mm`):** At `e = 1.0`, `intake_cover_lly` translates strictly `+260.0 mm` along `+Z` with zero rotation or XY drift, clearing the exterior shell (`Z_max = 556.0 mm`) while both closed mounting towers (`if_intake_cover_rear_bolt`, `if_intake_cover_duct_clamp`) travel rigidly with the cover body.
+  2. **Y-bridge completely exposed beneath:** Lifting the cover reveals the entire two-piece cast-aluminium `intakeBridge` (`ext_ybridge_duct`, `ext_ybridge_crossover`, `ext_ybridge_seals`, top `ext_map_sensor`, and fastener rows) and `ext_charge_cold` neck in the front valley alongside the exploded internal head/valvetrain banks.
+  3. **Legible three-line `6.6 / TURBO / DIESEL` legend:** All three raised rectilinear stroke lines (`6.6` / `TURBO` / `DIESEL`, `540` tris across `45` stroke prisms) remain crisply legible on the matte-black pad (`mat_cover_letter` vs. `mat_cover_plastic`), with no `DURAMAX` wordmark and no diamond-field texture.
+
+![RF-20 — θ = 90°, Explode 100% with intake cover lifted +Z 260 mm above the exposed two-piece Y-bridge](./reference-frames/RF-20.png)
+
+*Caption: Exploded view (`RF-20`, `Explode = 100 %`, pose per D-047) with the optional GM `21994000` intake manifold cover lifted `+Z 260 mm` above the exposed two-piece Y-bridge and MAP sensor, keeping both integrated mounts attached and the three-line `6.6 TURBO DIESEL` legend legible.*
 
 ---
 

@@ -140,4 +140,10 @@ Both `three/package.json` and `@types/three/package.json` export `./addons/*` an
 - **No stencil buffer, no render target, single `renderer.render(scene, camera)`:**
   - `WebGLRenderer` continues to run with default `stencil: false` (measured `gl.getParameter(gl.STENCIL_BITS) === 0`), allocates zero `WebGLRenderTarget` instances for section capping, and issues exactly one `renderer.render(scene, camera)` call per frame.
 
+## Milestone 12 Scene-Placed Add-On APIs (0.187.0)
+
+- `loadVariantScene` wraps a Y-up project-frame GLB once with `wrapInPartLocalFrame` (+90° X) and returns a `Group`; the intake cover uses the same path, with no new loader or dependency.
+- `prepareCapSource` accepts a `Group`: it caches child-mesh entries and world matrices, so a scene-placed add-on can be a static cap source; `skipWhenGhosted: true` suppresses its caps while its materials are ghosted.
+- The cover's materials join the existing M4 `clippableMaterials` set and the M4 `clipShadows`/X-Ray snapshot path; no new render pass, stencil buffer, render target or shader is introduced.
+
 

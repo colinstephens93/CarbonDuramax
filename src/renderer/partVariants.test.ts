@@ -7,6 +7,10 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { fullCatalog } from '../catalog';
 import {
+  INTAKE_COVER_DRAW_CALLS,
+  INTAKE_COVER_TRIANGLE_CAP,
+} from './intakeCover';
+import {
   computeVariantExplodeOffsetMm,
   EXTERIOR_PRESERVED_SUBTREES,
   EXTERIOR_PRESERVED_TRIANGLES,
@@ -231,9 +235,30 @@ describe('Milestone 8 shell split, pure variant rules, and D-033 budget guard (s
     );
     const pistonSwapDeltaTris = (pistonCap - stockPistonTris) * 8;
     const worstCaseSceneTriangles =
-      stockSceneTrianglesExtOn - hiddenShellTris + externalCapSum + pistonSwapDeltaTris;
+      stockSceneTrianglesExtOn -
+      hiddenShellTris +
+      externalCapSum +
+      pistonSwapDeltaTris +
+      INTAKE_COVER_TRIANGLE_CAP;
 
+    expect(INTAKE_COVER_TRIANGLE_CAP).toBe(1_800);
+    expect(worstCaseSceneTriangles).toBe(317_368);
     expect(worstCaseSceneTriangles).toBeLessThanOrEqual(phoneSceneAssetBudget);
     expect(worstCaseSceneTriangles).toBeLessThanOrEqual(desktopSceneAssetBudget);
+    expect(phoneSceneAssetBudget - worstCaseSceneTriangles).toBe(2_632);
+    expect(desktopSceneAssetBudget - worstCaseSceneTriangles).toBe(42_632);
+
+    // Draw-call budget guard with M12 intake cover (+2 opaque meshes) against D-033 (120 phone / 250 desktop)
+    expect(INTAKE_COVER_DRAW_CALLS).toBe(2);
+    const desktopStockCallsWithCover = 96 + INTAKE_COVER_DRAW_CALLS;
+    const phoneStockCallsWithCover = 58 + INTAKE_COVER_DRAW_CALLS;
+    const desktopWorstCallsWithCover = 97 + INTAKE_COVER_DRAW_CALLS;
+    const phoneWorstCallsWithCover = 60 + INTAKE_COVER_DRAW_CALLS;
+    expect(desktopStockCallsWithCover).toBe(98);
+    expect(phoneStockCallsWithCover).toBe(60);
+    expect(desktopWorstCallsWithCover).toBe(99);
+    expect(phoneWorstCallsWithCover).toBe(62);
+    expect(desktopWorstCallsWithCover).toBeLessThanOrEqual(250);
+    expect(phoneWorstCallsWithCover).toBeLessThanOrEqual(120);
   });
 });

@@ -121,6 +121,10 @@ const ui = mountEngineUi(
       scene.setExteriorVisible(visible);
       refreshLabelsIfEnabled();
     },
+    onIntakeCoverChange: (enabled) => {
+      scene.setIntakeCoverEnabled(enabled);
+      refreshLabelsIfEnabled();
+    },
     onQualityChange: (mode) => {
       scene.setQualityMode(mode);
     },
@@ -193,6 +197,7 @@ const applyReferenceFrame = (frameId: string): boolean => {
   }
   ui.setQualityMode('full');
   ui.setExteriorChecked(def.exterior);
+  ui.setIntakeCoverChecked(def.intakeCover ?? false);
   ui.setExplodePercent(def.explodePercent ?? 0);
   ui.setSectionMode(def.sectionMode ?? 'off');
   if (def.sectionPositionMm !== undefined) {
@@ -260,6 +265,10 @@ if (isBenchmark) {
   if (requestedLabels === '1' || requestedLabels === '0') {
     ui.setLabelsChecked(requestedLabels === '1');
   }
+  const requestedCover = params.get('cover');
+  if (requestedCover === '1' || requestedCover === '0') {
+    ui.setIntakeCoverChecked(requestedCover === '1');
+  }
 
   const requestedSound = params.get('sound') === '1';
   let benchmarkAudioSettled = !requestedSound;
@@ -293,6 +302,7 @@ if (isBenchmark) {
       !stats.hdriLoaded ||
       !stats.exteriorLoaded ||
       !stats.variantsLoaded ||
+      !stats.intakeCoverLoaded ||
       !benchmarkAudioSettled
     ) {
       requestAnimationFrame(sampleFrame);

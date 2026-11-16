@@ -12,6 +12,13 @@ import type { ValveConfig } from '../config/valveConfig';
 import type { CrankState, CylinderId, EngineConfig } from '../core/interfaces';
 import { computeState, crankPinPositionM, phaseOffsetDeg } from '../core/kinematics';
 import { loadRegisteredExteriorShell, type LoadedExteriorShell } from './exteriorLoader';
+import {
+  computeIntakeCoverExplodeOffsetMm,
+  computeIntakeCoverVisible,
+  createExteriorGhostRegistry,
+  INTAKE_COVER_DEFAULT_ENABLED,
+  INTAKE_COVER_MODEL_PATH,
+} from './intakeCover';
 import { computeEngineLayout } from './layout';
 import {
   createPartLoader,
@@ -128,12 +135,21 @@ export interface EngineRenderStats {
   sectionCapClosedChains?: number;
   sectionCapDroppedGroups?: number;
   sectionCapHullOnlySources?: number;
+  intakeCoverLoaded: boolean;
+  intakeCoverFailed: boolean;
+  intakeCoverEnabled: boolean;
+  intakeCoverVisible: boolean;
+  intakeCoverTriangles: number;
+  intakeCoverSceneTriangles: number;
+  intakeCoverMaterials: number;
 }
 
 export interface EngineSceneController {
   update(state: CrankState): void;
   setExteriorVisible(visible: boolean): void;
   getExteriorVisible(): boolean;
+  setIntakeCoverEnabled(enabled: boolean): void;
+  getIntakeCoverEnabled(): boolean;
   setXrayEnabled(enabled: boolean): void;
   getXrayEnabled(): boolean;
   setExplodeFactor(factor: number): void;
@@ -193,12 +209,6 @@ interface DetailedV8Batches {
   pushrod: InstancedPartBatch;
   lifter: InstancedPartBatch;
   totalTriangles: number;
-}
-
-interface MaterialTransparencySnapshot {
-  readonly transparent: boolean;
-  readonly opacity: number;
-  readonly depthWrite: boolean;
 }
 
 /**
@@ -637,8 +647,11 @@ export function createEngineScene(
   let exteriorVisible = false;
   let xrayEnabled = false;
   let explodeFactor = 0;
-  let exteriorMaterialsGhosted = false;
-  const exteriorMaterialSnapshots = new Map<THREE.Material, MaterialTransparencySnapshot>();
+  const exteriorGhostRegistry = createExteriorGhostRegistry(XRAY_GHOST_OPACITY);
+  let intakeCover: LoadedVariantScene | null = null;
+  let intakeCoverEnabled = INTAKE_COVER_DEFAULT_ENABLED;
+  let intakeCoverLoaded = false;
+  let intakeCoverLoadFailed = false;
   let lastState: CrankState = computeState(config, 0, 900, valveCfg);
 
   // Reusable scratch math objects (zero per-frame heap allocations)
@@ -1181,39 +1194,34 @@ export function createEngineScene(
     staticCapsDirty = true;
   };
 
-  // M4 §5: Synchronize exterior shell group visibility (exteriorChecked || xrayEnabled) and ghosting state
+  // M12 §5.2: Synchronize optional intake cover visibility (enabled && (exteriorVisible || xrayEnabled)) and +Z explode offset
+  const syncIntakeCoverState = (): void => {
+    if (!intakeCover) return;
+    const nextVisible = computeIntakeCoverVisible(intakeCoverEnabled, exteriorVisible, xrayEnabled);
+    const [dxMm, dyMm, dzMm] = computeIntakeCoverExplodeOffsetMm(explodeFactor);
+    const nextX = dxMm / 1000;
+    const nextY = dyMm / 1000;
+    const nextZ = dzMm / 1000;
+    if (
+      intakeCover.group.visible !== nextVisible ||
+      intakeCover.group.position.x !== nextX ||
+      intakeCover.group.position.y !== nextY ||
+      intakeCover.group.position.z !== nextZ
+    ) {
+      intakeCover.group.visible = nextVisible;
+      intakeCover.group.position.set(nextX, nextY, nextZ);
+      staticCapsDirty = true;
+    }
+  };
+
+  // M4 §5 & M12 §5.2: Synchronize load-order-safe exterior material ghosting, cover state, and shell visibility
   const syncExteriorShellState = (): void => {
     staticCapsDirty = true;
+    exteriorGhostRegistry.setGhosted(xrayEnabled);
+    syncIntakeCoverState();
     if (!exteriorShell) return;
 
     exteriorShell.group.visible = exteriorVisible || xrayEnabled;
-
-    if (xrayEnabled && !exteriorMaterialsGhosted) {
-      for (const mat of exteriorShell.materials) {
-        exteriorMaterialSnapshots.set(mat, {
-          transparent: mat.transparent,
-          opacity: mat.opacity,
-          depthWrite: mat.depthWrite,
-        });
-        mat.transparent = true;
-        mat.opacity = XRAY_GHOST_OPACITY;
-        mat.depthWrite = false;
-        mat.needsUpdate = true;
-      }
-      exteriorMaterialsGhosted = true;
-    } else if (!xrayEnabled && exteriorMaterialsGhosted) {
-      for (const mat of exteriorShell.materials) {
-        const snap = exteriorMaterialSnapshots.get(mat);
-        if (snap) {
-          mat.transparent = snap.transparent;
-          mat.opacity = snap.opacity;
-          mat.depthWrite = snap.depthWrite;
-          mat.needsUpdate = true;
-        }
-      }
-      exteriorMaterialSnapshots.clear();
-      exteriorMaterialsGhosted = false;
-    }
   };
 
   // Load all 10 part GLBs and build batched V8 InstancedMeshes
@@ -1506,6 +1514,7 @@ export function createEngineScene(
         );
         shellMeshIndex += 1;
       });
+      exteriorGhostRegistry.register(loaded.materials);
       syncExteriorShellState();
       syncVisualVariants();
       scene.add(loaded.group);
@@ -1576,6 +1585,45 @@ export function createEngineScene(
     });
   }
 
+  // Preload optional M12 intake manifold cover (`public/models/intake_cover_lly.glb`), hidden by default (§5.2)
+  void loadVariantScene(partLoader, `${baseUrl}${INTAKE_COVER_MODEL_PATH}`)
+    .then((loaded) => {
+      if (disposed) {
+        for (const g of loaded.geometries) g.dispose();
+        for (const m of loaded.materials) m.dispose();
+        return;
+      }
+      intakeCover = loaded;
+      for (const g of loaded.geometries) geometriesToDispose.add(g);
+      for (const m of loaded.materials) {
+        materialsToDispose.add(m);
+        registerClippableMaterial(m);
+      }
+      intakeCoverLoaded = true;
+      loaded.group.visible = false;
+      scene.add(loaded.group);
+      staticCapSources.push(
+        prepareCapSource({
+          id: 'intake_cover',
+          object3D: intakeCover.group,
+          instanced: false,
+          count: 1,
+          static: true,
+          skipWhenGhosted: true,
+          hullOnly: false,
+        }),
+      );
+      exteriorGhostRegistry.register(intakeCover.materials);
+      syncExteriorShellState();
+      syncIntakeCoverState();
+      staticCapsDirty = true;
+    })
+    .catch((err) => {
+      console.error('Failed to load LLY intake manifold cover GLB:', err);
+      intakeCoverLoadFailed = true;
+      intakeCoverLoaded = true;
+    });
+
   const applyEffectiveQualityTier = (nextTier: QualityTier): void => {
     const tierChanged = nextTier !== effectiveTier;
     effectiveTier = nextTier;
@@ -1620,14 +1668,25 @@ export function createEngineScene(
   const setExteriorVisible = (visible: boolean): void => {
     exteriorVisible = visible;
     syncExteriorShellState();
+    syncIntakeCoverState();
     syncVisualVariants();
   };
 
   const getExteriorVisible = (): boolean => exteriorVisible;
 
+  const setIntakeCoverEnabled = (enabled: boolean): void => {
+    intakeCoverEnabled = Boolean(enabled);
+    syncExteriorShellState();
+    syncIntakeCoverState();
+    staticCapsDirty = true;
+  };
+
+  const getIntakeCoverEnabled = (): boolean => intakeCoverEnabled;
+
   const setXrayEnabled = (enabled: boolean): void => {
     xrayEnabled = enabled;
     syncExteriorShellState();
+    syncIntakeCoverState();
     syncVisualVariants();
   };
 
@@ -1640,6 +1699,7 @@ export function createEngineScene(
     }
     explodeFactor = next;
     syncVisualVariants();
+    syncIntakeCoverState();
     if (v8Batches) {
       applyHeadAndInjectorTransforms(v8Batches);
       applyV8KinematicState(
@@ -1892,13 +1952,16 @@ export function createEngineScene(
       }
     }
 
+    const intakeCoverSceneTriangles = intakeCover ? intakeCover.triangles : 0;
+    const intakeCoverVisibleNow = intakeCover !== null && intakeCover.group.visible;
     const internalTris = v8Batches ? v8Batches.totalTriangles : 0;
     const visibleSceneTriangles =
       internalTris +
       mainShaft.triangles +
       groundSegments +
       visibleShellTriangles +
-      visibleExternalVariantTriangles;
+      visibleExternalVariantTriangles +
+      (intakeCoverVisibleNow ? intakeCoverSceneTriangles : 0);
 
     const failedVariantIds = configuredVariants
       .filter((d) => failedVariantIdSet.has(d.variantId))
@@ -1941,6 +2004,13 @@ export function createEngineScene(
       sectionCapDroppedGroups: lastStaticCapStats.droppedGroups + lastDynamicCapStats.droppedGroups,
       sectionCapHullOnlySources:
         lastStaticCapStats.hullOnlySources + lastDynamicCapStats.hullOnlySources,
+      intakeCoverLoaded,
+      intakeCoverFailed: intakeCoverLoadFailed,
+      intakeCoverEnabled,
+      intakeCoverVisible: intakeCoverVisibleNow,
+      intakeCoverTriangles: intakeCoverSceneTriangles,
+      intakeCoverSceneTriangles,
+      intakeCoverMaterials: intakeCover ? intakeCover.materials.length : 0,
     };
   };
 
@@ -1974,6 +2044,12 @@ export function createEngineScene(
       instMesh.dispose();
     }
     instancedMeshesToDispose.clear();
+    if (intakeCover) {
+      scene.remove(intakeCover.group);
+      intakeCover = null;
+    }
+    staticCapSources.length = 0;
+    dynamicCapSources.length = 0;
     for (const geo of geometriesToDispose) {
       geo.dispose();
     }
@@ -1983,7 +2059,7 @@ export function createEngineScene(
     for (const tex of texturesToDispose) {
       tex.dispose();
     }
-    exteriorMaterialSnapshots.clear();
+    exteriorGhostRegistry.clear();
     clippableMaterials.clear();
     renderer.dispose();
     renderer.domElement.remove();
@@ -1993,6 +2069,8 @@ export function createEngineScene(
     update,
     setExteriorVisible,
     getExteriorVisible,
+    setIntakeCoverEnabled,
+    getIntakeCoverEnabled,
     setXrayEnabled,
     getXrayEnabled,
     setExplodeFactor,

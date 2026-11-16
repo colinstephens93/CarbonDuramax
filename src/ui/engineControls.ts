@@ -291,10 +291,17 @@ function injectStyles(): void {
     }
     .m4-toggles-row {
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
-      gap: 18px;
+      gap: 6px 14px;
       margin-top: 6px;
       margin-bottom: 6px;
+    }
+    .m12-cover-note {
+      margin: 0 0 6px;
+      font-size: 10.5px;
+      line-height: 1.35;
+      color: #94a3b8;
     }
     .m4-cutaway-note {
       margin: 0;
@@ -609,6 +616,7 @@ function injectStyles(): void {
 
 export interface EngineUiOptions {
   onExteriorChange?: (visible: boolean) => void;
+  onIntakeCoverChange?: (enabled: boolean) => void;
   onQualityChange?: (mode: UiQualityMode) => void;
   onExplodeChange?: (explodeFactor: number) => void;
   onSectionChange?: (mode: UiSectionMode, positionMm: number) => void;
@@ -623,6 +631,7 @@ export interface EngineUiHandle {
   setCrankAngleDeg(deg: number): void;
   setPlaying(playing: boolean): void;
   setExteriorChecked(checked: boolean): void;
+  setIntakeCoverChecked(checked: boolean): void;
   setQualityMode(mode: UiQualityMode): void;
   setExplodePercent(percent: number): void;
   setSectionMode(mode: UiSectionMode): void;
@@ -647,7 +656,7 @@ export function mountEngineUi(
 
   const bannerSubtitle = document.querySelector('#title-banner p');
   if (bannerSubtitle) {
-    bannerSubtitle.textContent = 'Milestone 11 — Capped-Solid Cutaways';
+    bannerSubtitle.textContent = 'Milestone 12 — Intake Manifold Cover';
   }
 
   let isPlaying = true;
@@ -918,7 +927,24 @@ export function mountEngineUi(
   labelsToggleText.textContent = 'Labels';
   labelsToggleLabel.append(labelsCheckbox, labelsToggleText);
 
-  viewTogglesRow.append(xrayLabel, labelsToggleLabel);
+  const intakeCoverLabel = document.createElement('label');
+  intakeCoverLabel.className = 'm3-checkbox-label';
+  intakeCoverLabel.htmlFor = 'm12-intake-cover-checkbox';
+  const intakeCoverCheckbox = document.createElement('input');
+  intakeCoverCheckbox.id = 'm12-intake-cover-checkbox';
+  intakeCoverCheckbox.type = 'checkbox';
+  intakeCoverCheckbox.checked = false;
+  const intakeCoverText = document.createElement('span');
+  intakeCoverText.textContent = 'Intake cover';
+  intakeCoverLabel.append(intakeCoverCheckbox, intakeCoverText);
+
+  viewTogglesRow.append(xrayLabel, labelsToggleLabel, intakeCoverLabel);
+
+  // M12 §5.3 & §10.2 optional cosmetic cover note (immediately after toggles row, before cutaway note)
+  const coverNote = document.createElement('p');
+  coverNote.className = 'm12-cover-note';
+  coverNote.textContent =
+    'Optional cosmetic cover (GM 21994000) — shows with Exterior or X-Ray and hides the Y-bridge. The moulded "6.6 TURBO DIESEL" legend is an illustrative reconstruction; the planform, dimensions and wall thickness are illustrative placeholders, not measured LLY values.';
 
   // 5. Cutaway note (exact text per M11 Spec §9.1)
   const cutawayNote = document.createElement('p');
@@ -926,7 +952,7 @@ export function mountEngineUi(
   cutawayNote.textContent =
     'Section cut faces are filled as solid, hatched material — a diagrammatic section, not a machined or verified LLY surface.';
 
-  viewsGroup.append(viewsTitle, explodeWrap, sectionWrap, viewTogglesRow, cutawayNote);
+  viewsGroup.append(viewsTitle, explodeWrap, sectionWrap, viewTogglesRow, coverNote, cutawayNote);
 
   // Readout cards: Crank Angle, RPM, Effective Speed, Firing Cylinder
   const readoutGrid = document.createElement('div');
@@ -1150,6 +1176,11 @@ export function mountEngineUi(
     options?.onXrayChange?.(checked);
   };
 
+  const applyIntakeCoverCheckedInternal = (checked: boolean): void => {
+    intakeCoverCheckbox.checked = checked;
+    options?.onIntakeCoverChange?.(checked);
+  };
+
   const applyLabelsCheckedInternal = (checked: boolean): void => {
     labelsChecked = checked;
     labelsCheckbox.checked = checked;
@@ -1229,6 +1260,10 @@ export function mountEngineUi(
 
   labelsCheckbox.addEventListener('change', () => {
     applyLabelsCheckedInternal(labelsCheckbox.checked);
+  });
+
+  intakeCoverCheckbox.addEventListener('change', () => {
+    applyIntakeCoverCheckedInternal(intakeCoverCheckbox.checked);
   });
 
   const pauseAndScrub = (): void => {
@@ -1343,6 +1378,10 @@ export function mountEngineUi(
     options?.onExteriorChange?.(checked);
   };
 
+  const setIntakeCoverChecked = (checked: boolean): void => {
+    applyIntakeCoverCheckedInternal(checked);
+  };
+
   const setQualityMode = (mode: UiQualityMode): void => {
     qualitySelect.value = mode;
     options?.onQualityChange?.(mode);
@@ -1403,6 +1442,7 @@ export function mountEngineUi(
     setCrankAngleDeg,
     setPlaying,
     setExteriorChecked,
+    setIntakeCoverChecked,
     setQualityMode,
     setExplodePercent,
     setSectionMode,
