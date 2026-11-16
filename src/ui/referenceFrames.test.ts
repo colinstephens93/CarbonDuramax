@@ -2,6 +2,8 @@
 // (docs/specs/M8-part-variants.md §9.12, docs/specs/M11-capped-cutaways.md §8 test 7).
 // Imports the pure, DOM-free and Three.js-free src/ui/referenceFrames.ts table directly.
 
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { checkCompatibility, fullCatalog, slotForVariantId } from '../catalog';
 import type { Build, PartSlotId } from '../core/interfaces';
@@ -9,8 +11,8 @@ import { stockBuild } from '../perf';
 import { SECTION_RANGES_MM } from '../renderer/viewLayout';
 import { REFERENCE_FRAME_DEFS } from './referenceFrames';
 
-describe('Milestone 8, 10 & 11 reference frames (src/ui/referenceFrames.test.ts)', () => {
-  it('7. validates RF-1..RF-17 states, keeps stock frames variant-free, verifies RF-14..RF-17 section ranges/cutting planes, and verifies RF-8..RF-10 compatibility', () => {
+describe('Milestone 8, 10, 11 & 12 reference frames (src/ui/referenceFrames.test.ts)', () => {
+  it('10. validates RF-1..RF-20 states, keeps stock frames variant-free, verifies RF-18..RF-20 intakeCover flags & RF-19 section checklist, and verifies RF-8..RF-10 compatibility', () => {
     const expectedIds = [
       'RF-1',
       'RF-2',
@@ -29,6 +31,9 @@ describe('Milestone 8, 10 & 11 reference frames (src/ui/referenceFrames.test.ts)
       'RF-15',
       'RF-16',
       'RF-17',
+      'RF-18',
+      'RF-19',
+      'RF-20',
     ];
     expect(Object.keys(REFERENCE_FRAME_DEFS)).toEqual(expectedIds);
 
@@ -71,9 +76,18 @@ describe('Milestone 8, 10 & 11 reference frames (src/ui/referenceFrames.test.ts)
       if (def.labels !== undefined) {
         expect(typeof def.labels).toBe('boolean');
       }
+      if (def.intakeCover !== undefined) {
+        expect(typeof def.intakeCover).toBe('boolean');
+      }
     }
 
-    // RF-1 .. RF-7 and RF-11 .. RF-17 carry no variants field (stock builds)
+    // RF-1 .. RF-17 keep intakeCover undefined/false (cover defaults off)
+    for (let i = 1; i <= 17; i += 1) {
+      const def = REFERENCE_FRAME_DEFS[`RF-${i}`]!;
+      expect(def.intakeCover ?? false).toBe(false);
+    }
+
+    // RF-1 .. RF-7 and RF-11 .. RF-20 carry no variants field (stock builds)
     for (const stockFrameId of [
       'RF-1',
       'RF-2',
@@ -89,6 +103,9 @@ describe('Milestone 8, 10 & 11 reference frames (src/ui/referenceFrames.test.ts)
       'RF-15',
       'RF-16',
       'RF-17',
+      'RF-18',
+      'RF-19',
+      'RF-20',
     ]) {
       const def = REFERENCE_FRAME_DEFS[stockFrameId]!;
       expect('variants' in def).toBe(false);
@@ -100,9 +117,9 @@ describe('Milestone 8, 10 & 11 reference frames (src/ui/referenceFrames.test.ts)
       expect(REFERENCE_FRAME_DEFS[m10FrameId]!.exterior).toBe(true);
     }
 
-    // M11 §8 test 7: RF-14 .. RF-17 section mode/position within SECTION_RANGES_MM and at a true cutting plane
-    for (const m11FrameId of ['RF-14', 'RF-15', 'RF-16', 'RF-17']) {
-      const def = REFERENCE_FRAME_DEFS[m11FrameId]!;
+    // M11 §8 test 7 & M12 §9 test 10: section-active frames within SECTION_RANGES_MM and at a true cutting plane
+    for (const secFrameId of ['RF-14', 'RF-15', 'RF-16', 'RF-17', 'RF-19']) {
+      const def = REFERENCE_FRAME_DEFS[secFrameId]!;
       expect(def.sectionMode === 'x' || def.sectionMode === 'y').toBe(true);
       expect(def.sectionPositionMm).toBeDefined();
       const mode = def.sectionMode as 'x' | 'y';
@@ -118,6 +135,34 @@ describe('Milestone 8, 10 & 11 reference frames (src/ui/referenceFrames.test.ts)
         expect(posMm).toBeLessThan(hasIntercooler ? 696.0 : 480.66);
       }
     }
+
+    // M12 §9 test 10: RF-18..RF-20 specific assertions + docs/REFERENCE_FRAMES.md Section-Fill Checklist check
+    for (const m12FrameId of ['RF-18', 'RF-19', 'RF-20']) {
+      const def = REFERENCE_FRAME_DEFS[m12FrameId]!;
+      expect(def.exterior).toBe(true);
+      expect(def.intakeCover).toBe(true);
+    }
+    expect(REFERENCE_FRAME_DEFS['RF-18']!.sectionMode ?? 'off').toBe('off');
+    expect(REFERENCE_FRAME_DEFS['RF-18']!.explodePercent ?? 0).toBe(0);
+    expect(REFERENCE_FRAME_DEFS['RF-19']!.sectionMode).toBe('x');
+    expect(REFERENCE_FRAME_DEFS['RF-19']!.sectionPositionMm).toBe(300);
+    // D-047: RF-19 camera sits on the +X side of X = 300 mm (> 0.300 m) so the +X cut face is unoccluded
+    expect(REFERENCE_FRAME_DEFS['RF-19']!.position[0]).toBeGreaterThan(0.3);
+    expect(REFERENCE_FRAME_DEFS['RF-20']!.sectionMode ?? 'off').toBe('off');
+    expect(REFERENCE_FRAME_DEFS['RF-20']!.explodePercent).toBe(100);
+    // D-047: RF-20 camera sits safely above the +260 mm lifted cover pad (Z = 0.678 m)
+    expect(REFERENCE_FRAME_DEFS['RF-20']!.position[2]).toBeGreaterThan(1.0);
+
+    const refFramesDoc = readFileSync(
+      resolve(process.cwd(), 'docs', 'REFERENCE_FRAMES.md'),
+      'utf8',
+    );
+    expect(refFramesDoc).toContain(
+      '## Section-Fill Checklist (Shared by `RF-6`, `RF-14`…`RF-17`, and `RF-19`, Milestone 11 Spec §7.2, extended M12)',
+    );
+    expect(refFramesDoc).toContain(
+      "The M12 cover's open thin-walled underside is a material band at the cut: the cover cap must show the wall band and leave the open cavity as air, not a filled slab.",
+    );
 
     // RF-8 .. RF-10 carry valid visual variants and form coherent M6 builds
     for (const modFrameId of ['RF-8', 'RF-9', 'RF-10']) {

@@ -13,6 +13,7 @@ export interface ReferenceFrameDef {
   readonly sectionPositionMm?: number;
   readonly xray?: boolean;
   readonly labels?: boolean;
+  readonly intakeCover?: boolean;
   readonly variants?: readonly string[];
 }
 
@@ -172,5 +173,39 @@ export const REFERENCE_FRAME_DEFS: Readonly<Record<string, ReferenceFrameDef>> =
     sectionPositionMm: -185,
     xray: false,
     labels: false,
+  },
+  'RF-18': {
+    thetaDeg: 180,
+    position: [1.38, -1.18, 0.72],
+    target: [0.3, -0.02, 0.17],
+    exterior: true,
+    explodePercent: 0,
+    sectionMode: 'off',
+    xray: false,
+    labels: false,
+    intakeCover: true,
+  },
+  'RF-19': {
+    thetaDeg: 705,
+    position: [0.92, -0.58, 0.56],
+    target: [0.28, -0.01, 0.31],
+    exterior: true,
+    explodePercent: 0,
+    sectionMode: 'x',
+    sectionPositionMm: 300,
+    xray: false,
+    labels: false,
+    intakeCover: true,
+  },
+  'RF-20': {
+    thetaDeg: 90,
+    position: [1.28, -1.08, 1.12],
+    target: [0.31, -0.02, 0.3],
+    exterior: true,
+    explodePercent: 100,
+    sectionMode: 'off',
+    xray: false,
+    labels: false,
+    intakeCover: true,
   },
 };
