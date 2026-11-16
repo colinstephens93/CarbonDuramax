@@ -101,7 +101,7 @@ No dimensioned GM drawing, no GM service dimension, and no measured sample were 
 | Mass | **Not published** | no listing weight | **NOT PUBLISHED** |
 | Shipping carton dimensions | Occasionally available on dealer/marketplace pages | not a part dimension; **not adopted** | **RECORDED-NOT-ADOPTED** |
 
-**Consequence for M12:** every cover dimension must be a **labeled placeholder** derived from the measured M10 shell and the GM EPC/photo *form*, not presented as a published LLY measurement. The spec's parameter table marks each value `published` / `measured-from-code` / `labeled placeholder`, and the on-screen and docs provenance keeps the cover's proportions illustrative.
+**Consequence for M12:** every cover dimension must be a **labeled placeholder** derived from the measured M10 shell and the GM EPC/photo *form* (except the planform orientation, which is a clearance-driven placeholder, not form-matched; §15.7), not presented as a published LLY measurement. The spec's parameter table marks each value `published` / `measured-from-code` / `labeled placeholder`, and the on-screen and docs provenance keeps the cover's proportions illustrative.
 
 ---
 
