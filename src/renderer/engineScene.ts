@@ -19,6 +19,13 @@ import {
   INTAKE_COVER_DEFAULT_ENABLED,
   INTAKE_COVER_MODEL_PATH,
 } from './intakeCover';
+import {
+  computeCombinedInternalSceneTriangles,
+  filterInternalPrimEntriesBySlot,
+  resolveVariantLoadFailure,
+  ROD_VARIANT_ID,
+  type InternalPrimEntry,
+} from './internalVariants';
 import { computeEngineLayout } from './layout';
 import {
   createPartLoader,
@@ -113,6 +120,9 @@ export interface EngineRenderStats {
   visibleVariantModels: string[];
   variantSceneTriangles: number;
   pistonVariantActive: boolean;
+  rodVariantActive: boolean;
+  rodVariantTriangles: number;
+  rodSceneTriangles: number;
   visibleSceneTriangles: number;
   exteriorVisible: boolean;
   xrayEnabled: boolean;
@@ -162,6 +172,7 @@ export interface EngineSceneController {
     readonly attachedVariantIds: readonly string[];
     readonly shellPartsHidden: readonly string[];
     readonly pistonVariantActive: boolean;
+    readonly rodVariantActive: boolean;
   };
   projectLabelAnchors(viewportWidthPx: number, viewportHeightPx: number): ProjectedLabelAnchor[];
   setQualityMode(mode: QualityMode): void;
@@ -1017,11 +1028,18 @@ export function createEngineScene(
     { readonly descriptor: VisualVariantDescriptor; readonly loaded: LoadedVariantScene }
   >();
   const attachedExternalVariantIds = new Set<string>();
-  const loadedPistonPrimsById = new Map<string, ExtractedPartPrimitive[]>();
+  const loadedInternalPrimsById = new Map<string, InternalPrimEntry<ExtractedPartPrimitive[]>>();
   const pistonBatchSetsById = new Map<string, PistonBatchSet>();
   let stockPistonBatchSet: PistonBatchSet | null = null;
+  let stockConrodBatch: InstancedPartBatch | null = null;
+  let rodBatch: InstancedPartBatch | null = null;
+  let currentRodBatch: InstancedPartBatch | null = null;
+  let currentPistonSet: PistonBatchSet | null = null;
   let nonPistonInternalTriangles = 0;
+  let baseNonPistonInternalTriangles = 0;
   let attachedPistonVariantId: string | null = null;
+  let attachedRodVariantId: string | null = null;
+  let rodVariantPerInstanceTriangles = 0;
   let selectedVariants: readonly VisualVariantDescriptor[] = [];
   const shellPartTrianglesById = new Map<string, number>();
 
@@ -1075,7 +1093,10 @@ export function createEngineScene(
 
   const ensureVariantPistonBatchSetsBuilt = (): void => {
     if (!v8Batches) return;
-    for (const [variantId, prims] of loadedPistonPrimsById) {
+    for (const [variantId, { prims }] of filterInternalPrimEntriesBySlot(
+      loadedInternalPrimsById,
+      'pistons',
+    )) {
       if (!pistonBatchSetsById.has(variantId)) {
         const variantSet = buildPistonBatchSet(`piston_${variantId}`, prims, v8Batches.root, false);
         pistonBatchSetsById.set(variantId, variantSet);
@@ -1095,18 +1116,52 @@ export function createEngineScene(
     }
   };
 
-  // M8 §4.3: Synchronize scene-placed external variant attachment/visibility/explode offsets,
-  // shell preserved-subtree hiding, and instanced piston-batch swapping.
+  const ensureVariantRodBatchBuilt = (): void => {
+    if (!v8Batches || rodBatch !== null) return;
+    const rodEntry = filterInternalPrimEntriesBySlot(loadedInternalPrimsById, 'rods').find(
+      ([variantId]) => variantId === ROD_VARIANT_ID,
+    );
+    if (!rodEntry) return;
+    const [, { prims: rodPrims }] = rodEntry;
+    const rodRes = createInstancedBatch(
+      'conrod_variant',
+      rodPrims,
+      8,
+      v8Batches.root,
+      undefined,
+      false,
+    );
+    rodBatch = registerInstancedBatchForDispose(rodRes.batch);
+    registerInstancedCapSource(dynamicCapSources, 'conrod_variant', rodBatch, false);
+  };
+
+  const recomputeCombinedInternalTriangles = (): void => {
+    if (!v8Batches || !stockConrodBatch || !stockPistonBatchSet) return;
+    v8Batches.totalTriangles = computeCombinedInternalSceneTriangles(
+      baseNonPistonInternalTriangles,
+      (currentRodBatch ?? stockConrodBatch).totalTriangles,
+      (currentPistonSet ?? stockPistonBatchSet).totalTriangles,
+    );
+  };
+
+  // M8 §4.3 & M13 §5.3: Synchronize scene-placed external variant attachment/visibility/explode offsets,
+  // shell preserved-subtree hiding, and instanced rod & piston batch swapping.
   const syncVisualVariants = (): void => {
     ensureVariantPistonBatchSetsBuilt();
+    ensureVariantRodBatchBuilt();
 
     const activeExtById = new Map<string, VisualVariantDescriptor>();
     const replacedShellPartIds = new Set<string>();
     let selectedPistonDesc: VisualVariantDescriptor | null = null;
+    let selectedRodDesc: VisualVariantDescriptor | null = null;
 
     for (const sel of selectedVariants) {
       if (sel.slotId === 'pistons') {
         selectedPistonDesc = sel;
+        continue;
+      }
+      if (sel.slotId === 'rods') {
+        selectedRodDesc = sel;
         continue;
       }
       if (loadedExternalVariants.has(sel.variantId)) {
@@ -1147,6 +1202,36 @@ export function createEngineScene(
       }
     }
 
+    let internalBatchSwapped = false;
+
+    const desiredRodId =
+      selectedRodDesc &&
+      selectedRodDesc.variantId === ROD_VARIANT_ID &&
+      rodBatch !== null
+        ? selectedRodDesc.variantId
+        : null;
+
+    if (v8Batches && stockConrodBatch && desiredRodId !== attachedRodVariantId) {
+      const prevRodBatch = currentRodBatch ?? stockConrodBatch;
+      const nextRodBatch =
+        desiredRodId !== null && rodBatch !== null ? rodBatch : stockConrodBatch;
+
+      for (const m of prevRodBatch.meshes) {
+        m.visible = false;
+        v8Batches.root.remove(m);
+      }
+      for (const m of nextRodBatch.meshes) {
+        m.visible = true;
+        v8Batches.root.add(m);
+      }
+
+      v8Batches.conrod = nextRodBatch;
+      currentRodBatch = nextRodBatch;
+      attachedRodVariantId = desiredRodId;
+      recomputeCombinedInternalTriangles();
+      internalBatchSwapped = true;
+    }
+
     const desiredPistonId =
       selectedPistonDesc && pistonBatchSetsById.has(selectedPistonDesc.variantId)
         ? selectedPistonDesc.variantId
@@ -1181,9 +1266,13 @@ export function createEngineScene(
 
       v8Batches.pistonStandard = nextSet.standard;
       v8Batches.pistonFiring = nextSet.firing;
-      v8Batches.totalTriangles = nonPistonInternalTriangles + nextSet.totalTriangles;
+      currentPistonSet = nextSet;
       attachedPistonVariantId = desiredPistonId;
+      recomputeCombinedInternalTriangles();
+      internalBatchSwapped = true;
+    }
 
+    if (internalBatchSwapped && v8Batches) {
       applyV8KinematicState(
         v8Batches,
         lastState,
@@ -1375,7 +1464,15 @@ export function createEngineScene(
           lifter,
         ];
         nonPistonInternalTriangles = nonPistonBatches.reduce((sum, b) => sum + b.totalTriangles, 0);
-        const totalTriangles = nonPistonInternalTriangles + stockPistonBatchSet.totalTriangles;
+        stockConrodBatch = conrod;
+        currentRodBatch = conrod;
+        currentPistonSet = stockPistonBatchSet;
+        baseNonPistonInternalTriangles = nonPistonInternalTriangles - conrod.totalTriangles;
+        const totalTriangles = computeCombinedInternalSceneTriangles(
+          baseNonPistonInternalTriangles,
+          currentRodBatch.totalTriangles,
+          currentPistonSet.totalTriangles,
+        );
 
         v8Batches = {
           root,
@@ -1529,7 +1626,7 @@ export function createEngineScene(
     const variantPromises = configuredVariants.map(async (desc) => {
       const assetUrl = `${baseUrl}${desc.modelPath}`;
       try {
-        if (desc.slotId === 'pistons') {
+        if (desc.slotId === 'pistons' || desc.slotId === 'rods') {
           const gltf = await loadPartGltf(partLoader, assetUrl);
           const prims = extractAllPartPrimitives(gltf);
           if (disposed) {
@@ -1544,7 +1641,13 @@ export function createEngineScene(
             materialsToDispose.add(p.material);
             registerClippableMaterial(p.material);
           }
-          loadedPistonPrimsById.set(desc.variantId, prims);
+          if (desc.slotId === 'rods' && desc.variantId === ROD_VARIANT_ID) {
+            rodVariantPerInstanceTriangles = prims.reduce((sum, p) => sum + p.triangles, 0);
+          }
+          loadedInternalPrimsById.set(desc.variantId, {
+            slotId: desc.slotId,
+            prims,
+          });
         } else {
           const loaded = await loadVariantScene(partLoader, assetUrl);
           if (disposed) {
@@ -1580,7 +1683,10 @@ export function createEngineScene(
 
     void Promise.allSettled(variantPromises).then(() => {
       if (disposed) return;
-      variantsLoaded = true;
+      variantsLoaded = resolveVariantLoadFailure(
+        configuredVariants.map((d) => d.variantId),
+        failedVariantIdSet,
+      ).variantsLoaded;
       syncVisualVariants();
     });
   }
@@ -1723,6 +1829,7 @@ export function createEngineScene(
     readonly attachedVariantIds: readonly string[];
     readonly shellPartsHidden: readonly string[];
     readonly pistonVariantActive: boolean;
+    readonly rodVariantActive: boolean;
   } => {
     const activeVariantIds: string[] = [];
     const attachedVariantIds: string[] = [];
@@ -1731,6 +1838,11 @@ export function createEngineScene(
     for (const sel of selectedVariants) {
       if (sel.slotId === 'pistons') {
         if (attachedPistonVariantId === sel.variantId) {
+          activeVariantIds.push(sel.variantId);
+          attachedVariantIds.push(sel.variantId);
+        }
+      } else if (sel.slotId === 'rods') {
+        if (attachedRodVariantId === sel.variantId) {
           activeVariantIds.push(sel.variantId);
           attachedVariantIds.push(sel.variantId);
         }
@@ -1757,6 +1869,7 @@ export function createEngineScene(
       attachedVariantIds,
       shellPartsHidden,
       pistonVariantActive: attachedPistonVariantId !== null,
+      rodVariantActive: attachedRodVariantId !== null,
     };
   };
 
@@ -1932,6 +2045,11 @@ export function createEngineScene(
           variantSceneTriangles +=
             pistonBatchSetsById.get(sel.variantId)?.totalTriangles ?? 0;
         }
+      } else if (sel.slotId === 'rods') {
+        if (v8Batches !== null && attachedRodVariantId === sel.variantId && rodBatch !== null) {
+          visibleVariantModels.push(sel.variantId);
+          variantSceneTriangles += rodBatch.totalTriangles;
+        }
       } else if (showExternalContext && attachedExternalVariantIds.has(sel.variantId)) {
         const entry = loadedExternalVariants.get(sel.variantId);
         if (entry) {
@@ -1963,9 +2081,10 @@ export function createEngineScene(
       visibleExternalVariantTriangles +
       (intakeCoverVisibleNow ? intakeCoverSceneTriangles : 0);
 
-    const failedVariantIds = configuredVariants
-      .filter((d) => failedVariantIdSet.has(d.variantId))
-      .map((d) => d.variantId);
+    const { failedVariantIds } = resolveVariantLoadFailure(
+      configuredVariants.map((d) => d.variantId),
+      failedVariantIdSet,
+    );
 
     return {
       calls: renderer.info.render.calls,
@@ -1981,6 +2100,9 @@ export function createEngineScene(
       visibleVariantModels,
       variantSceneTriangles,
       pistonVariantActive: attachedPistonVariantId !== null,
+      rodVariantActive: attachedRodVariantId !== null,
+      rodVariantTriangles: rodVariantPerInstanceTriangles,
+      rodSceneTriangles: currentRodBatch ? currentRodBatch.totalTriangles : 0,
       visibleSceneTriangles,
       exteriorVisible,
       xrayEnabled,
@@ -2044,6 +2166,10 @@ export function createEngineScene(
       instMesh.dispose();
     }
     instancedMeshesToDispose.clear();
+    rodBatch = null;
+    stockConrodBatch = null;
+    currentRodBatch = null;
+    currentPistonSet = null;
     if (intakeCover) {
       scene.remove(intakeCover.group);
       intakeCover = null;

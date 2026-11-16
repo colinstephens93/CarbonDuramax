@@ -105,6 +105,10 @@ describe('Milestone 6 parts catalog, compatibility, and build comparison', () =>
         modelPath: 'models/variants/rot_piston_c1_lowcomp.glb',
         explodeVectorMm: [0, 0, 0],
       },
+      rods_forged: {
+        modelPath: 'models/variants/rot_conrod_c1_forged.glb',
+        explodeVectorMm: [0, 0, 0],
+      },
     };
 
     for (const entry of modified) {
@@ -384,5 +388,42 @@ describe('Milestone 6 parts catalog, compatibility, and build comparison', () =>
     });
 
     console.info(`[M6 Measured Scenario Table]\n${lines.join('\n')}`);
+  });
+
+  it('11. M13 only-one-catalog-diff: catalog/modified.json differs from modified.pre-m13.json fixture solely at rods_forged.modelPath', async () => {
+    const repoRoot = process.cwd();
+    const preRawLf = readFileSync(
+      resolve(repoRoot, 'src/catalog/__fixtures__/modified.pre-m13.json'),
+      'utf-8',
+    ).replace(/\r\n/g, '\n');
+    const postRawLf = readFileSync(resolve(repoRoot, 'catalog/modified.json'), 'utf-8').replace(
+      /\r\n/g,
+      '\n',
+    );
+
+    const encodedPre = new TextEncoder().encode(preRawLf);
+    expect(encodedPre.byteLength).toBe(7_122);
+    const digestBuf = await globalThis.crypto.subtle.digest('SHA-256', encodedPre);
+    const preSha256 = Array.from(new Uint8Array(digestBuf))
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
+    expect(preSha256).toBe('af6f0ce3bccc039943267ccbd7ad58a8f7817bb7410019dc30751656c443897c');
+
+    const preEntries = JSON.parse(preRawLf) as PartVariant[];
+    const postEntries = JSON.parse(postRawLf) as PartVariant[];
+    expect(postEntries).toHaveLength(preEntries.length);
+
+    for (let i = 0; i < preEntries.length; i += 1) {
+      const pre = preEntries[i]!;
+      const post = postEntries[i]!;
+      expect(post.id).toBe(pre.id);
+      if (pre.id === 'rods_forged') {
+        expect(pre.modelPath).toBeNull();
+        expect(post.modelPath).toBe('models/variants/rot_conrod_c1_forged.glb');
+        expect(JSON.stringify({ ...post, modelPath: null })).toBe(JSON.stringify(pre));
+      } else {
+        expect(JSON.stringify(post)).toBe(JSON.stringify(pre));
+      }
+    }
   });
 });

@@ -1,12 +1,12 @@
 # Visual Reference Frames
 
-Project: Duramax LLY Engine Lab · Governing plan: [`docs/PLAN.md`](./PLAN.md) · Milestone 3 Spec: [`docs/specs/M3-full-engine.md`](./specs/M3-full-engine.md) §9 · Milestone 4 Spec: [`docs/specs/M4-views.md`](./specs/M4-views.md) §9 · Milestone 8 Spec: [`docs/specs/M8-part-variants.md`](./specs/M8-part-variants.md) §5.2, §7.3 · Milestone 10 Spec: [`docs/specs/M10-exterior-accuracy.md`](./specs/M10-exterior-accuracy.md) §8 · Milestone 11 Spec: [`docs/specs/M11-capped-cutaways.md`](./specs/M11-capped-cutaways.md) §7 · Milestone 12 Spec: [`docs/specs/M12-intake-cover.md`](./specs/M12-intake-cover.md) §8 (with owner-approved pose/checklist deviation **D-047**) · Measurements: [`docs/M3-MEASUREMENTS.md`](./M3-MEASUREMENTS.md), [`docs/M4-MEASUREMENTS.md`](./M4-MEASUREMENTS.md), [`docs/M8-MEASUREMENTS.md`](./M8-MEASUREMENTS.md), [`docs/M10-MEASUREMENTS.md`](./M10-MEASUREMENTS.md), [`docs/M11-MEASUREMENTS.md`](./M11-MEASUREMENTS.md), [`docs/M12-MEASUREMENTS.md`](./M12-MEASUREMENTS.md) · Exterior model record: [`docs/M10-EXTERIOR.md`](./M10-EXTERIOR.md) · Cutaway technique record: [`docs/M11-CUTAWAYS.md`](./M11-CUTAWAYS.md) · Intake cover record: [`docs/M12-COVER.md`](./M12-COVER.md)
+Project: Duramax LLY Engine Lab · Governing plan: [`docs/PLAN.md`](./PLAN.md) · Milestone 3 Spec: [`docs/specs/M3-full-engine.md`](./specs/M3-full-engine.md) §9 · Milestone 4 Spec: [`docs/specs/M4-views.md`](./specs/M4-views.md) §9 · Milestone 8 Spec: [`docs/specs/M8-part-variants.md`](./specs/M8-part-variants.md) §5.2, §7.3 · Milestone 10 Spec: [`docs/specs/M10-exterior-accuracy.md`](./specs/M10-exterior-accuracy.md) §8 · Milestone 11 Spec: [`docs/specs/M11-capped-cutaways.md`](./specs/M11-capped-cutaways.md) §7 · Milestone 12 Spec: [`docs/specs/M12-intake-cover.md`](./specs/M12-intake-cover.md) §8 (with owner-approved pose/checklist deviation **D-047**) · Milestone 13 Spec: [`docs/specs/M13-internal-variants.md`](./specs/M13-internal-variants.md) §8 · Measurements: [`docs/M3-MEASUREMENTS.md`](./M3-MEASUREMENTS.md), [`docs/M4-MEASUREMENTS.md`](./M4-MEASUREMENTS.md), [`docs/M8-MEASUREMENTS.md`](./M8-MEASUREMENTS.md), [`docs/M10-MEASUREMENTS.md`](./M10-MEASUREMENTS.md), [`docs/M11-MEASUREMENTS.md`](./M11-MEASUREMENTS.md), [`docs/M12-MEASUREMENTS.md`](./M12-MEASUREMENTS.md), [`docs/M13-MEASUREMENTS.md`](./M13-MEASUREMENTS.md) · Exterior model record: [`docs/M10-EXTERIOR.md`](./M10-EXTERIOR.md) · Cutaway technique record: [`docs/M11-CUTAWAYS.md`](./M11-CUTAWAYS.md) · Intake cover record: [`docs/M12-COVER.md`](./M12-COVER.md) · Internal variants record: [`docs/M13-INTERNAL-VARIANTS.md`](./M13-INTERNAL-VARIANTS.md)
 
-These twenty fixed reference frames establish canonical camera poses, crank angles, display/view configurations, and catalog build selections for visual regression checks across milestones (`RF-1`…`RF-4` established at M3; `RF-5`…`RF-7` added at M4; `RF-8`…`RF-10` added at M8; `RF-11`…`RF-13` added and exterior-on frames `RF-3`, `RF-7`, `RF-8`, `RF-9` re-baselined at M10; `RF-14`…`RF-17` added and `RF-6` re-baselined with capped-solid cutaways at M11; `RF-18`…`RF-20` added for the optional LLY intake manifold cover at M12, with `RF-19`/`RF-20` poses and `RF-19` clipped-legend scope recorded under **D-047** while `RF-1`…`RF-17` keep `intakeCover` off).
+These twenty-two fixed reference frames establish canonical camera poses, crank angles, display/view configurations, and catalog build selections for visual regression checks across milestones (`RF-1`…`RF-4` established at M3; `RF-5`…`RF-7` added at M4; `RF-8`…`RF-10` added at M8; `RF-11`…`RF-13` added and exterior-on frames `RF-3`, `RF-7`, `RF-8`, `RF-9` re-baselined at M10; `RF-14`…`RF-17` added and `RF-6` re-baselined with capped-solid cutaways at M11; `RF-18`…`RF-20` added for the optional LLY intake manifold cover at M12, with `RF-19`/`RF-20` poses and `RF-19` clipped-legend scope recorded under **D-047** while `RF-1`…`RF-17` keep `intakeCover` off; `RF-21`…`RF-22` added for the `rods_forged` internal connecting-rod variant at M13 while `RF-1`…`RF-20` keep `rods_stock`).
 
 ## Common Capture Convention
 
-- **Build:** Production bundle (`npm run build && npm run preview`), reproducible directly via `?rf=RF-1` through `?rf=RF-20`
+- **Build:** Production bundle (`npm run build && npm run preview`), reproducible directly via `?rf=RF-1` through `?rf=RF-22`
 - **Viewport:** `1440 × 900` CSS px (`devicePixelRatio = 1`; Antigravity's built-in Chromium webview `page.screenshot()` serializes `1440×900` `16:10` viewports as `1024×640` `16:10` PNGs including the HUD readouts — standing `1024×640` convention for all frames)
 - **Camera Lens & Up Axis:** `PerspectiveCamera` with `fov = 42°`, `near = 0.02 m`, `far = 20 m`, `camera.up = [0, 0, 1]` (`+Z` vertical; `+X` front of engine along crank axis; `-Y` RH bank `[1,3,5,7]`; `+Y` LH bank `[2,4,6,8]`)
 - **Block Midpoint Reference:** `centerXM = 0.2300 m` (`230.0 mm` ahead of the `X = 0` rear block plane)
@@ -38,6 +38,8 @@ These twenty fixed reference frames establish canonical camera poses, crank angl
 | **RF-18** | `180°` | `[1.3800, -1.1800, 0.7200]` | `[0.3000, -0.0200, 0.1700]` | `Full` | `On` (checked) | `0% / Off / Off / Off` *(Intake cover `On`)* | `stock` | [`reference-frames/RF-18.png`](./reference-frames/RF-18.png) |
 | **RF-19** | `705°` | `[0.9200, -0.5800, 0.5600]` *(D-047)* | `[0.2800, -0.0100, 0.3100]` *(D-047)* | `Full` | `On` (checked) | `0% / Front–Back (X) @ 300.0 mm / Off / Off` *(Intake cover `On`)* | `stock` | [`reference-frames/RF-19.png`](./reference-frames/RF-19.png) |
 | **RF-20** | `90°` | `[1.2800, -1.0800, 1.1200]` *(D-047)* | `[0.3100, -0.0200, 0.3000]` *(D-047)* | `Full` | `On` (checked) | `100% / Off / Off / Off` *(Intake cover `On`)* | `stock` | [`reference-frames/RF-20.png`](./reference-frames/RF-20.png) |
+| **RF-21** | `90°` | `[1.2800, -1.0800, 0.7400]` | `[0.3100, -0.0500, 0.1800]` | `Full` | `Off` (unchecked) | `100% / Off / Off / Off` | `rods_forged` | [`reference-frames/RF-21.png`](./reference-frames/RF-21.png) |
+| **RF-22** | `0°` | `[1.0600, -0.5400, 0.4800]` | `[0.2900, -0.0200, 0.1400]` | `Full` | `Off` (unchecked) | `0% / Front–Back (X) @ 388.3 mm / Off / Off` | `rods_forged` | [`reference-frames/RF-22.png`](./reference-frames/RF-22.png) |
 
 ---
 
@@ -51,6 +53,22 @@ Every section-active reference frame (`RF-6`, `RF-14`, `RF-15`, `RF-16`, `RF-17`
 4. **Hatch quality:** `45°` lines, uniform world spacing (`5.0 mm` perpendicular period, `1/3` duty), no swimming/stretching/moiré, and no hatch on non-cut surfaces.
 5. **Crisp cut edge:** The boundary between the cap and the part's outer surface is a clean silhouette; no gap ring of background appears between them.
 6. **No spurious fill:** No cap patch floats in air or appears where the plane does not cut material.
+
+---
+
+## Rod-Variant Checklist (RF-21, RF-22, Milestone 13 Spec §8.1)
+
+**Shared (`RF-21` and `RF-22`):**
+1. The variant is present on all eight rods; the stock rods are not also visible (no double geometry).
+2. The H-beam is visibly wider/thicker than the stock rod; the cap fasteners read as a stepped 12-point head (an illustrative placeholder, not a published feature).
+3. The rod keeps the stock big-end width and journal; the cap sits on the crankpin, and the small end sits on the piston pin.
+4. No rod intersects the piston skirt, crank web, adjacent rod, block or oil pan.
+5. The firing-highlight colour remains on the pistons only; the rods are not emissive.
+6. The rod material reads as forged steel with a dark fastener and bronze bushing; no texture/decal.
+
+**Per-frame:**
+- **`RF-21`:** The exploded rods are separated with the rest of the internal assembly; the beam/flange difference is legible at this camera; the pose is the committed `RF-10` camera pose (verified directly for `rods_forged` at `G-FRAME-M13`, not claimed from `RF-10`'s `turbo_large + pistons_lowcomp` image); labels (`Off`) do not obscure the part.
+- **`RF-22`:** The cut face is a flat, hatched solid at **`X = 388.3 mm`, through the station-0 RH rod** (deliberately not `RF-6`'s `X = 402.5 mm` inter-rod gap); there is no open chain, gap, or floating cap; the rod section is continuous with the M11 cap convention; the other parts cut by the plane follow the same convention and do not obscure the rod face.
 
 ---
 
@@ -459,6 +477,45 @@ Every section-active reference frame (`RF-6`, `RF-14`, `RF-15`, `RF-16`, `RF-17`
 ![RF-20 — θ = 90°, Explode 100% with intake cover lifted +Z 260 mm above the exposed two-piece Y-bridge](./reference-frames/RF-20.png)
 
 *Caption: Exploded view (`RF-20`, `Explode = 100 %`, pose per D-047) with the optional GM `21994000` intake manifold cover lifted `+Z 260 mm` above the exposed two-piece Y-bridge and MAP sensor, keeping both integrated mounts attached and the three-line `6.6 TURBO DIESEL` legend legible.*
+
+---
+
+### RF-21 — Heavy-Duty Forged Connecting Rods in Exploded Internal View (`θ = 90°`, Exterior Off, Explode `100%`)
+
+- **Crank angle:** `θ = 90°` (Cylinder 2 LH at compression/firing TDC, firing window `[90°, 180°)` — matching `RF-5` / `RF-10` camera pose)
+- **Camera position (m):** `[1.2800, -1.0800, 0.7400]` (`fov = 42°`, `up = [0, 0, 1]`; exact committed `RF-10` camera position)
+- **Camera target (m):** `[0.3100, -0.0500, 0.1800]` (exact committed `RF-10` camera target)
+- **Quality profile:** `Full` (`PCFSoftShadowMap` `2048×2048` enabled)
+- **Exterior:** `Off` (unchecked)
+- **View states:** `Explode = 100%` (`e = 1.0`), `Section = Off`, `X-Ray = Off`, `Labels = Off`, `Intake cover = Off`
+- **Build selection:** `rods_forged` (other 11 catalog slots `stock`)
+- **What to look for (Rod-Variant Checklist shared items 1–6 + `RF-21` item):**
+  1. **Swapped 8-cylinder instanced forged rods (`rot_conrod_c1_forged`, `1,372` tris × `8` = `10,976`):** All eight connecting rods display the visibly wider/thicker H-beam shank (`30.343 / 18.568 mm` flange outer Y, `8.177 mm` flange thickness, `5.258 mm` web half-width — illustrative placeholders) and dark stepped 12-point cap fasteners with integral washer flanges (illustrative placeholder) with zero stock-rod double geometry.
+  2. **Preserved stock kinematic interface & M4 station spread:** Identical `163.0 mm` centre-to-centre length, `62.9 mm` crankpin bore, `34.5 mm` wrist-pin bronze bushing, and `27.676 mm` big-end axial width (`0.724 mm` shared-pin inter-rod gap) keep all eight rods seated cleanly on their crankpins and wrist pins at `+1.8×` axial station spread with zero interference.
+  3. **PBR material & highlight discipline:** Untextured forged-steel body, dark fasteners, and bronze small-end bushing; orange firing emissive remains strictly on **Cylinder 2 (LH)** piston at TDC; labels off so no chips obscure the shanks or cap fasteners.
+
+![RF-21 — θ = 90°, heavy-duty forged connecting rods in 100% exploded internal view, exterior off](./reference-frames/RF-21.png)
+
+*Caption: `rods_forged` (`rot_conrod_c1_forged.glb`) in `100 %` exploded internal view (`RF-21`, `RF-10` camera pose), preserving the stock `163.0 / 62.9 / 34.5 / 27.676 mm` interface while displaying the illustrative heavier H-beam flanges/web and stepped 12-point cap fasteners.*
+
+---
+
+### RF-22 — Sectioned Station-0 RH Forged Connecting Rod (`θ = 0°`, Section X @ `388.3 mm`, Exterior Off)
+
+- **Crank angle:** `θ = 0°` (Cylinder 1 RH at compression/firing TDC, firing window `[0°, 90°)` — matching `RF-6` camera pose)
+- **Camera position (m):** `[1.0600, -0.5400, 0.4800]` (`fov = 42°`, `up = [0, 0, 1]`; exact committed `RF-6` camera position on the removed `+X` side looking toward `X ≤ 388.3 mm`)
+- **Camera target (m):** `[0.2900, -0.0200, 0.1400]` (exact committed `RF-6` camera target)
+- **Quality profile:** `Full` (`PCFSoftShadowMap` `2048×2048` enabled)
+- **Exterior:** `Off` (unchecked)
+- **View states:** `Explode = 0%`, **`Section = Front–Back (X)` at `388.3 mm`** (`plane normal = (-1, 0, 0)`, `constant = +0.3883 m`, keeping `x <= 0.3883 m` — deliberately `388.3 mm` through the station-0 RH rod `[374.462, 402.138] mm`, not `RF-6`'s `402.5 mm` inter-rod gap), `X-Ray = Off`, `Labels = Off`, `Intake cover = Off`
+- **Build selection:** `rods_forged` (other 11 catalog slots `stock`)
+- **What to look for (Rod-Variant Checklist shared items 1–6 + Section-Fill Checklist items 1–6 + `RF-22` item):**
+  1. **True longitudinal cross-section through the station-0 RH forged rod (`X = 388.3 mm`, `526` rod cap tris, `2,234` total):** Slicing along the station-0 RH rod seat (`402.5 − 14.2 = 388.3 mm`, `13.838 mm` inside each big-end face) cuts the watertight 10-component `rot_conrod_c1_forged` (`0` open chains, `0` dropped groups, NDC projection `x ∈ [-0.143, 0.157], y ∈ [-0.512, -0.064]`) into a flat, crisp, 45°-hatched cut-bronze cross-section facing the `+X` camera, with the paired LH rod at `416.7 mm` cleanly clipped away so it cannot occlude the cut face.
+  2. **Zero stock-rod double capping:** Hidden and removed stock `conrod` meshes (`visible = false`) contribute `0` cap triangles; only `conrod_variant` is sliced along with Cylinder 1's firing piston, Cylinder 2's LH piston, front heads, crank throw, and main shaft in the shared M11 section convention.
+
+![RF-22 — θ = 0°, Section Front–Back (X) at 388.3 mm slicing through the station-0 RH forged connecting rod, exterior off](./reference-frames/RF-22.png)
+
+*Caption: Station-0 RH forged connecting-rod cutaway at `X = 388.3 mm` (`RF-22`, `RF-6` camera pose), proving a solid 45°-hatched longitudinal cross-section through `rot_conrod_c1_forged` continuous with the Milestone 11 cap convention.*
 
 ---
 

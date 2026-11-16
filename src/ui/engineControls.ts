@@ -656,7 +656,7 @@ export function mountEngineUi(
 
   const bannerSubtitle = document.querySelector('#title-banner p');
   if (bannerSubtitle) {
-    bannerSubtitle.textContent = 'Milestone 12 — Intake Manifold Cover';
+    bannerSubtitle.textContent = 'Milestone 13 — Internal Part Variants';
   }
 
   let isPlaying = true;
@@ -1027,7 +1027,7 @@ export function mountEngineUi(
   const buildNoteEl = document.createElement('p');
   buildNoteEl.className = 'm8-build-note';
   buildNoteEl.textContent =
-    '3D variants: exterior parts render with the Exterior shell shown (Exterior or X-Ray); the low-compression piston renders in the internal assembly.';
+    '3D variants: exterior parts render with the Exterior shell shown (Exterior or X-Ray); the low-compression piston and forged connecting rods render in the internal assembly.';
 
   const buildViolationsEl = document.createElement('div');
   buildViolationsEl.className = 'm6-build-violations';

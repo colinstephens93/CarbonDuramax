@@ -3,6 +3,7 @@
 // Importable directly by Node asset and budget-guard tests without loading Three.js or a DOM.
 
 import type { PartSlotId } from '../core/interfaces';
+import { ROD_VARIANT_TRIANGLE_CAP } from './internalVariants';
 
 export interface ExteriorPreservedSubtreeSpec {
   readonly id: string;
@@ -22,6 +23,7 @@ export const EXTERNAL_VISUAL_SLOTS: readonly ExternalVisualSlotId[] = [
 export const VISUAL_VARIANT_SLOTS: readonly PartSlotId[] = [
   ...EXTERNAL_VISUAL_SLOTS,
   'pistons',
+  'rods',
 ];
 
 export const EXTERIOR_PRESERVED_SUBTREES: readonly ExteriorPreservedSubtreeSpec[] = [
@@ -42,6 +44,7 @@ export const VARIANT_TRIANGLE_CAPS: Readonly<Record<string, number>> = {
   exhaust_4in: 2800,
   intercooler_upgraded: 1800,
   pistons_lowcomp: 5200,
+  rods_forged: ROD_VARIANT_TRIANGLE_CAP,
 };
 
 export const SHELL_PARTS_REPLACED_BY_SLOT: Readonly<

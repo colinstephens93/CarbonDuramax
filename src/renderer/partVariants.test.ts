@@ -10,6 +10,7 @@ import {
   INTAKE_COVER_DRAW_CALLS,
   INTAKE_COVER_TRIANGLE_CAP,
 } from './intakeCover';
+import { ROD_VARIANT_TRIANGLE_CAP } from './internalVariants';
 import {
   computeVariantExplodeOffsetMm,
   EXTERIOR_PRESERVED_SUBTREES,
@@ -179,7 +180,20 @@ describe('Milestone 8 shell split, pure variant rules, and D-033 budget guard (s
       'exhaust',
       'intercooler',
       'pistons',
+      'rods',
     ]);
+    expect(VARIANT_TRIANGLE_CAPS.rods_forged).toBe(ROD_VARIANT_TRIANGLE_CAP);
+    expect(VARIANT_TRIANGLE_CAPS.rods_forged).toBe(1_400);
+
+    // Source check: partVariants.ts imports ROD_VARIANT_TRIANGLE_CAP from ./internalVariants and repeats no 1400 literal
+    const partVariantsSrc = readFileSync(
+      resolve(process.cwd(), 'src', 'renderer', 'partVariants.ts'),
+      'utf8',
+    );
+    expect(partVariantsSrc).toMatch(
+      /import\s*\{\s*ROD_VARIANT_TRIANGLE_CAP\s*\}\s*from\s*['"]\.\/internalVariants['"]/,
+    );
+    expect(partVariantsSrc).not.toMatch(/\b1[_ ,]?400\b/);
 
     const validPreservedIds = new Set(EXTERIOR_PRESERVED_SUBTREES.map((s) => s.id));
     for (const slot of EXTERNAL_VISUAL_SLOTS) {
@@ -193,6 +207,8 @@ describe('Milestone 8 shell split, pure variant rules, and D-033 budget guard (s
       }
     }
     expect(SHELL_PARTS_REPLACED_BY_SLOT.intercooler).toEqual([]);
+    expect('rods' in SHELL_PARTS_REPLACED_BY_SLOT).toBe(false);
+    expect('pistons' in SHELL_PARTS_REPLACED_BY_SLOT).toBe(false);
   });
 
   it('9. budget guard (derived): worst-case scene triangles from VARIANT_TRIANGLE_CAPS and EXTERIOR_PRESERVED_TRIANGLES stay within D-033 phone (320k) and desktop (360k)', () => {
@@ -206,6 +222,32 @@ describe('Milestone 8 shell split, pure variant rules, and D-033 budget guard (s
     const stockPistonTris = countSceneTriangles(stockPistonGltf);
     expect(stockPistonTris).toBe(4832);
 
+    const stockConrodGltf = parseGlbJson(
+      resolve(process.cwd(), 'public', 'models', 'rot_conrod_c1_stock.glb'),
+    );
+    const stockConrodTris = countSceneTriangles(stockConrodGltf);
+    expect(stockConrodTris).toBe(1180);
+
+    const forgedConrodGltf = parseGlbJson(
+      resolve(process.cwd(), 'public', 'models', 'variants', 'rot_conrod_c1_forged.glb'),
+    );
+    const countScenePrimitives = (gltf: GltfJson): number => {
+      const nodes = gltf.nodes ?? [];
+      let prims = 0;
+      const visit = (idx: number): void => {
+        const n = nodes[idx]!;
+        if (n.mesh !== undefined) {
+          prims += gltf.meshes?.[n.mesh]?.primitives.length ?? 0;
+        }
+        for (const c of n.children ?? []) visit(c);
+      };
+      const roots = gltf.scenes?.[gltf.scene ?? 0]?.nodes ?? [];
+      for (const r of roots) visit(r);
+      return prims;
+    };
+    expect(countScenePrimitives(stockConrodGltf)).toBe(3);
+    expect(countScenePrimitives(forgedConrodGltf)).toBe(3);
+
     const visualCatalogEntries = fullCatalog.filter((entry) => entry.modelPath !== null);
     expect(visualCatalogEntries.map((e) => e.id).sort()).toEqual(
       Object.keys(VARIANT_TRIANGLE_CAPS).sort(),
@@ -214,6 +256,7 @@ describe('Milestone 8 shell split, pure variant rules, and D-033 budget guard (s
     const externalSlotSet = new Set<string>(EXTERNAL_VISUAL_SLOTS);
     let externalCapSum = 0;
     let pistonCap = 0;
+    let rodCap = 0;
     for (const entry of visualCatalogEntries) {
       const cap = VARIANT_TRIANGLE_CAPS[entry.id];
       expect(cap, `Missing VARIANT_TRIANGLE_CAPS entry for "${entry.id}"`).toBeDefined();
@@ -221,44 +264,55 @@ describe('Milestone 8 shell split, pure variant rules, and D-033 budget guard (s
         externalCapSum += cap!;
       } else if (entry.slotId === 'pistons') {
         pistonCap = cap!;
+      } else if (entry.slotId === 'rods') {
+        rodCap = cap!;
       } else {
         throw new Error(`Unexpected visual variant slot "${entry.slotId}".`);
       }
     }
 
     expect(externalCapSum).toBeLessThanOrEqual(10_800);
-    expect(externalCapSum + pistonCap).toBeLessThanOrEqual(16_000);
+    expect(rodCap).toBe(1_400);
+    expect(externalCapSum + pistonCap + rodCap).toBe(17_400);
 
     const hiddenShellTris = Object.values(EXTERIOR_PRESERVED_TRIANGLES).reduce(
       (sum, n) => sum + n,
       0,
     );
     const pistonSwapDeltaTris = (pistonCap - stockPistonTris) * 8;
+    const rodSwapDeltaTris = (rodCap - stockConrodTris) * 8;
+    expect(pistonSwapDeltaTris).toBe(2_944);
+    expect(rodSwapDeltaTris).toBe(1_760);
+
     const worstCaseSceneTriangles =
       stockSceneTrianglesExtOn -
       hiddenShellTris +
       externalCapSum +
       pistonSwapDeltaTris +
-      INTAKE_COVER_TRIANGLE_CAP;
+      INTAKE_COVER_TRIANGLE_CAP +
+      rodSwapDeltaTris;
 
     expect(INTAKE_COVER_TRIANGLE_CAP).toBe(1_800);
-    expect(worstCaseSceneTriangles).toBe(317_368);
+    expect(worstCaseSceneTriangles).toBe(319_128);
     expect(worstCaseSceneTriangles).toBeLessThanOrEqual(phoneSceneAssetBudget);
     expect(worstCaseSceneTriangles).toBeLessThanOrEqual(desktopSceneAssetBudget);
-    expect(phoneSceneAssetBudget - worstCaseSceneTriangles).toBe(2_632);
-    expect(desktopSceneAssetBudget - worstCaseSceneTriangles).toBe(42_632);
+    expect(phoneSceneAssetBudget - worstCaseSceneTriangles).toBe(872);
+    expect(desktopSceneAssetBudget - worstCaseSceneTriangles).toBe(40_872);
 
-    // Draw-call budget guard with M12 intake cover (+2 opaque meshes) against D-033 (120 phone / 250 desktop)
+    // Draw-call budget guard: rod swap adds 0 net calls (3 primitives vs 3 stock); M12 cover adds +2 against D-033 (120 phone / 250 desktop)
+    const rodNetDrawCalls =
+      countScenePrimitives(forgedConrodGltf) - countScenePrimitives(stockConrodGltf);
+    expect(rodNetDrawCalls).toBe(0);
     expect(INTAKE_COVER_DRAW_CALLS).toBe(2);
-    const desktopStockCallsWithCover = 96 + INTAKE_COVER_DRAW_CALLS;
-    const phoneStockCallsWithCover = 58 + INTAKE_COVER_DRAW_CALLS;
-    const desktopWorstCallsWithCover = 97 + INTAKE_COVER_DRAW_CALLS;
-    const phoneWorstCallsWithCover = 60 + INTAKE_COVER_DRAW_CALLS;
-    expect(desktopStockCallsWithCover).toBe(98);
-    expect(phoneStockCallsWithCover).toBe(60);
-    expect(desktopWorstCallsWithCover).toBe(99);
-    expect(phoneWorstCallsWithCover).toBe(62);
-    expect(desktopWorstCallsWithCover).toBeLessThanOrEqual(250);
-    expect(phoneWorstCallsWithCover).toBeLessThanOrEqual(120);
+    const desktopStockCallsWithRodsAndCover = 96 + rodNetDrawCalls + INTAKE_COVER_DRAW_CALLS;
+    const phoneStockCallsWithRodsAndCover = 58 + rodNetDrawCalls + INTAKE_COVER_DRAW_CALLS;
+    const desktopWorstCallsWithRodsAndCover = 97 + rodNetDrawCalls + INTAKE_COVER_DRAW_CALLS;
+    const phoneWorstCallsWithRodsAndCover = 60 + rodNetDrawCalls + INTAKE_COVER_DRAW_CALLS;
+    expect(desktopStockCallsWithRodsAndCover).toBe(98);
+    expect(phoneStockCallsWithRodsAndCover).toBe(60);
+    expect(desktopWorstCallsWithRodsAndCover).toBe(99);
+    expect(phoneWorstCallsWithRodsAndCover).toBe(62);
+    expect(desktopWorstCallsWithRodsAndCover).toBeLessThanOrEqual(250);
+    expect(phoneWorstCallsWithRodsAndCover).toBeLessThanOrEqual(120);
   });
 });
