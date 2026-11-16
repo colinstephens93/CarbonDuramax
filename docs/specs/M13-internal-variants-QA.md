@@ -341,3 +341,21 @@ cyl  bank  station  centre   seat    interval            contains 388.3  contain
 - **Should-fix spot checks: 4 / 4 pass** — QA-03, QA-04, QA-06, QA-10.
 - **New findings: 2 should-fix + 3 nits.** N-01 (cap `274,784` used as the runtime acceptance total; measured `264,928`) and N-02 (shared prims map not filtered in the piston ensure path) are open. N-03/N-04/N-05 are nits.
 - **Ready for Buckley's audit?** **Not yet.** The original blockers are closed and the package is substantially improved, but N-01 makes acceptance 8's expected runtime number wrong and N-02 leaves an implementable-code ambiguity in the QA-02 fix. Both need a short revision to the spec (not the survey) before Buckley's audit; neither requires redoing the RF-22 plane or the combined-accounting design.
+
+---
+
+## 12. Close-out revision — N-01 to N-05 dispositions (2026-11-16)
+
+**Scope:** planning-text close-out on `plan/m13-internal-variants`; no production or test code was edited in this run. The original blockers and the four spot-checked should-fixes were not reopened.
+
+| ID | Severity | Disposition | Where changed |
+| --- | --- | --- | --- |
+| **N-01** | should-fix | **Fixed.** The spec now states `274,784` explicitly as the **cap-only** combined total and separates the **runtime** totals: `264,928` with the rod cap and shipped low-comp piston set, `264,704` with the provisional rod prototype, and `263,168` for the old-branch stock-rod control. Acceptance 8 and the handoff assert the runtime figures; §9 test 5 pins both the cap-only arithmetic (`274,784` / `273,024`) and the three runtime values. | §§5.1, 9 test 5, 13.8, 15.7 item 10, 15.8, 16.8 |
+| **N-02** | should-fix | **Fixed.** `loadedInternalPrimsById` now stores `{ slotId, prims }`; `ensureVariantPistonBatchSetsBuilt()` consumes `filterInternalPrimEntriesBySlot(loadedInternalPrimsById, 'pistons')` (the named slot-id filter), not the raw map. Test 5 adds a two-entry piston+rod fixture and asserts no `piston_rods_forged*` set and no `piston_rods_forged_std`/`piston_rods_forged_firing` cap source is built from the rod entry. | §§5.1, 5.3.1–5.3.3, 9 test 5, 14 |
+| **N-03** | nit | **Fixed.** The RF-22 projection is labelled an **approximate stock-rod proxy** (NDC x `−0.143…0.158`, y `−0.514…−0.064`) and the variant's exact extremes are recorded at G-FRAME-M13; the numbers are no longer presented as independently reproduced. | §§8.2, 15.9 |
+| **N-04** | nit | **Fixed.** §7.2 now reads "calls/VRAM are the M12 measured values; p95 is the M11 detail-row target, with M12 measured stock 17.0 / 17.0 ms." | §7.2 |
+| **N-05** | nit | **Fixed.** §15.4 now states "rod scene delta +1,760 at cap (11,200 batch); cap triangles additional; scene triangles unchanged," consistent with §7.7. | §15.4 |
+
+**Consistency verification:** grep of the spec and survey finds no remaining current claim that uses `274,784` as a runtime total and no stale `−0.143…0.131` / `−0.466…−0.064` projection wording; the only `274,784` / `273,024` occurrences are explicitly labelled cap arithmetic (the historical QA record above is unchanged). The D-033 guard is untouched at **319,128 / 320,000 phone (872 triangles; 0.2725 %)**; QA-01 (RF-22 at 388.3 mm) and QA-02 (shared three-term recompute) remain closed.
+
+**Readiness:** §11.6's "Not yet" is superseded by this close-out. N-01/N-02 are fixed, N-03–N-05 are closed, and the original blockers and D-033 guard are unchanged.
