@@ -256,3 +256,82 @@ grep -n "detailedLoaded\|intakeCoverLoaded\|vehicle" src/main.ts
 ```
 
 No spec or survey file was modified by this QA run.
+
+---
+
+## Second QA pass (confirmation, 2026-11-17)
+
+**Reviewer:** independent QA agent, separate from the drafting context; confirmation pass on `plan/m14-vehicle-hardware` at `5a4edf0`. **The spec and survey were not edited in this run.** Method: independent binary-GLB parse of the shell, the ten stock parts, the six `public/models/variants/*.glb`, the M12 cover and the V2/V3/V4 assets; `npx vitest run src` (114/114, 23 files) and the `shellAssets` test file; direct source reads of `engineScene.ts`, `viewLayout.ts`, `sectionCaps.ts`, `intakeCover.test.ts`, `partVariants.test.ts`; a visual inspection of the seven cited owner photographs in `~/projects/sandboxforgamedev/reference/`; and arithmetic from the spec's own formulas. No WebGL/headless browser and no Blender are available, so the benchmark/RF renders and the hardware asset remain design contracts; those limitations are unchanged from the first pass.
+
+### 1. Per-blocker verdicts
+
+| ID | Verdict | Evidence |
+| --- | --- | --- |
+| **QA-01** | **CLOSED** | OD-2 now makes `intake_highflow` + Vehicle explicitly unsupported: `vehicleContextActive` is false while `frontStackConflict` is true, the internals stay visible and **all five** stock hardware parts are withheld (§5.1, §6.7, OD-2, D-049). Test 6 asserts `['intake_highflow']` shows none and parses V2; acceptance 8 renders/checks the unsupported combination. Independent V2 parse: 2,560 triangles, project bounds X −17.98…778.54, Y −639.09…56.13, Z 289.14…547.79; **14 vertices inside the stock radiator box** (X 650–706, Y ±500, Z −108…420) and **6 inside the intercooler box** (X 712–760, Y ±520, Z −100…410); V1/V3/V4 have **0** inside. The through-stack state is no longer selectable. |
+| **QA-02** | **CLOSED** (original defect) — **new blocker QA-28** | Independent recomputation: the 70 mm collar end is (649.198, −541.399, 360.664), inside the boss X 636.4–736.4, Y −560…−535, Z 303.9–403.9; the body-face ray entry is 112.141 mm (112.139 with the unit normal — within any ±0.1 mm tolerance); the group AABB is exactly **X 566.52–860, Y −820…−470.61, Z 240–520**. Test 3's ±0.10 mm bounds and collar/boss assertions are now passable. The original "collar short / bounds exclude collar" blocker is closed. The **added radiator relief clearance** is a separate new blocker (QA-28). |
+| **QA-03** | **CLOSED** | Independent recomputation from the defined centreline P0…P7 + 44.45 mm radius + flange Ø120 × 10 mm + muffler Ø220 × 340 mm gives exactly **X −1,364.45…−161.97, Y −345.0…−101.79, Z −220.0…+84.45**; the muffler is Y −345…−125, Z −220…0; the floor rows are 25.0 mm (muffler) / 40.55 mm (pipe) and agree with the Z bound. Test 3's exhaust bounds are passable. |
+| **QA-04** | **CLOSED** | §5.1 defines `applySceneVisibility()` setting the actual `.visible` flags on `internalRoot`, `mainShaft`, `vehicleHardwareGroup`, shell and cover; `getRenderStats().sceneGraphVisibility` reads those **actual** flags; `visibleSceneTriangles` sums only objects whose actual `.visible` is true. Test 1b applies the function to a fake scene graph and asserts the flags, and source-checks that `engineScene.ts` passes `v8Batches.root`, `mainShaft.mesh` and `vehicleHardware.group`; acceptance 4 asserts the rendered `sceneGraphVisibility` and `visibleSceneTriangles`. Test 1b fails if the renderer omits the application or passes the wrong handles; a renderer that applies the function and then re-shows the internals is caught by acceptance 4's real stats. The pure resolver invariant is explicitly labelled true-by-construction. Nit on the "real mutual-exclusion test" wording: QA-30. |
+
+### 2. QA-13 rebuttal verdict — **SOUND**
+
+Independent parse of `public/Duramax_LLY_2005_66L_V8.glb` (no node transforms): raw accessor bounds **X [−0.272515535, 0.617799997], Y [−0.223499998, 0.555999994], Z [−0.480664313, 0.549860060]**. The D-042 conversion `p_mm = (1000·g_x, −1000·g_z, 1000·g_y)` gives **X −272.516…617.800, Y −549.860…480.664, Z −223.500…556.000** — exactly the spec values in §3 and §15.4. §8.1's "shell max Y 0.48" and §15.6's "0.481" are correct; the RF-24 camera Y 1.25 remains outside. `src/renderer/shellAssets.test.ts` test 4 uses the same conversion and passes (6/6 in that file; 114/114 overall). The original QA-13 finding swapped the raw Y and Z intervals and was **wrong**; the rebuttal is sound and no spec change is needed. Citation nit: the QA-13 disposition says "§15.4/§15.5", but the shell-bounds evidence is §15.4 (the axis check), not §15.5.
+
+### 3. Photo reconciliation — outcomes check out
+
+Inspected the seven cited images: `02-engine-bay-driver-side.jpg`, `IMG_2874.jpeg`–`IMG_2877.jpeg`, `03-underside-rear.jpg`, `manuals/lly-engine-compartment-diagram.png`.
+
+- **4 confirmed:** `IMG_2874` (airbox RH/lid/snorkel, corrugated tube, fan/clutch behind accessories, front stack at the left edge mostly obscured, silver LH charge pipe); `IMG_2875` (airbox outlet/tube, fan/clutch/belt, black top tank/upper hose consistent with the radiator, battery/fuse block); `03-underside-rear` (AAM axle/diff, spare tire, exhaust over the axle, frame rails; lifted 2001 GMT800, not an LLY); the manual diagram (air cleaner image-left/truck-RH, coolant tank image-right/truck-LH, fan/radiator front centre, valley cover; no scale or intercooler callout).
+- **1 corrected:** `02-engine-bay-driver-side.jpg` shows the brake reservoir/hydroboost, fuse block, driver battery, engine cover and coolant tank; the **second battery is not visible in this frame**. The survey removed the second-battery claim. Confirmed.
+- **2 downgraded:** `IMG_2876` — shroud opening/front stack is below the frame and not directly visible; `IMG_2877` — radiator core/front stack is not directly visible; the frame supports only the airbox/hose/fan/accessory layout. Both confirmed.
+- **Intercooler:** no cited photo shows the core or its mounting datum. The **photo-implied / NOT PUBLISHED / labeled placeholder** wording is now present in spec §2.4, §2.8 row 4, §7.3, §7.4, D-049 (§12.2) and survey §7.1/§7.2/§11/§12/§13. No dimension is scaled from a photo. Confirmed.
+- Residual nit: the survey's `02` row still says "The second battery is on the opposite side and is not visible in this frame." The "opposite side" clause is not shown in the frame; only "not visible in this frame" is photo-supported (QA-33). The intercooler "hidden behind the grille/condenser" is an occlusion inference, but the "no photo shows the core or its mounting datum" caveat is present, so no dimension is attributed to the photos.
+
+### 4. Recomputation results
+
+| # | Spec claim (location) | Independent value | Verdict |
+| ---: | --- | --- | --- |
+| 1 | Airbox group AABB X 566.52–860, Y −820…−470.61, Z 240–520 (§2.1, §7.4, test 3) | same | ✅ |
+| 2 | Collar end (649.197, −541.399, 360.664) | (649.198, −541.399, 360.664) | ✅ |
+| 3 | Body face at t = 112.141 mm | 112.141 (unnormalised marker normal) / 112.139 (unit normal) | ✅ within 0.1 mm |
+| 4 | Exhaust group AABB X −1,364.45…−161.97, Y −345.0…−101.79, Z −220.0…+84.45 | same | ✅ |
+| 5 | Muffler Y −345…−125, Z −220…0; floor 25.0 / pipe 40.55 | same | ✅ |
+| 6 | Option (b) minimum phone cap 350,528; 9,472 / 17,700 headroom | same | ✅ |
+| 7 | Option (d) saving 31,392 / 31,424 | same | ✅ |
+| 8 | Intercooler offsets 474.8 mm / 337.4 mm | same | ✅ |
+| 9 | Radiator relief 8 × 50 × 15 mm; collar clearance **5.35**; no-relief graze **2.65** (§2.1, §7.5, §15.5, §15.7 item 13; survey §4.2/§5.2) | **axis-to-radiator 44.028 mm → surface −0.422 mm (0.42 mm interference); no-relief −7.063 mm.** Nearest radiator point (650, −500, 340), the bottom edge of the stated relief. | ❌ **QA-28** |
+| 10 | Guards **310,900 / 319,128 / 872 / 31,400 / 70,364 / 81,164 / 350,528** | all reproduce: `270,080 + 1,080 + 64 + 37,100 + 1,536 + 1,040 = 310,900`; `308,324 − 6,500 + 10,800 + 2,944 + 1,800 + 1,760 = 319,128`; `320,000 − 319,128 = 872`; `5,600 + 6,400 + 4,800 + 6,200 + 8,400 = 31,400`; `37,100 + 31,400 + 1,800 + 64 = 70,364`; `70,364 + 10,800 = 81,164`; `319,128 + 31,400 = 350,528` | ✅ |
+| 11 | V2 14 / 6 vertices; V1/V3/V4 0 inside | 14 / 6; 0 / 0 / 0 | ✅ |
+| 12 | Shell bounds X −272.52…617.80, Y −549.86…480.66, Z −223.50…556.00 | same | ✅ (QA-13 rebuttal) |
+| 13 | Downpipe 405 vertices / 800 tris / 0 boundary edges; 14-vertex / 14-triangle cap | same | ✅ |
+| 14 | Fan (0,156), r 212.0, X 570.0–617.8, r 210.0 at X ≥ 610; clutch X 472–570 | same | ✅ |
+| 15 | Frozen hashes §15.8 (7 files) | all 7 match | ✅ |
+| 16 | Existing suite 114 tests / 23 files | 114 / 23 pass | ✅ |
+
+The only changed-number failure is the **5.35 / 2.65** relief pair. All other changed numbers and every unchanged guard reproduce.
+
+### 5. New findings
+
+| ID | Severity | Location | Finding | Required action |
+| --- | --- | --- | --- | --- |
+| **QA-28** | **blocker** | spec §2.1, §7.5, §15.5, §15.7 item 13; survey §4.2, §5.2 | **The claimed 5.35 mm collar-to-radiator clearance is not reproducible; the stated 8 × 50 × 15 mm relief leaves the collar interfering by 0.42 mm.** Independent computation: the collar is a 44.45 mm-radius cylinder on the unit marker normal; the nearest point of the notched radiator is (650, −500, 340), the bottom edge of the Z 340–390 relief; the axis-to-solid distance is **44.028 mm**, so the surface clearance is **−0.422 mm**. Without the relief the minimum is **−7.063 mm**, not the claimed −2.65. The relief as dimensioned is too shallow/too short to produce 5.35 mm; the 2.65 figure is also wrong. This is a self-intersection in the revised placement and the build's own "collar/radiator clearance below 2.0 mm is a stop-and-report" rule would trip. | Re-derive the relief/collar geometry and the clearance: enlarge/re-shape the relief and/or locally taper the collar so the measured minimum is the claimed value, then update §2.1, §7.5, §15.5, §15.7 item 13 and survey §4.2/§5.2. Do not approve the current 5.35/2.65. |
+| **QA-29** | should-fix | spec §13 acceptance 4; §9 test 12 | **Acceptance 4's `visibleSceneTriangles` assertion is an equality to 69,604, but 69,604 is a cap-based bound** (hardware at the 31,400 cap, cover measured). §4.2 says the caps are design budgets, not measured assets; a correct build with actual hardware < 31,400 reports **less** than 69,604 and would fail "must report 69,604". Test 12 also lists 70,364 as a runtime value, but the spec elsewhere correctly says 70,364 is the cover-cap budget guard, not a rendered state. | Change the assertion to "report the actual, **≤ 69,604** (hardware ≤ cap, cover measured)" and keep 70,364 solely as the budget guard; remove 70,364 from the runtime-values list in test 12. |
+| **QA-30** | nit | spec §4.4, §9 test 1b | Test 1b is a unit test of `applySceneVisibility()` on **fake** targets; it does not run the renderer. It catches an omitted call/wrong handles via the source check, but a renderer that applies the function and then re-shows the internals is caught only by acceptance 4. The "the test that can fail when the renderer is wrong" / "the real mutual-exclusion test" wording overstates it. | Reword to "the applier test; acceptance 4 is the rendered-state test." The design itself is adequate. |
+| **QA-31** | nit | spec §5.1 API snippet, §9 test 12 | Test 12 calls `resolveSceneVisibility`, but the `sceneContext.ts` API snippet declares only the input/output interfaces and `applySceneVisibility`; the resolver function name is undeclared. | Declare the resolver function name in §5.1 (or rename the test call). |
+| **QA-32** | nit | QA record §3, §4 | The original §3 OD-2 matrix (rows 8/17 "FAIL (QA-01)"; conclusion "`intake_highflow` is not [geometrically sound] … the rule hides the wrong part for V2") and the §4 verdict table are pre-revision snapshots. They are superseded by the revised OD-2 (all five parts withheld, Vehicle suspended), but §3/§4 do not carry the revision note that §5–§7 carry. | Mark §3/§4 as the original QA snapshot/superseded, or add a revision note. |
+| **QA-33** | nit | survey §3, `02` row | "The second battery is on the opposite side and is not visible in this frame." The frame shows only that the second battery is not visible; the opposite side is not shown. | Say "the second battery is not visible in this frame" only. |
+| **QA-34** | nit | survey §2.5 | The survey cites `sectionCaps.ts:1911` for the invisibility skip; the `isObjectAndAncestorsVisible` call is **:1910**, and :1911 is `skipWhenGhosted`. The spec §3 is correct. | Correct the survey citation to :1910. |
+
+### 6. New-damage / consistency scan
+
+- **No stale group bounds in the spec/survey.** The old airbox `X 600–800 (snorkel to 860)` survives only as the body/snorkel row, not the group AABB; the old exhaust `X −1,320…−222` survives only as the centreline tip (P7), not the AABB. The old bounds in the QA record's original finding/recomputation rows are the historical audit trail and are superseded by the dispositions.
+- **OD-1/OD-2 are consistent** with §5.1, §6.7 and D-049: OD-1 keeps the 310,900 / 319,128 / 872 engine state and the 70,364 / 81,164 vehicle guards with no D-033 amendment; OD-2 yields the intercooler to `intercooler_upgraded`, the exhaust to `exhaust_4in`, and makes `intake_highflow` + Vehicle explicitly unsupported with all five parts withheld. No contradiction found.
+- **Test-file accounting:** 2 new + 3 edited; `src/renderer/intakeCover.test.ts` is not edited and its pinned `syncExteriorShellState` regex still matches the current function prefix. The spec preserves the pinned sequence; the `applySceneVisibility` writes to shell/cover agree with `shellVisible`/`intakeCoverVisible`.
+- **Function/section names:** the only undeclared name is `resolveSceneVisibility` (QA-31). `applySceneVisibility`, `sceneGraphVisibility`, `syncSceneContext`, `resolveEffectiveExplodeFactor`, `resolveLabelContext`, `sectionCaps.ts:1910/1911` and the six variant GLBs are consistent.
+- **Acceptance 4's 69,604 equality** is the only acceptance/self-check contradiction (QA-29); the 5.35/2.65 pair is the only geometry contradiction (QA-28).
+- The QA record's original §3/§4 tables are stale in tense (QA-32) but do not change the spec; the survey's `02` and `:1911` wording are the only residual photo/citation nits (QA-33/QA-34).
+
+### 7. Verdict
+
+**4/4 original blockers (QA-01–QA-04) closed. QA-13 rebuttal sound. One new blocker (QA-28) open; one new should-fix (QA-29); five new nits (QA-30–QA-34).** The package is **not ready for Buckley's audit** until QA-28 is corrected and re-QA'd. The 5.35 mm clearance is a self-intersection in the revised placement, and acceptance 4's 69,604 equality should be fixed in the same revision. The four original blockers and the reconsidered QA-13 do not need further work.
+
+No spec or survey file was modified in this second pass.
