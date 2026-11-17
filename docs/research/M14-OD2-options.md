@@ -302,7 +302,7 @@ The cost is stated plainly: V2 + Vehicle is unavailable; the owner can see V2 in
 
 ## 6. Drafted OD-2 resolution text for D-049
 
-> **Owner Decision OD-2 (approved): Vehicle-view stock-hardware precedence.** Stock-hardware visibility in the `Vehicle` context is resolved by **one priority rule**: a stock part yields to the variant that owns its slot; a variant with a verified geometric conflict and no yielding stock part **suspends the Vehicle context** (`frontStackConflict`), with the internals visible and all five stock parts withheld. The per-variant outcomes are:
+> **Owner Decision OD-2 (for owner approval): Vehicle-view stock-hardware precedence.** Stock-hardware visibility in the `Vehicle` context is resolved by **one priority rule**: a stock part yields to the variant that owns its slot; a variant with a verified geometric conflict and no yielding stock part **suspends the Vehicle context** (`frontStackConflict`), with the internals visible and all five stock parts withheld. The per-variant outcomes are:
 >
 > - **V1 `turbo_large`:** no stock part hides; airbox, radiator, shroud, intercooler and exhaust all show. V1 clears the front stack by ≥602.9 mm (nearest vertex).
 > - **V4 `intercooler_upgraded`:** the **stock intercooler core hides**; V4 shows at its frozen `if_hot_side_inlet` service point; airbox, radiator, shroud and exhaust show. V4 and the stock IC are two different cores 30.0 mm apart in X; V4's nearest vertex is 45.0 mm from the radiator envelope (vertex-level). V4 is not moved to the stock-core position.
