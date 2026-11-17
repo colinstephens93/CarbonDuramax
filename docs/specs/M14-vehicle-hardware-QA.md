@@ -357,3 +357,58 @@ No spec or survey file was modified in this second pass.
 | **QA-34** | **FIXED** | Survey §2.5 now cites **`sectionCaps.ts:1910`** for `isObjectAndAncestorsVisible`, with `:1911` identified as `skipWhenGhosted`. The spec §3 citation was already correct. |
 
 **Re-verification.** The six named guards are untouched and reproduce: **310,900** (fullest measured), **319,128** (engine cap guard), **872** (phone headroom), **31,400** (hardware cap), **70,364** (vehicle stock guard), **81,164** (vehicle conservative guard); the forbidden co-visible cap remains **350,528**. QA-01–QA-04 remain **CLOSED** with their dispositions unchanged, and the QA-13 rebuttal (shell bounds X −272.52…617.80, Y −549.86…480.66, Z −223.50…556.00 from the D-042 conversion) is **not disturbed**. No spec/survey text was changed beyond QA-28–QA-34 and the relief-dimension/clearance copies they require.
+
+---
+
+## Third QA pass (independent confirmation, 2026-11-17)
+
+**Reviewer:** independent QA agent, separate from the drafting and revision contexts; confirmation pass on `plan/m14-vehicle-hardware` at `4a67116`. **The spec and survey were not edited in this run.** Method: an independent pure-Python cylinder-vs-notched-box computation from the spec's own collar/relief definitions (no numpy/scipy), re-derivation of the guard arithmetic, a targeted stale-figure grep across the three documents, source/doc reads for the QA-01–QA-04 and QA-30–QA-34 dispositions, an independent binary-GLB parse of the shell, and `npx vitest run src` (114/114, 23 files) + `npm run typecheck`. No WebGL/headless browser and no Blender are available, so the rendered caps/RF captures and the hardware asset remain build-time gates; the relief clearance is an analytic check of the specified envelope. Commit `4a67116` touches only the spec, the survey and this record; no source, test, asset, catalog or budget constant changed.
+
+### 1. QA-28 — **CLOSED**
+
+Independently recomputed from the revised definitions: collar axis `P(t) = (587.4, −510.5, 371.9) + t(0.882820, −0.441410, −0.160513)`, `0 ≤ t ≤ 70`, `r = 44.45`; radiator `X 650–706, Y −500…500, Z −108…420` minus the relief `X 650–690, Y −500…−480, Z 320–410` (20 mm deep × 90 mm tall × 40 mm long). The clearance is the minimum distance from the collar surface (side plus both end caps) to the notched solid, minimised over `t` and the radial angle.
+
+| Candidate feature | Independent nearest pair | Distance (mm) | Verdict |
+| --- | --- | ---: | --- |
+| Relief inner face at `Y = −480` (main radiator body) | collar `(645.159, −489.683, 365.013)` ↔ radiator `(650.000, −480.000, 365.013)` | **10.826** | **true minimum; matches the spec** |
+| Lower remaining corner `(650, −500, 320)` | collar `(647.681, −508.030, 329.329)` ↔ `(650, −500, 320)` | 12.526 | clears; 1.700 mm farther |
+| Upper remaining corner `(650, −500, 410)` | collar `(644.208, −507.494, 398.754)` ↔ `(650, −500, 410)` | 14.703 | clears |
+| Relief end face at `X = 690` | collar `(669.987, −503.278, 370.173)` ↔ `(690, −500, 370.173)` | 20.279 | clears |
+| No-relief control: rear-face edge `(650, −500, 363.558)` | axis `P(51.970) = (633.281, −533.440, 363.558)` ↔ `(650, −500, 363.558)` | **37.387 axis; −7.063 signed** | **7.063 mm interference; relief is load-bearing** |
+
+The claimed values reproduce: `P(42.909) = (625.281, −529.440, 365.013)` (the spec's unnormalised normal; the unit-normal optimum is `t = 42.907` and the same distances), axis-to-radiator **55.276 mm**, `55.276 − 44.450 = 10.826 mm`, nearest collar-surface point `(645.159, −489.683, 365.013)`, margin over the 2.0 mm floor **8.826 mm**. The no-relief control gives axis-to-edge **37.387 mm**, signed clearance `37.387 − 44.450 = −7.063 mm` (7.063 mm penetration).
+
+The nearest pair is the true minimum, not an edge or endpoint artifact: a coarse `t × θ` sweep plus local refinement found no closer pair; the minimum is interior at `t ≈ 42.907`, the next candidate is **12.526 mm** (1.700 mm farther), and the collar end caps were checked separately (the `t = 70` cap minimum is 14.647 mm, so the side pair controls). No collar-surface point lies inside the notched solid. The relief geometry is what produces the clearance: the 20 mm depth moves the controlling face from the no-relief `Y = −500` rear edge to the relief face at `Y = −480`.
+
+**Bounds and caps.** The notched radiator's union AABB is still exactly **X 650–706, Y −500…500, Z −108…420**, identical to §7.4; the relief removes material only inside that envelope. The radiator per-part cap remains **6,400** and the package sum is unchanged: `5,600 + 6,400 + 4,800 + 6,200 + 8,400 = 31,400`. No new part, row or cap is introduced. The relief's forward limit `X = 690` is the RF-26 cap plane; the pocket lies entirely at `X < 690`, so the `X = 690` cross-section is the full radiator rectangle and the closed cap source is not broached. The build's RF-26 visual check remains the gate. The relief is a planning-envelope rectangular pocket, not a measured tank feature; the build re-measures it, as the spec states.
+
+### 2. Stale-figure sweep
+
+- `5.35` / `2.65` are absent from the spec, the survey and this QA record (targeted grep).
+- The old **8 mm × 50 mm × 15 mm** relief dimensions and the old `X 650–665`, `Y −500…−492`, `Z 340–390` ranges are absent from all three.
+- The only residual historical mention is the second-pass recomputation row 9 ("Original relief: axis-to-radiator 44.028 mm … nearest radiator point (650, −500, 340)") and the QA-28 finding's "then-stated relief"; both are explicitly labelled as the original/superseded state, not a live claim.
+- Every live copy uses the revised **20 × 90 × 40** relief and the **10.826 / 8.826 / 7.063** values: spec §2.1, §2.2, §3, §7.4, §7.5, §8, §9 test 3, §12.2 D-049, §15.5, §15.7 item 13; survey §4.2, §5.2, §13. The planning disposition's "No copy of the old clearance pair remains" is independently confirmed.
+
+### 3. QA-29 — confirmed fixed
+
+- Spec acceptance 4 now asserts `visibleSceneTriangles` **≤ 69,604** (hardware ≤ the 31,400 cap, measured 1,040 cover), explicitly allowing a correct build below the cap; it names 69,604 the cap-based bound and 70,364 the cover-cap budget guard, not a separate rendered state.
+- §9 test 12 lists the runtime values as `310,900 / 308,324 / actual ≤ 69,604` and states that 70,364 is a budget guard, not a runtime value.
+- Sibling scan: the remaining `69,604` occurrences are the arithmetic `37,100 + 31,400 + 1,040 + 64`, the "Vehicle at cap" table row and the `101,004 / 69,604` submitted bound — all clearly cap-based, not exact rendered assertions. `112,564 / 81,164` is a `≤` bound; `350,528` is the forbidden co-visible cap; `31,400` is the hardware cap. No cap-derived figure is asserted as an exact rendered value.
+
+### 4. No-new-damage checks
+
+- **Guards unchanged and reproduced:** `310,900 = 308,324 + (1,372−1,180)×8 + 1,040`; `319,128 = 308,324 − 6,500 + 10,800 + (5,200−4,832)×8 + 1,800 + (1,400−1,180)×8`; `872 = 320,000 − 319,128`; `31,400 = 5,600 + 6,400 + 4,800 + 6,200 + 8,400`; `70,364 = 37,100 + 31,400 + 1,800 + 64`; `81,164 = 70,364 + 10,800`; `350,528 = 319,128 + 31,400` (109.54 %, 30,528 over 320,000). The sibling values 308,324 / 9,100 / 40,872 / 328,228 / 342,300 / 9,472 / 17,700 / 31,392 / 31,424 also reproduce.
+- **QA-01–QA-04 remain CLOSED:** OD-2 still suspends the Vehicle context for `intake_highflow` and withholds all five parts (§2.4, §4.6, §5.1, §6.7, test 6, acceptance 8); the collar/boss and group AABB are unchanged (§2.1, §7.4, test 3); the exhaust AABB is unchanged (§2.5, §7.4, test 3); `applySceneVisibility`/`sceneGraphVisibility` and test 1b/acceptance 4 are unchanged. The relief edit does not touch these rules.
+- **QA-13 rebuttal stands:** independent GLB parse gives raw POSITION bounds X [−0.272515535, 0.617799997], Y [−0.223499998, 0.555999994], Z [−0.480664313, 0.549860060]; the D-042 conversion gives X −272.516…617.800, Y −549.860…480.664, Z −223.500…556.000, matching spec §3/§15.4. All seven §15.8 hashes match.
+- **QA-30–QA-34 fixes present:** QA-30 wording in §4.4 and the test 1b title; QA-31 `resolveSceneVisibility` declaration in §5.1; QA-32 revision notes on QA record §3/§4; QA-33 survey `02` row; QA-34 survey `:1910` citation.
+- **Suite/typecheck:** `npx vitest run src` passes **114/114** in 23 files; `npm run typecheck` passes. The latest commit is docs-only.
+
+### 5. New findings
+
+**None new.** No new blocker, should-fix or nit is introduced by the QA-28/QA-29 revision; the nearest-point pair, the relief geometry, the §7.4 bounds and the 31,400 cap sum all check out.
+
+A **pre-existing record-only nit** remains (not new to this pass, already noted in the second pass): the QA-13 disposition cites "§15.4/§15.5", while the shell-bounds evidence is **§15.4**; §15.5 is the clearance table. The rebuttal's substance and the spec numbers are correct. This is non-blocking and can be corrected opportunistically.
+
+### 6. Verdict
+
+**QA-28 is CLOSED.** The revised relief produces **10.826 mm** clearance (nearest pair as claimed), the pair is the true minimum, the margin over the 2.0 mm floor is **8.826 mm**, and the no-relief control is **−7.063 mm**. The stale 5.35/2.65 pair and the old 8 × 50 × 15 relief are gone from every live claim. QA-29 is fixed. QA-01–QA-04 remain closed, the QA-13 rebuttal stands, the QA-30–QA-34 fixes are present, and every guard reproduces. **The package is ready for Buckley's audit.** The only open item is the non-blocking record-only QA-13 citation nit; the build must still re-measure the actual asset and run the rendered RF-26 cap check, which this pass could not execute without Blender/WebGL.
