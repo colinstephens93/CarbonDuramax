@@ -957,7 +957,7 @@ describe('Milestone 12 optional LLY intake manifold cover (src/renderer/intakeCo
     expect(letAudit.components).toBe(45);
   });
 
-  it('12. frozen-asset identity: M10 shell GLB, all 5 M8 variant GLBs, and catalog JSON files are byte-identical', async () => {
+  it('12. frozen-asset identity: M10 shell GLB, all 5 M8 variant GLBs, catalog/stock.json, and post-M13 catalog/modified.json (sanctioned rods_forged.modelPath change) match pinned hashes', async () => {
     const sha256Of = async (relPath: string): Promise<string> => {
       const bytes = readFileSync(resolve(process.cwd(), relPath));
       const copy = new Uint8Array(bytes.byteLength);
@@ -1002,7 +1002,7 @@ describe('Milestone 12 optional LLY intake manifold cover (src/renderer/intakeCo
       '5ee91f4b0c667c3d3c70c2a39eb9e8afebd614875a4809ea42a29bd75fe2a66d',
     );
     expect(await sha256TextLfOf('catalog/modified.json')).toBe(
-      'af6f0ce3bccc039943267ccbd7ad58a8f7817bb7410019dc30751656c443897c',
+      '509c90c7c02af0081e1b3fe1737c47991bd03f9b6195e6118df594663059d802',
     );
   });
 });

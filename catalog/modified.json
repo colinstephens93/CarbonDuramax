@@ -179,7 +179,7 @@
     "slotId": "rods",
     "name": "Heavy-Duty Forged Connecting Rods",
     "provenance": "illustrative",
-    "modelPath": null,
+    "modelPath": "models/variants/rot_conrod_c1_forged.glb",
     "explodeVectorMm": [0, 0, 0],
     "performanceParams": {},
     "compatibility": {},

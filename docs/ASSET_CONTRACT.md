@@ -32,3 +32,7 @@ Milestone 8 extended the contract with a **scene-placed class** for externally m
 ### M12 scene-placed cosmetic add-on (D-038 extension)
 
 The LLY intake cover (`public/models/intake_cover_lly.glb`) uses the scene-placed class with these additions: one contract **root Group** `intake_cover_lly` (a deliberate extension of the M8 single-root-mesh rule, needed for two material-separated meshes); two mesh leaves `ext_intake_cover_body` / `ext_intake_cover_lettering`; `if_intake_cover_rear_bolt` / `if_intake_cover_duct_clamp` empty markers; no pivot/animation; project-frame authoring at final positions; untextured `MeshStandardMaterial` (≤ 2 materials, no images/textures/UVs); total triangle cap 1,800 (body ≤ 1,200, lettering ≤ 600); file-size cap 64 KiB (65,536 B). It is loaded through `loadVariantScene` and registered as a static section-cap source; it is not a catalog variant and does not add a slot.
+
+### M13 part-local internal variant (D-048)
+
+`public/models/variants/rot_conrod_c1_forged.glb` is a second **part-local** drop-in (after M8 `rot_piston_c1_lowcomp.glb`): contract root `rot_conrod_c1_forged`, child `rot_conrod_smallend_c1_forged` at `(0, 0, 163.0) mm`, origin at the big-end bore axis, three untextured `MeshStandardMaterial`s, no `if_*` markers, indexed `POSITION` + `NORMAL` triangles only, **≤ 1,400 triangles**, **≤ 48 KiB**. It is loaded through the existing `extractAllPartPrimitives` path and swapped into the eight instanced conrod slots; it adds no asset class, no pivot and no animation.

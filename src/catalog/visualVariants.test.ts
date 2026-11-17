@@ -48,6 +48,12 @@ const EXPECTED_VISUAL_ENTRIES: ReadonlyArray<{
     modelPath: 'models/variants/rot_piston_c1_lowcomp.glb',
     explodeVectorMm: [0, 0, 0],
   },
+  {
+    slotId: 'rods',
+    variantId: 'rods_forged',
+    modelPath: 'models/variants/rot_conrod_c1_forged.glb',
+    explodeVectorMm: [0, 0, 0],
+  },
 ];
 
 function makeBuildWith(overrides: Partial<Record<PartSlotId, string>>): Build {
@@ -61,16 +67,23 @@ function makeBuildWith(overrides: Partial<Record<PartSlotId, string>>): Build {
   };
 }
 
-describe('Milestone 8 catalog visual variants (src/catalog/visualVariants.test.ts)', () => {
-  it('1. catalog visual data: exactly five modified entries have non-null modelPath on disk; other 19 stay null/zero', () => {
+describe('Milestone 8 & 13 catalog visual variants (src/catalog/visualVariants.test.ts)', () => {
+  it('1. catalog visual data: exactly six modified entries have non-null modelPath on disk; other 18 stay null/zero', () => {
     const publicDir = resolve(process.cwd(), 'public');
     const expectedById = new Map(EXPECTED_VISUAL_ENTRIES.map((e) => [e.variantId, e]));
 
     const withModelPath = fullCatalog.filter((entry) => entry.modelPath !== null);
-    expect(withModelPath).toHaveLength(5);
+    expect(withModelPath).toHaveLength(6);
     expect(withModelPath.map((e) => e.id).sort()).toEqual(
       EXPECTED_VISUAL_ENTRIES.map((e) => e.variantId).sort(),
     );
+
+    const withoutModelPath = fullCatalog.filter((entry) => entry.modelPath === null);
+    expect(withoutModelPath).toHaveLength(18);
+
+    const rodsForged = fullCatalog.find((entry) => entry.id === 'rods_forged')!;
+    expect(rodsForged.modelPath).toBe('models/variants/rot_conrod_c1_forged.glb');
+    expect(rodsForged.explodeVectorMm).toEqual([0, 0, 0]);
 
     const seenPaths = new Set<string>();
     for (const entry of fullCatalog) {
@@ -98,13 +111,14 @@ describe('Milestone 8 catalog visual variants (src/catalog/visualVariants.test.t
     }
   });
 
-  it('2. explode vectors: four external entries carry §2 vectors, pistons_lowcomp and other 19 entries carry [0, 0, 0]', () => {
+  it('2. explode vectors: four external entries carry §2 vectors, pistons_lowcomp, rods_forged and other 18 entries carry [0, 0, 0]', () => {
     const expectedVectors = new Map<string, readonly [number, number, number]>([
       ['turbo_large', [0, 0, 260]],
       ['intake_highflow', [0, -260, 150]],
       ['exhaust_4in', [-320, 0, 0]],
       ['intercooler_upgraded', [0, 260, 0]],
       ['pistons_lowcomp', [0, 0, 0]],
+      ['rods_forged', [0, 0, 0]],
     ]);
 
     for (const entry of fullCatalog) {
@@ -140,11 +154,11 @@ describe('Milestone 8 catalog visual variants (src/catalog/visualVariants.test.t
       injectors: 'injectors_plus30',
       cp3: 'cp3_stroker',
       tune: 'tune_performance',
-      rods: 'rods_forged',
       camshaft: 'cam_performance',
       heads: 'heads_ported',
     });
     expect(visualVariantsForBuild(nonVisualModifiedOnly, fullCatalog)).toEqual([]);
+    expect(slotForVariantId('rods_forged', fullCatalog)).toBe('rods');
 
     const malformedBuild: Build = {
       buildId: 'malformed',

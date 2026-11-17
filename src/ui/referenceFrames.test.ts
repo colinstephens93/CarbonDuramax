@@ -6,13 +6,17 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { checkCompatibility, fullCatalog, slotForVariantId } from '../catalog';
+import { detailConfig } from '../config/detailConfig';
+import { engineConfig } from '../config/engineConfig';
+import { valveConfig } from '../config/valveConfig';
 import type { Build, PartSlotId } from '../core/interfaces';
 import { stockBuild } from '../perf';
+import { computeEngineLayout, computeRodSeatOffsetMm } from '../renderer/layout';
 import { SECTION_RANGES_MM } from '../renderer/viewLayout';
 import { REFERENCE_FRAME_DEFS } from './referenceFrames';
 
-describe('Milestone 8, 10, 11 & 12 reference frames (src/ui/referenceFrames.test.ts)', () => {
-  it('10. validates RF-1..RF-20 states, keeps stock frames variant-free, verifies RF-18..RF-20 intakeCover flags & RF-19 section checklist, and verifies RF-8..RF-10 compatibility', () => {
+describe('Milestone 8, 10, 11, 12 & 13 reference frames (src/ui/referenceFrames.test.ts)', () => {
+  it('10. validates RF-1..RF-22 states, keeps stock frames variant-free, verifies RF-18..RF-20 intakeCover flags, RF-21..RF-22 rod frames & pure X=388.3 intersection, and build compatibility', () => {
     const expectedIds = [
       'RF-1',
       'RF-2',
@@ -34,6 +38,8 @@ describe('Milestone 8, 10, 11 & 12 reference frames (src/ui/referenceFrames.test
       'RF-18',
       'RF-19',
       'RF-20',
+      'RF-21',
+      'RF-22',
     ];
     expect(Object.keys(REFERENCE_FRAME_DEFS)).toEqual(expectedIds);
 
@@ -117,8 +123,8 @@ describe('Milestone 8, 10, 11 & 12 reference frames (src/ui/referenceFrames.test
       expect(REFERENCE_FRAME_DEFS[m10FrameId]!.exterior).toBe(true);
     }
 
-    // M11 §8 test 7 & M12 §9 test 10: section-active frames within SECTION_RANGES_MM and at a true cutting plane
-    for (const secFrameId of ['RF-14', 'RF-15', 'RF-16', 'RF-17', 'RF-19']) {
+    // M11 §8 test 7, M12 §9 test 10 & M13 §9 test 8: section-active frames within SECTION_RANGES_MM and at a true cutting plane
+    for (const secFrameId of ['RF-14', 'RF-15', 'RF-16', 'RF-17', 'RF-19', 'RF-22']) {
       const def = REFERENCE_FRAME_DEFS[secFrameId]!;
       expect(def.sectionMode === 'x' || def.sectionMode === 'y').toBe(true);
       expect(def.sectionPositionMm).toBeDefined();
@@ -164,8 +170,8 @@ describe('Milestone 8, 10, 11 & 12 reference frames (src/ui/referenceFrames.test
       "The M12 cover's open thin-walled underside is a material band at the cut: the cover cap must show the wall band and leave the open cavity as air, not a filled slab.",
     );
 
-    // RF-8 .. RF-10 carry valid visual variants and form coherent M6 builds
-    for (const modFrameId of ['RF-8', 'RF-9', 'RF-10']) {
+    // RF-8 .. RF-10 and RF-21 .. RF-22 carry valid visual variants and form coherent M6 builds
+    for (const modFrameId of ['RF-8', 'RF-9', 'RF-10', 'RF-21', 'RF-22']) {
       const def = REFERENCE_FRAME_DEFS[modFrameId]!;
       expect(def.variants).toBeDefined();
       expect(def.variants!.length).toBeGreaterThan(0);
@@ -200,5 +206,74 @@ describe('Milestone 8, 10, 11 & 12 reference frames (src/ui/referenceFrames.test
     expect(REFERENCE_FRAME_DEFS['RF-10']!.exterior).toBe(false);
     expect(REFERENCE_FRAME_DEFS['RF-10']!.explodePercent).toBe(100);
     expect(REFERENCE_FRAME_DEFS['RF-10']!.variants).toEqual(['turbo_large', 'pistons_lowcomp']);
+
+    // M13 §9 test 8: RF-21 & RF-22 definitions, reused RF-10/RF-6 camera poses, X=388.3 section, and docs/REFERENCE_FRAMES.md checks
+    const rf10 = REFERENCE_FRAME_DEFS['RF-10']!;
+    const rf6 = REFERENCE_FRAME_DEFS['RF-6']!;
+    const rf21 = REFERENCE_FRAME_DEFS['RF-21']!;
+    const rf22 = REFERENCE_FRAME_DEFS['RF-22']!;
+
+    for (const rf of [rf21, rf22]) {
+      expect(rf.variants).toEqual(['rods_forged']);
+      expect(rf.exterior).toBe(false);
+      expect(rf.xray ?? false).toBe(false);
+      expect(rf.labels ?? false).toBe(false);
+      expect(rf.intakeCover ?? false).toBe(false);
+    }
+
+    expect(rf21.thetaDeg).toBe(rf10.thetaDeg);
+    expect(rf21.position).toEqual(rf10.position);
+    expect(rf21.target).toEqual(rf10.target);
+    expect(rf21.explodePercent).toBe(100);
+    expect(rf21.sectionMode).toBe('off');
+
+    expect(rf22.thetaDeg).toBe(rf6.thetaDeg);
+    expect(rf22.position).toEqual(rf6.position);
+    expect(rf22.target).toEqual(rf6.target);
+    expect(rf22.explodePercent).toBe(rf6.explodePercent);
+    expect(rf22.exterior).toBe(rf6.exterior);
+    expect(rf22.sectionMode).toBe(rf6.sectionMode);
+    expect(rf22.sectionPositionMm).toBe(388.3);
+    expect(rf22.sectionPositionMm).not.toBe(rf6.sectionPositionMm);
+    expect(rf6.sectionPositionMm).toBe(402.5);
+
+    expect(refFramesDoc).toContain('**RF-21**');
+    expect(refFramesDoc).toContain('**RF-22**');
+    expect(refFramesDoc).toContain('## Rod-Variant Checklist (RF-21, RF-22, Milestone 13 Spec §8.1)');
+
+    // Pure intersection check across all 8 rod X intervals from computeEngineLayout + computeRodSeatOffsetMm
+    const layout = computeEngineLayout(engineConfig, valveConfig, detailConfig);
+    const bigEndHalfWidthMm = 0.22 * detailConfig.pinJournalDiameterMm.value;
+    expect(bigEndHalfWidthMm).toBeCloseTo(13.838, 6);
+
+    const rodIntervals: Array<{
+      stationIndex: number;
+      bank: 'RH' | 'LH';
+      minXMm: number;
+      maxXMm: number;
+    }> = [];
+    for (const st of layout.stations) {
+      for (const bank of ['RH', 'LH'] as const) {
+        const seatXMm =
+          st.centerXMm + computeRodSeatOffsetMm(bank, detailConfig.rodSeatOffsetMm.value);
+        rodIntervals.push({
+          stationIndex: st.stationIndex,
+          bank,
+          minXMm: seatXMm - bigEndHalfWidthMm,
+          maxXMm: seatXMm + bigEndHalfWidthMm,
+        });
+      }
+    }
+    expect(rodIntervals).toHaveLength(8);
+
+    const hitsAt3883 = rodIntervals.filter((iv) => 388.3 > iv.minXMm && 388.3 < iv.maxXMm);
+    expect(hitsAt3883).toHaveLength(1);
+    expect(hitsAt3883[0]!.stationIndex).toBe(0);
+    expect(hitsAt3883[0]!.bank).toBe('RH');
+    expect(hitsAt3883[0]!.minXMm).toBeCloseTo(374.462, 5);
+    expect(hitsAt3883[0]!.maxXMm).toBeCloseTo(402.138, 5);
+
+    const hitsAt4025 = rodIntervals.filter((iv) => 402.5 >= iv.minXMm && 402.5 <= iv.maxXMm);
+    expect(hitsAt4025).toHaveLength(0);
   });
 });

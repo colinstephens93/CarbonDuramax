@@ -7,7 +7,7 @@ Unresolved questions and data still to source. An item leaves this list only whe
 - [ ] **Full stock torque curve** for the LLY (Allison automatic configuration) — peak points alone cannot calibrate the performance model. Needed by Milestone 5; earlier is better.
 - [ ] **Stock boost and rail pressure vs. RPM** — needed for performance-model calibration (Milestone 5).
 - [ ] **Stock injector flow rate** — needed for the fuel-delivered cap (Milestone 5).
-- [ ] **Bore pitch / bank stagger and deck height** — surveyed 2026-11-13 (L7 survey): no published source exists; remain illustrative placeholders. Cam timing events/duration/LSA — same survey: not published; lobe lift is published and adopted at M7 (D-035), timing remains placeholder.
+- [ ] **Bore pitch / bank stagger and deck height** — surveyed 2026-11-13 (L7 survey): no published source exists; remain illustrative placeholders. Cam timing events/duration/LSA — same survey: not published; lobe lift is published and adopted at M7 (D-035), corrected by D-044, timing remains placeholder.
 
 ## Decisions still to make
 
@@ -15,7 +15,6 @@ Unresolved questions and data still to source. An item leaves this list only whe
 
 ## Deferred candidates
 
-- [ ] **Internal-part visual variants not in M8** — rods (material-only), injectors/CP3 (flow-internal, no truthful visible change), camshaft (not modeled; timing unpublished), heads (porting unpublished/unmodeled). Deferred until a milestone adds the underlying geometry or published data.
 - [ ] **User volume control / loudness calibration** — M9 ships a fixed master and limiter with no dB claim. A volume slider and a calibrated loudness target are deferred.
 - [ ] **Dual-generator idler, medium-duty oil filler/filter arrangement, vehicle-side hardware (airbox, intercooler core, radiator/shroud, exhaust beyond the downpipe)** — out of scope for M10.
 - [ ] **Per-part or per-material section colours / section outlines** — M11 chooses one section colour so the cut plane reads as a diagrammatic convention; part identity stays with labels/build panels. Revisit only alongside a legibility study.
@@ -41,3 +40,10 @@ Unresolved questions and data still to source. An item leaves this list only whe
 - [ ] **Intake cover material/finish and fastener torque** — "moulded black plastic" is supported by the photos/EPC; the polymer family, colour code, diamond-field pitch/depth and the **rear cover-bolt torque** are not published. A GM service record in the M10 survey gives the **front clamp 6 N·m (53 lb·in)**, adopted as a prior-project record; M12 uses a matte-black PBR approximation, models the M8×1.25×113.7 bolt without a torque claim, and displays no torque.
 - [ ] **Intake-cover fitment years** — GM EPC TC00-668 lists 2004–2006 CK2/3 (LLY); an eBay title also claims 2005–2007 LBZ. M12 follows the LLY EPC and does not claim LBZ coverage.
 - [ ] **V2 high-flow intake / cover clearance is a planning computation** — 6.567 mm minimum surface clearance (r = 58 mm coupler, 4,001-point centreline sampling); the build's asset test re-runs it. Revisit if the V2 route or cover planform changes.
+- [ ] **`rods_forged` variant flange/web dimensions are illustrative placeholders** — no published aftermarket H-beam flange thickness or web depth; M13 adopts the stock interface (163.0 mm c2c, 62.9 mm journal, 34.5 mm pin, 27.676 mm big-end width) and one grade-C vendor's qualitative Callies description ("thicker H-beam flanges / reduced depth of cut", ARP L19 fasteners), with the flange/web magnitudes and the 12-point fastener labeled placeholders. This is a **single weak source**; the catalog entry is generic. Revisit with a dimensioned aftermarket rod drawing or a measured part.
+- [ ] **Camshaft visual with valve-lift kinematics** — M13 defers the cam visual (owner decision OD-1). A cam that rotates at half crank speed but does not drive the valves would be mechanically dishonest; wiring lobe lift into the valve kinematics requires a published duration/timing profile (not available) and opens `src/core/kinematics.ts`/`valveConfig.ts` in a future milestone. Revisit only with an owner decision and a sourced lobe profile.
+- [ ] **Injector nozzle visual** — +30 % flow is nozzle-internal; the 7-hole count is published but hole diameter is unverified (0.155 mm candidate, low confidence). Revisit with a verified nozzle drawing or flow-bench data.
+- [ ] **Heads port visual** — LLY port geometry is unpublished and unmodeled; no source publishes an external-casting difference (the external identity is inferred from the casting listing, not measured). Revisit with a dimensioned port drawing or a scanned head.
+- [ ] **CP3 stroker external visual** — the stroker's difference is internal cam-ring stroke; no source publishes an external housing difference (the external identity is inferred from the replacement listing, not measured). Revisit only if a stroker with a distinct external housing/FCA is documented.
+- [ ] **Rod variant inter-rod clearance** — the variant keeps the 27.676 mm big-end axial width and the stock 0.724 mm inter-rod gap; do not adopt the published 28.4 mm aftermarket big-end width without re-checking the shared-pin layout. Revisit if the pin/seat geometry changes.
+- [ ] **`docs/M7-DATA.md` §3 "rod I-beam" erratum** — the shipped GLB and `build_cylinder1.py` are H-beam; the frozen M7 register row is stale wording, not a different asset. M13 records the erratum in D-048 and `docs/M13-INTERNAL-VARIANTS.md`; correct the row only if a future milestone reopens `M7-DATA.md`.
